@@ -1,0 +1,49 @@
+# build output
+dist/
+.output/
+
+# dependencies
+node_modules/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+
+# environment variables
+.env
+.env.production
+
+# macOS-specific files
+.DS_Store
+
+pnpm-lock.yaml
+
+.astro
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+*.log
+
+# Env
+.env
+.env.*
+venv/
+.venv/
+
+# Alembic caches
+alembic/versions/__pycache__/
+alembic/__pycache__/
+
+# VSCode
+.vscode/
+
+# Mac/Linux system
+.DS_Store
