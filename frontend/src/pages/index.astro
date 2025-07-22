@@ -1,1 +1,21 @@
-<meta http-equiv="refresh" content="0;url=/en" />
+---
+// src/pages/index.astro
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Krzysztof Głuchowski</title>
+  <meta http-equiv="refresh" content="0; url=/en">
+  <link rel="canonical" href="/en">
+</head>
+<body>
+  <script>
+    // Natychmiastowe przekierowanie bez opóźnienia
+    window.location.replace('/en');
+  </script>
+  <p>Redirecting to <a href="/en">English version</a>...</p>
+</body>
+</html>
