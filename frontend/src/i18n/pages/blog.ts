@@ -8,6 +8,12 @@ export const blogTranslations = {
     'blog.loading': 'Loading posts...',
     'blog.error': 'Error loading posts',
     'blog.retry': 'Try again',
+    'blog.readMore': 'Read more',
+    'blog.errorTitle': 'Error Loading Posts',
+    'blog.comingSoon': 'Coming Soon',
+    'blog.noPostsMessage': 'New blog posts are coming soon. Stay tuned!',
+    'blog.category': 'Category',
+    'blog.publishedOn': 'Published on',
   },
   pl: {
     // ===== SEKCJA BLOG =====
@@ -18,5 +24,11 @@ export const blogTranslations = {
     'blog.loading': 'Ładowanie postów...',
     'blog.error': 'Błąd podczas ładowania postów',
     'blog.retry': 'Ponów próbę',
+    'blog.readMore': 'Czytaj więcej',
+    'blog.errorTitle': 'Błąd podczas ładowania postów',
+    'blog.comingSoon': 'Wkrótce',
+    'blog.noPostsMessage': 'Nowe posty na blogu pojawią się wkrótce. Zostań z nami!',
+    'blog.category': 'Kategoria',
+    'blog.publishedOn': 'Opublikowano',
   },
 } as const;
