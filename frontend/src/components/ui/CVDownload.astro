@@ -26,11 +26,12 @@ const variants = {
     <button class={`${baseClasses} ${variants[variant]} ${className}`} aria-label={t('nav.cv')}>
       <Icon name="tabler:file-text" class="w-4 h-4 mr-1" />
       {t('nav.cv')}
-      <Icon name="tabler:chevron-down" class="w-3 h-3 ml-1" />
+      <Icon name="tabler:chevron-down" class="w-3 h-3 ml-1 md:inline hidden group-hover:rotate-180 transition-transform duration-200" />
+      <Icon name="tabler:chevron-up" class="w-3 h-3 ml-1 md:hidden inline group-hover:rotate-180 transition-transform duration-200" />
     </button>
     
-    <!-- Dropdown menu -->
-    <div class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 border border-gray-200 dark:border-gray-700">
+    <!-- Dropdown menu - positioned above on mobile, below on desktop -->
+    <div class="absolute right-0 mt-2 md:mt-2 md:top-full bottom-full md:bottom-auto mb-2 md:mb-0 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 border border-gray-200 dark:border-gray-700">
       <div class="py-1">
         <a
           href="/cv/CV_Krzysztof_Gluchowski_EN.pdf"
