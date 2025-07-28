@@ -1,0 +1,110 @@
+---
+import Layout from '~/layouts/PageLayout.astro';
+import { useTranslations } from '~/i18n/utils';
+
+const t = useTranslations('en'); // Default to English for admin
+
+const metadata = {
+  title: t('admin.title'),
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+---
+
+<Layout metadata={metadata}>
+  <section class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+      <div>
+        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
+          {t('admin.title')}
+        </h2>
+        <p class="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
+          {t('admin.login')}
+        </p>
+      </div>
+      
+      <div id="error-message" class="hidden bg-red-100 dark:bg-red-900/20 border border-red-400 text-red-700 dark:text-red-400 px-4 py-3 rounded">
+      </div>
+      
+      <form id="login-form" class="mt-8 space-y-6">
+        <div class="rounded-md shadow-sm -space-y-px">
+          <div>
+            <label for="email" class="sr-only">{t('admin.email')}</label>
+            <input id="email" name="email" type="email" required 
+                   class="relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-t-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" 
+                   placeholder={t('admin.email')}>
+          </div>
+          <div>
+            <label for="password" class="sr-only">{t('admin.password')}</label>
+            <input id="password" name="password" type="password" required 
+                   class="relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-b-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" 
+                   placeholder={t('admin.password')}>
+          </div>
+        </div>
+
+        <div>
+          <button type="submit" id="login-button"
+                  class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50">
+            <span id="button-text">{t('admin.loginButton')}</span>
+            <svg id="loading-spinner" class="hidden animate-spin -mr-1 ml-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </button>
+        </div>
+      </form>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { AdminAuth } from '../../utils/adminAuth.js';
+  
+  document.addEventListener('DOMContentLoaded', () => {
+    // Check if already logged in
+    if (AdminAuth.isAuthenticated()) {
+      window.location.href = '/admin/dashboard';
+      return;
+    }
+    
+    const loginForm = document.getElementById('login-form') as HTMLFormElement;
+    const emailInput = document.getElementById('email') as HTMLInputElement;
+    const passwordInput = document.getElementById('password') as HTMLInputElement;
+    const loginButton = document.getElementById('login-button') as HTMLButtonElement;
+    const buttonText = document.getElementById('button-text') as HTMLSpanElement;
+    const spinner = document.getElementById('loading-spinner') as HTMLElement;
+    const errorDiv = document.getElementById('error-message') as HTMLDivElement;
+    
+    loginForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      // Show loading state
+      loginButton.disabled = true;
+      buttonText.textContent = 'Signing in...';
+      spinner.classList.remove('hidden');
+      errorDiv.classList.add('hidden');
+      
+      try {
+        const email = emailInput.value;
+        const password = passwordInput.value;
+        
+        await AdminAuth.login(email, password);
+        
+        // Success - redirect to dashboard
+        window.location.href = '/admin/dashboard';
+        
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Login failed';
+        errorDiv.textContent = message;
+        errorDiv.classList.remove('hidden');
+      } finally {
+        // Reset button state
+        loginButton.disabled = false;
+        buttonText.textContent = 'Sign In';
+        spinner.classList.add('hidden');
+      }
+    });
+  });
+</script>

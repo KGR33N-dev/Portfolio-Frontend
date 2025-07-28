@@ -2,6 +2,7 @@
 import Layout from '~/layouts/PageLayout.astro';
 import { useTranslations } from '~/i18n/utils';
 import { languages } from '~/i18n';
+import { API_CONFIG, API_URLS } from '~/config/api';
 
 // Type definition for blog post
 interface BlogPost {
@@ -48,18 +49,18 @@ const { lang } = Astro.params;
 const t = useTranslations(lang as keyof typeof languages);
 
 // Fetch blog posts from FastAPI
-const API_BASE_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000';
 let posts: BlogPost[] = [];
 let error: string | null = null;
 let apiInfo: ApiInfo | null = null;
 
-console.log('🔍 Fetching from API:', `${API_BASE_URL}/api/blog/`);
+const apiUrl = API_URLS.getAllPosts();
+console.log('🔍 Fetching from API:', apiUrl);
 
 try {
-  const response = await fetch(`${API_BASE_URL}/api/blog/`);
+  const response = await fetch(apiUrl);
   
   apiInfo = {
-    url: `${API_BASE_URL}/api/blog/`,
+    url: apiUrl,
     status: response.status,
     statusText: response.statusText,
     headers: Object.fromEntries(response.headers.entries())
@@ -83,7 +84,7 @@ try {
   
   // Try to get more details about the error
   if (e instanceof TypeError && e.message.includes('fetch')) {
-    error = `Nie można połączyć z API (${API_BASE_URL}). Sprawdź czy serwer API jest uruchomiony.`;
+    error = `Nie można połączyć z API (${API_CONFIG.baseUrl}). Sprawdź czy serwer API jest uruchomiony.`;
   }
 }
 
@@ -118,7 +119,7 @@ const metadata = {
       <div class="mb-8 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
         <h3 class="text-lg font-semibold mb-2">🔧 Debug Information</h3>
         <div class="space-y-2 text-sm">
-          <div><strong>API URL:</strong> {apiInfo?.url || API_BASE_URL + '/api/blog/'}</div>
+          <div><strong>API URL:</strong> {apiInfo?.url || apiUrl}</div>
           <div><strong>Status:</strong> {apiInfo?.status || 'N/A'} {apiInfo?.statusText || ''}</div>
           <div><strong>Posts Count:</strong> {posts.length}</div>
           <div><strong>Error:</strong> {error || 'None'}</div>
