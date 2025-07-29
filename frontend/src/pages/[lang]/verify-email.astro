@@ -1,0 +1,330 @@
+---
+import Layout from '~/layouts/PageLayout.astro';
+import Headline from '~/components/ui/Headline.astro';
+import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
+import { useTranslations } from '~/i18n/utils';
+import { languages } from '~/i18n';
+
+export function getStaticPaths() {
+  return Object.keys(languages).map(lang => ({
+    params: { lang }
+  }));
+}
+
+const { lang } = Astro.params;
+const t = useTranslations(lang as keyof typeof languages);
+
+const metadata = {
+  title: t('auth.verifyEmailTitle'),
+  description: t('auth.verifyEmailSubtitle'),
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+---
+
+<Layout metadata={metadata}>
+  <WidgetWrapper 
+    id="verify-email" 
+    containerClass="max-w-md mx-auto min-h-screen flex items-center"
+  >
+    <Fragment slot="bg">
+      <div class="absolute inset-0 bg-gray-50 dark:bg-gray-900"></div>
+    </Fragment>
+    
+    <div class="w-full space-y-8">
+      <Headline 
+        title={t('auth.verifyEmailTitle')}
+        subtitle={t('auth.verifyEmailSubtitle')}
+        classes={{
+          container: 'text-center',
+          title: 'text-3xl font-extrabold',
+          subtitle: 'text-sm text-gray-600 dark:text-gray-400'
+        }}
+      />
+      
+      <!-- Messages -->
+      <div id="error-message" class="hidden bg-red-100 dark:bg-red-900/20 border border-red-400 text-red-700 dark:text-red-400 px-4 py-3 rounded">
+      </div>
+      
+      <div id="success-message" class="hidden bg-green-100 dark:bg-green-900/20 border border-green-400 text-green-700 dark:text-green-400 px-4 py-3 rounded">
+      </div>
+      
+      <div id="info-message" class="hidden bg-blue-100 dark:bg-blue-900/20 border border-blue-400 text-blue-700 dark:text-blue-400 px-4 py-3 rounded">
+      </div>
+      
+      <!-- Verification Form -->
+      <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <div class="space-y-6">
+          <!-- Email Display -->
+          <div class="text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/20">
+              <svg class="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+              </svg>
+            </div>
+            <p class="mt-4 text-sm text-gray-600 dark:text-gray-400" id="email-display">
+              {t('auth.checkYourEmail')}
+            </p>
+          </div>
+
+          <form id="verify-form" class="space-y-6">
+            <div>
+              <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t('auth.email')} <span class="text-red-500">*</span>
+              </label>
+              <input 
+                id="email" 
+                name="email" 
+                type="email" 
+                required 
+                autocomplete="email"
+                class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                placeholder={t('auth.emailPlaceholder')}
+              />
+            </div>
+            
+            <div>
+              <label for="verification-code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t('auth.verificationCode')} <span class="text-red-500">*</span>
+              </label>
+              <input 
+                id="verification-code" 
+                name="verification_code" 
+                type="text" 
+                required 
+                autocomplete="one-time-code"
+                class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors text-center tracking-wider font-mono text-2xl"
+                placeholder="123456"
+                maxlength="6"
+                pattern="[0-9]{6}"
+                inputmode="numeric"
+              />
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('auth.verificationCodeHint')}</p>
+            </div>
+            
+            <div class="mt-6">
+              <button 
+                type="submit" 
+                id="verify-button"
+                class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              >
+                <span id="verify-button-text">{t('auth.verifyEmailButton')}</span>
+                <svg id="verify-loading-spinner" class="hidden animate-spin -mr-1 ml-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </button>
+            </div>
+          </form>
+          
+          <!-- Resend Code -->
+          <div class="text-center space-y-4">
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              {t('auth.didntReceiveCode')}
+            </p>
+            
+            <button 
+              id="resend-button"
+              type="button"
+              class="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span id="resend-button-text">{t('auth.resendCode')}</span>
+              <span id="resend-countdown" class="hidden">({t('auth.resendIn')} <span id="countdown-timer">60</span>s)</span>
+            </button>
+            
+            <div class="mt-4">
+              <a href={`/${lang}/login`} class="text-sm text-gray-600 hover:text-gray-500 dark:text-gray-400 dark:hover:text-gray-300">
+                ← {t('auth.backToLogin')}
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </WidgetWrapper>
+</Layout>
+
+<script>
+  import { AdminAuth } from '../../utils/adminAuth';
+  
+  document.addEventListener('DOMContentLoaded', () => {
+    // Check if already logged in
+    if (AdminAuth.isAuthenticated()) {
+      const currentLang = window.location.pathname.split('/')[1];
+      const user = AdminAuth.getCurrentUser();
+      const redirectUrl = user?.is_admin 
+        ? `/${currentLang}/admin/dashboard` 
+        : `/${currentLang}/blog`;
+      window.location.href = redirectUrl;
+      return;
+    }
+    
+    const verifyForm = document.getElementById('verify-form') as HTMLFormElement;
+    const emailInput = document.getElementById('email') as HTMLInputElement;
+    const codeInput = document.getElementById('verification-code') as HTMLInputElement;
+    const verifyButton = document.getElementById('verify-button') as HTMLButtonElement;
+    const verifyButtonText = document.getElementById('verify-button-text') as HTMLSpanElement;
+    const verifySpinner = document.getElementById('verify-loading-spinner') as HTMLElement;
+    const resendButton = document.getElementById('resend-button') as HTMLButtonElement;
+    const resendButtonText = document.getElementById('resend-button-text') as HTMLSpanElement;
+    const resendCountdown = document.getElementById('resend-countdown') as HTMLSpanElement;
+    const countdownTimer = document.getElementById('countdown-timer') as HTMLSpanElement;
+    const emailDisplay = document.getElementById('email-display') as HTMLParagraphElement;
+    
+    const errorDiv = document.getElementById('error-message') as HTMLDivElement;
+    const successDiv = document.getElementById('success-message') as HTMLDivElement;
+    const infoDiv = document.getElementById('info-message') as HTMLDivElement;
+    
+    let resendTimeout: NodeJS.Timeout | null = null;
+    let countdownInterval: NodeJS.Timeout | null = null;
+    
+    function showError(message: string) {
+      errorDiv.textContent = message;
+      errorDiv.classList.remove('hidden');
+      successDiv.classList.add('hidden');
+      infoDiv.classList.add('hidden');
+    }
+    
+    function showSuccess(message: string) {
+      successDiv.textContent = message;
+      successDiv.classList.remove('hidden');
+      errorDiv.classList.add('hidden');
+      infoDiv.classList.add('hidden');
+    }
+    
+    function showInfo(message: string) {
+      infoDiv.textContent = message;
+      infoDiv.classList.remove('hidden');
+      errorDiv.classList.add('hidden');
+      successDiv.classList.add('hidden');
+    }
+    
+    function hideMessages() {
+      errorDiv.classList.add('hidden');
+      successDiv.classList.add('hidden');
+      infoDiv.classList.add('hidden');
+    }
+    
+    function startResendCountdown() {
+      let timeLeft = 60;
+      resendButton.disabled = true;
+      resendButtonText.classList.add('hidden');
+      resendCountdown.classList.remove('hidden');
+      
+      countdownInterval = setInterval(() => {
+        timeLeft--;
+        countdownTimer.textContent = timeLeft.toString();
+        
+        if (timeLeft <= 0) {
+          clearInterval(countdownInterval!);
+          resendButton.disabled = false;
+          resendButtonText.classList.remove('hidden');
+          resendCountdown.classList.add('hidden');
+        }
+      }, 1000);
+    }
+    
+    // Auto-format verification code input
+    codeInput?.addEventListener('input', (e) => {
+      const target = e.target as HTMLInputElement;
+      target.value = target.value.replace(/\D/g, '').slice(0, 6);
+    });
+    
+    // Get email from URL params or localStorage
+    const urlParams = new URLSearchParams(window.location.search);
+    const emailFromUrl = urlParams.get('email');
+    const emailFromStorage = localStorage.getItem('pending_verification_email');
+    
+    if (emailFromUrl) {
+      emailInput.value = emailFromUrl;
+      emailDisplay.textContent = `Verification code sent to ${emailFromUrl}`;
+      localStorage.setItem('pending_verification_email', emailFromUrl);
+    } else if (emailFromStorage) {
+      emailInput.value = emailFromStorage;
+      emailDisplay.textContent = `Verification code sent to ${emailFromStorage}`;
+    }
+    
+    // Verification form submission
+    verifyForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = emailInput.value.trim();
+      const code = codeInput.value.trim();
+      
+      if (!email || !code) {
+        showError('Please enter both email and verification code');
+        return;
+      }
+      
+      if (code.length !== 6) {
+        showError('Verification code must be 6 digits');
+        return;
+      }
+      
+      // Show loading state
+      verifyButton.disabled = true;
+      verifyButtonText.textContent = 'Verifying...';
+      verifySpinner.classList.remove('hidden');
+      hideMessages();
+      
+      try {
+        const result = await AdminAuth.verifyEmail(email, code);
+        
+        // Success
+        showSuccess('Email verified successfully! Redirecting...');
+        
+        // Clear pending email from storage
+        localStorage.removeItem('pending_verification_email');
+        
+        // Redirect to login after delay
+        setTimeout(() => {
+          const currentLang = window.location.pathname.split('/')[1];
+          window.location.href = `/${currentLang}/login?verified=true`;
+        }, 2000);
+        
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Verification failed';
+        showError(message);
+      } finally {
+        // Reset button state
+        verifyButton.disabled = false;
+        verifyButtonText.textContent = 'Verify Email';
+        verifySpinner.classList.add('hidden');
+      }
+    });
+    
+    // Resend verification code
+    resendButton?.addEventListener('click', async () => {
+      const email = emailInput.value.trim();
+      
+      if (!email) {
+        showError('Please enter your email address');
+        return;
+      }
+      
+      try {
+        await AdminAuth.resendVerification(email);
+        showInfo('Verification code sent! Please check your email.');
+        startResendCountdown();
+        
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to resend code';
+        showError(message);
+      }
+    });
+    
+    // Auto-focus code input if email is prefilled
+    if (emailInput.value) {
+      codeInput?.focus();
+    } else {
+      emailInput?.focus();
+    }
+    
+    // Start countdown if we just came from registration
+    if (emailFromUrl) {
+      startResendCountdown();
+    }
+  });
+</script>

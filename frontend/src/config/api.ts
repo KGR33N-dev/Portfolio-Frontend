@@ -44,6 +44,8 @@ export const API_URLS = {
   login: () => `${API_CONFIG.auth}/login`,
   register: () => `${API_CONFIG.auth}/register`,
   verify: () => `${API_CONFIG.auth}/verify`,
+  verifyEmail: () => `${API_CONFIG.auth}/verify-email`,
+  resendVerification: () => `${API_CONFIG.auth}/resend-verification`,
   
   // Admin endpoints
   dashboard: () => `${API_CONFIG.admin}/dashboard`,

@@ -1,0 +1,103 @@
+---
+// Authentication button component - shows login/register or logout based on auth status
+---
+
+<div id="auth-button-main-container">
+  <!-- Login/Register button (shown when not authenticated) -->
+  <a
+    id="auth-main-login-btn"
+    href="#"
+    class="font-semibold btn-secondary md:px-6 ml-2 px-5.5 py-2.5 shadow-none text-sm w-auto inline-flex items-center justify-center rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition-colors duration-200"
+    rel="noopener noreferrer"
+    target="_self"
+  >
+    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+    </svg>
+    Login
+  </a>
+
+  <!-- Logout button (shown when authenticated) -->
+  <button
+    id="auth-main-logout-btn"
+    class="font-semibold btn-secondary md:px-6 ml-2 px-5.5 py-2.5 shadow-none text-sm w-auto inline-flex items-center justify-center rounded-lg bg-red-200 text-red-800 hover:bg-red-300 dark:bg-red-700 dark:text-red-200 dark:hover:bg-red-600 transition-colors duration-200"
+    style="display: none;"
+  >
+    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+    </svg>
+    Logout
+  </button>
+</div>
+
+<script>
+  function initAuthButton() {
+    // Check authentication status
+    const token = localStorage.getItem('admin_token');
+    const userStr = localStorage.getItem('admin_user');
+    let user: { is_admin?: boolean } | null = null;
+    
+    try {
+      user = userStr ? JSON.parse(userStr) : null;
+    } catch {
+      console.warn('Failed to parse admin user data');
+    }
+
+    const isAuthenticated = !!(token && user); // Any authenticated user, not just admins
+
+    // Get elements with new IDs
+    const loginBtn = document.getElementById('auth-main-login-btn') as HTMLAnchorElement;
+    const logoutBtn = document.getElementById('auth-main-logout-btn');
+
+    // Set login URL with current language
+    if (loginBtn) {
+      const currentLang = window.location.pathname.split('/')[1] || 'en';
+      loginBtn.href = `/${currentLang}/login`;
+    }
+
+    console.log('AuthButton init:', { isAuthenticated, loginBtn: !!loginBtn, logoutBtn: !!logoutBtn });
+
+    if (isAuthenticated) {
+      // Show logout button, hide login
+      if (loginBtn) loginBtn.style.display = 'none';
+      if (logoutBtn) logoutBtn.style.display = 'inline-flex';
+    } else {
+      // Show login button, hide logout
+      if (loginBtn) loginBtn.style.display = 'inline-flex';
+      if (logoutBtn) logoutBtn.style.display = 'none';
+    }
+
+    // Setup logout functionality (remove old listeners first)
+    if (logoutBtn) {
+      // Remove old listeners
+      const newLogoutBtn = logoutBtn.cloneNode(true);
+      logoutBtn.parentNode?.replaceChild(newLogoutBtn, logoutBtn);
+      
+      newLogoutBtn.addEventListener('click', () => {
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_user');
+        window.location.reload();
+      });
+    }
+  }
+
+  // Initialize on page load
+  document.addEventListener('DOMContentLoaded', initAuthButton);
+  
+  // Listen for navigation changes (for SPA routing)
+  document.addEventListener('astro:page-load', initAuthButton);
+  
+  // Listen for storage changes (if user logs in/out in another tab)
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'admin_token' || e.key === 'admin_user') {
+      initAuthButton();
+    }
+  });
+  
+  // Also initialize if this script runs after DOMContentLoaded
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAuthButton);
+  } else {
+    initAuthButton();
+  }
+</script>

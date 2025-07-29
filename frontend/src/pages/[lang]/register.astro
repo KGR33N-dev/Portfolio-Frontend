@@ -1,0 +1,421 @@
+---
+import Layout from '~/layouts/PageLayout.astro';
+import Headline from '~/components/ui/Headline.astro';
+import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
+import { useTranslations } from '~/i18n/utils';
+import { languages } from '~/i18n';
+
+export function getStaticPaths() {
+  return Object.keys(languages).map(lang => ({
+    params: { lang }
+  }));
+}
+
+const { lang } = Astro.params;
+const t = useTranslations(lang as keyof typeof languages);
+
+const metadata = {
+  title: t('auth.registerTitle'),
+  description: t('auth.registerSubtitle'),
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+---
+
+<Layout metadata={metadata}>
+  <WidgetWrapper 
+    id="register" 
+    containerClass="max-w-md mx-auto min-h-screen flex items-center"
+  >
+    <Fragment slot="bg">
+      <div class="absolute inset-0 bg-gray-50 dark:bg-gray-900"></div>
+    </Fragment>
+    
+    <div class="w-full space-y-8">
+      <Headline 
+        title={t('auth.registerTitle')}
+        subtitle={t('auth.registerSubtitle')}
+        classes={{
+          container: 'text-center',
+          title: 'text-3xl font-extrabold',
+          subtitle: 'text-sm text-gray-600 dark:text-gray-400'
+        }}
+      />
+      
+      <!-- Error Message -->
+      <div id="error-message" class="hidden bg-red-100 dark:bg-red-900/20 border border-red-400 text-red-700 dark:text-red-400 px-4 py-3 rounded">
+      </div>
+      
+      <!-- Success Message -->
+      <div id="success-message" class="hidden bg-green-100 dark:bg-green-900/20 border border-green-400 text-green-700 dark:text-green-400 px-4 py-3 rounded">
+      </div>
+      
+      <!-- Info Message -->
+      <div id="info-message" class="hidden bg-blue-100 dark:bg-blue-900/20 border border-blue-400 text-blue-700 dark:text-blue-400 px-4 py-3 rounded">
+      </div>
+      
+      <!-- Registration Form -->
+      <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <form id="register-form" class="space-y-6">
+          <div>
+            <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('auth.email')} <span class="text-red-500">*</span>
+            </label>
+            <input 
+              id="email" 
+              name="email" 
+              type="email" 
+              required 
+              autocomplete="email"
+              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+              placeholder={t('auth.emailPlaceholder')}
+            />
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('auth.emailHint')}</p>
+          </div>
+          
+          <div>
+            <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('auth.username')} <span class="text-red-500">*</span>
+            </label>
+            <input 
+              id="username" 
+              name="username" 
+              type="text" 
+              required 
+              autocomplete="username"
+              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+              placeholder={t('auth.usernamePlaceholder')}
+              pattern="[-a-zA-Z0-9_.]+"
+              minlength="3"
+              maxlength="30"
+            />
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('auth.usernameHint')}</p>
+          </div>
+          
+          <div>
+            <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('auth.password')} <span class="text-red-500">*</span>
+            </label>
+            <input 
+              id="password" 
+              name="password" 
+              type="password" 
+              required 
+              autocomplete="new-password"
+              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+              placeholder={t('auth.passwordPlaceholder')}
+              minlength="8"
+            />
+            <div id="password-strength" class="mt-2">
+              <div class="text-xs text-gray-500 dark:text-gray-400">
+                {t('auth.passwordRequirements')}:
+              </div>
+              <ul class="text-xs text-gray-500 dark:text-gray-400 mt-1 space-y-1">
+                <li id="length-check" class="flex items-center">
+                  <span class="w-4 h-4 mr-2">✗</span>
+                  {t('auth.passwordLength')}
+                </li>
+                <li id="uppercase-check" class="flex items-center">
+                  <span class="w-4 h-4 mr-2">✗</span>
+                  {t('auth.passwordUppercase')}
+                </li>
+                <li id="lowercase-check" class="flex items-center">
+                  <span class="w-4 h-4 mr-2">✗</span>
+                  {t('auth.passwordLowercase')}
+                </li>
+                <li id="number-check" class="flex items-center">
+                  <span class="w-4 h-4 mr-2">✗</span>
+                  {t('auth.passwordNumber')}
+                </li>
+              </ul>
+            </div>
+          </div>
+          
+          <div>
+            <label for="confirmPassword" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('auth.confirmPassword')} <span class="text-red-500">*</span>
+            </label>
+            <input 
+              id="confirmPassword" 
+              name="confirmPassword" 
+              type="password" 
+              required 
+              autocomplete="new-password"
+              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+              placeholder={t('auth.confirmPasswordPlaceholder')}
+            />
+          </div>
+          
+          <div>
+            <label for="fullName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('auth.fullName')}
+            </label>
+            <input 
+              id="fullName" 
+              name="fullName" 
+              type="text" 
+              autocomplete="name"
+              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+              placeholder={t('auth.fullNamePlaceholder')}
+              maxlength="100"
+            />
+          </div>
+          
+          <!-- Terms & Privacy -->
+          <div class="flex items-start">
+            <div class="flex items-center h-5">
+              <input 
+                id="terms" 
+                name="terms" 
+                type="checkbox" 
+                required
+                class="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-blue-300 dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-600 dark:ring-offset-gray-800"
+              />
+            </div>
+            <div class="ml-3 text-sm">
+              <label for="terms" class="text-gray-500 dark:text-gray-300">
+                {t('auth.agreeToTerms')} <a href={`/${lang}/terms`} class="text-blue-600 hover:underline dark:text-blue-500" target="_blank">{t('auth.termsOfService')}</a> {t('auth.and')} <a href={`/${lang}/privacy`} class="text-blue-600 hover:underline dark:text-blue-500" target="_blank">{t('auth.privacyPolicy')}</a>
+              </label>
+            </div>
+          </div>
+          
+          <div class="mt-6">
+            <button 
+              type="submit" 
+              id="register-button"
+              class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              disabled
+            >
+              <span id="button-text">{t('auth.registerButton')}</span>
+              <svg id="loading-spinner" class="hidden animate-spin -mr-1 ml-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </button>
+          </div>
+        </form>
+        
+        <div class="mt-6 text-center">
+          <p class="text-sm text-gray-600 dark:text-gray-400">
+            {t('auth.alreadyHaveAccount')} 
+            <a href={`/${lang}/login`} class="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 font-medium">
+              {t('auth.signInHere')}
+            </a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </WidgetWrapper>
+</Layout>
+
+<script>
+  import { AdminAuth } from '../../utils/adminAuth';
+  import { RateLimiter } from '../../utils/rateLimiter';
+  import { PasswordValidator } from '../../utils/passwordValidator';
+  
+  document.addEventListener('DOMContentLoaded', () => {
+    // Check if already logged in
+    if (AdminAuth.isAuthenticated()) {
+      const currentLang = window.location.pathname.split('/')[1];
+      const user = AdminAuth.getCurrentUser();
+      const redirectUrl = user?.is_admin 
+        ? `/${currentLang}/admin/dashboard` 
+        : `/${currentLang}/blog`;
+      window.location.href = redirectUrl;
+      return;
+    }
+    
+    const registerForm = document.getElementById('register-form') as HTMLFormElement;
+    const emailInput = document.getElementById('email') as HTMLInputElement;
+    const usernameInput = document.getElementById('username') as HTMLInputElement;
+    const passwordInput = document.getElementById('password') as HTMLInputElement;
+    const confirmPasswordInput = document.getElementById('confirmPassword') as HTMLInputElement;
+    const fullNameInput = document.getElementById('fullName') as HTMLInputElement;
+    const termsCheckbox = document.getElementById('terms') as HTMLInputElement;
+    const registerButton = document.getElementById('register-button') as HTMLButtonElement;
+    const buttonText = document.getElementById('button-text') as HTMLSpanElement;
+    const spinner = document.getElementById('loading-spinner') as HTMLElement;
+    const errorDiv = document.getElementById('error-message') as HTMLDivElement;
+    const successDiv = document.getElementById('success-message') as HTMLDivElement;
+    const infoDiv = document.getElementById('info-message') as HTMLDivElement;
+    
+    // Password strength indicators
+    const lengthCheck = document.getElementById('length-check');
+    const uppercaseCheck = document.getElementById('uppercase-check');
+    const lowercaseCheck = document.getElementById('lowercase-check');
+    const numberCheck = document.getElementById('number-check');
+    
+    function showError(message: string) {
+      errorDiv.textContent = message;
+      errorDiv.classList.remove('hidden');
+      successDiv.classList.add('hidden');
+      infoDiv.classList.add('hidden');
+    }
+    
+    function showSuccess(message: string) {
+      successDiv.textContent = message;
+      successDiv.classList.remove('hidden');
+      errorDiv.classList.add('hidden');
+      infoDiv.classList.add('hidden');
+    }
+    
+    function showInfo(message: string) {
+      infoDiv.textContent = message;
+      infoDiv.classList.remove('hidden');
+      errorDiv.classList.add('hidden');
+      successDiv.classList.add('hidden');
+    }
+    
+    function hideMessages() {
+      errorDiv.classList.add('hidden');
+      successDiv.classList.add('hidden');
+      infoDiv.classList.add('hidden');
+    }
+    
+    function updatePasswordStrength() {
+      const password = passwordInput.value;
+      const validation = PasswordValidator.validate(password);
+      
+      // Update basic requirements UI
+      if (lengthCheck) {
+        const hasLength = password.length >= 8;
+        lengthCheck.querySelector('span')!.textContent = hasLength ? '✓' : '✗';
+        lengthCheck.querySelector('span')!.className = hasLength ? 'w-4 h-4 mr-2 text-green-500' : 'w-4 h-4 mr-2 text-red-500';
+      }
+      
+      if (uppercaseCheck) {
+        const hasUppercase = /[A-Z]/.test(password);
+        uppercaseCheck.querySelector('span')!.textContent = hasUppercase ? '✓' : '✗';
+        uppercaseCheck.querySelector('span')!.className = hasUppercase ? 'w-4 h-4 mr-2 text-green-500' : 'w-4 h-4 mr-2 text-red-500';
+      }
+      
+      if (lowercaseCheck) {
+        const hasLowercase = /[a-z]/.test(password);
+        lowercaseCheck.querySelector('span')!.textContent = hasLowercase ? '✓' : '✗';
+        lowercaseCheck.querySelector('span')!.className = hasLowercase ? 'w-4 h-4 mr-2 text-green-500' : 'w-4 h-4 mr-2 text-red-500';
+      }
+      
+      if (numberCheck) {
+        const hasNumber = /\d/.test(password);
+        numberCheck.querySelector('span')!.textContent = hasNumber ? '✓' : '✗';
+        numberCheck.querySelector('span')!.className = hasNumber ? 'w-4 h-4 mr-2 text-green-500' : 'w-4 h-4 mr-2 text-red-500';
+      }
+      
+      // Update password field border based on strength
+      if (password.length > 0) {
+        const strengthColor = validation.strength === 'weak' ? '#ef4444' :
+                             validation.strength === 'medium' ? '#f59e0b' :
+                             validation.strength === 'strong' ? '#3b82f6' : '#10b981';
+        passwordInput.style.borderColor = strengthColor;
+      }
+      
+      return validation.isValid;
+    }
+    
+    function validateForm() {
+      const isPasswordStrong = updatePasswordStrength();
+      const passwordsMatch = passwordInput.value === confirmPasswordInput.value;
+      const termsAccepted = termsCheckbox.checked;
+      const emailValid = emailInput.validity.valid && emailInput.value.length > 0;
+      const usernameValid = usernameInput.validity.valid && usernameInput.value.length >= 3;
+      
+      const isValid = isPasswordStrong && passwordsMatch && termsAccepted && emailValid && usernameValid;
+      registerButton.disabled = !isValid;
+      
+      // Show password match indicator
+      if (confirmPasswordInput.value.length > 0) {
+        confirmPasswordInput.style.borderColor = passwordsMatch ? '#10b981' : '#ef4444';
+      }
+      
+      return isValid;
+    }
+    
+    // Event listeners for real-time validation
+    passwordInput?.addEventListener('input', validateForm);
+    confirmPasswordInput?.addEventListener('input', validateForm);
+    emailInput?.addEventListener('input', validateForm);
+    usernameInput?.addEventListener('input', validateForm);
+    termsCheckbox?.addEventListener('change', validateForm);
+    
+    registerForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      if (!validateForm()) {
+        showError('Please fix the errors above');
+        return;
+      }
+      
+      const email = emailInput.value.trim();
+      
+      // Check rate limit
+      const rateLimitResult = RateLimiter.checkLimit(email, 'REGISTER');
+      if (!rateLimitResult.allowed) {
+        const resetTimeStr = RateLimiter.formatResetTime(rateLimitResult.resetTime!);
+        showError(`Too many registration attempts. Please try again in ${resetTimeStr}.`);
+        return;
+      }
+      
+      // Show loading state
+      registerButton.disabled = true;
+      buttonText.textContent = 'Creating account...';
+      spinner.classList.remove('hidden');
+      hideMessages();
+      
+      try {
+        const username = usernameInput.value.trim();
+        const password = passwordInput.value;
+        const fullName = fullNameInput.value.trim();
+        
+        const userData = {
+          email,
+          username,
+          password,
+          full_name: fullName || null,
+          is_admin: false // Regular user registration
+        };
+        
+        await AdminAuth.register(userData);
+        
+        // Success - user needs to verify email
+        showSuccess('Account created! Please check your email for verification code.');
+        
+        // Clear rate limit on success
+        RateLimiter.clearLimit(email, 'REGISTER');
+        
+        // Store email for verification page
+        localStorage.setItem('pending_verification_email', email);
+        
+        // Clear form
+        registerForm.reset();
+        validateForm();
+        
+        // Redirect to verification page after delay
+        setTimeout(() => {
+          const currentLang = window.location.pathname.split('/')[1];
+          window.location.href = `/${currentLang}/verify-email?email=${encodeURIComponent(email)}`;
+        }, 2000);
+        
+      } catch (error) {
+        // Record failed attempt
+        RateLimiter.recordAttempt(email, 'REGISTER');
+        
+        const message = error instanceof Error ? error.message : 'Registration failed';
+        showError(message);
+      } finally {
+        // Reset button state
+        registerButton.disabled = false;
+        buttonText.textContent = 'Create Account';
+        spinner.classList.add('hidden');
+        validateForm(); // Re-enable if form is valid
+      }
+    });
+    
+    // Auto-focus email field
+    emailInput?.focus();
+    
+    // Initial validation
+    validateForm();
+  });
+</script>

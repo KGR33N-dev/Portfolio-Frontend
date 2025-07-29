@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Utils Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .pass { background-color: #d4edda; }
+        .fail { background-color: #f8d7da; }
+        input { padding: 10px; margin: 5px; width: 300px; }
+        button { padding: 10px 15px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Security Utils Test Page</h1>
+    
+    <!-- Password Validator Test -->
+    <div class="test">
+        <h2>Password Validator Test</h2>
+        <input type="password" id="testPassword" placeholder="Enter test password">
+        <button onclick="testPassword()">Test Password</button>
+        <div id="passwordResult"></div>
+    </div>
+    
+    <!-- Rate Limiter Test -->
+    <div class="test">
+        <h2>Rate Limiter Test</h2>
+        <input type="email" id="testEmail" placeholder="Enter test email">
+        <button onclick="testRateLimit()">Test Rate Limit</button>
+        <button onclick="clearRateLimit()">Clear Limits</button>
+        <div id="rateLimitResult"></div>
+    </div>
+    
+    <!-- User Input Sanitization Test -->
+    <div class="test">
+        <h2>Input Sanitization Test</h2>
+        <input type="text" id="testInput" placeholder="Enter text with special chars">
+        <button onclick="testSanitization()">Test Sanitization</button>
+        <div id="sanitizeResult"></div>
+    </div>
+
+    <script type="module">
+        // Import our utility modules
+        import { PasswordValidator } from '/src/utils/passwordValidator.ts';
+        import { RateLimiter } from '/src/utils/rateLimiter.ts';
+        
+        // Make them globally available for testing
+        window.PasswordValidator = PasswordValidator;
+        window.RateLimiter = RateLimiter;
+        
+        // Test functions
+        window.testPassword = function() {
+            const password = document.getElementById('testPassword').value;
+            const result = PasswordValidator.validate(password);
+            
+            document.getElementById('passwordResult').innerHTML = `
+                <h4>Password: "${password}"</h4>
+                <p><strong>Valid:</strong> ${result.isValid}</p>
+                <p><strong>Strength:</strong> ${result.strength} (${result.score}/100)</p>
+                <p><strong>Errors:</strong> ${result.errors.join(', ') || 'None'}</p>
+                <p><strong>Color:</strong> <span style="color: ${PasswordValidator.getStrengthColor(result.strength)}">${result.strength}</span></p>
+            `;
+        };
+        
+        window.testRateLimit = function() {
+            const email = document.getElementById('testEmail').value;
+            
+            // Test multiple attempts
+            const results = [];
+            for (let i = 0; i < 6; i++) {
+                const check = RateLimiter.checkLimit(email, 'LOGIN');
+                RateLimiter.recordAttempt(email, 'LOGIN');
+                results.push(`Attempt ${i + 1}: ${check.allowed ? 'ALLOWED' : 'BLOCKED'} (${check.attemptsLeft || 0} left)`);
+            }
+            
+            document.getElementById('rateLimitResult').innerHTML = `
+                <h4>Rate Limit Test for: ${email}</h4>
+                <ul>${results.map(r => `<li>${r}</li>`).join('')}</ul>
+            `;
+        };
+        
+        window.clearRateLimit = function() {
+            RateLimiter.clearAllLimits();
+            document.getElementById('rateLimitResult').innerHTML = '<p style="color: green;">All rate limits cleared!</p>';
+        };
+        
+        window.testSanitization = function() {
+            const input = document.getElementById('testInput').value;
+            
+            // Basic sanitization functions
+            const sanitizeEmail = (email) => email.toLowerCase().trim();
+            const sanitizeUsername = (username) => username.replace(/[^a-zA-Z0-9._-]/g, '').toLowerCase();
+            const sanitizeFullName = (name) => name.replace(/<[^>]*>/g, '').trim();
+            
+            document.getElementById('sanitizeResult').innerHTML = `
+                <h4>Input: "${input}"</h4>
+                <p><strong>As Email:</strong> "${sanitizeEmail(input)}"</p>
+                <p><strong>As Username:</strong> "${sanitizeUsername(input)}"</p>
+                <p><strong>As Full Name:</strong> "${sanitizeFullName(input)}"</p>
+            `;
+        };
+        
+        console.log('Security Utils Test Page Loaded');
+        console.log('PasswordValidator:', PasswordValidator);
+        console.log('RateLimiter:', RateLimiter);
+    </script>
+</body>
+</html>

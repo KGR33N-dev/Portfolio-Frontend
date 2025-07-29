@@ -14,6 +14,47 @@ interface LoginResponse {
   user: User;
 }
 
+interface RegisterRequest {
+  email: string;
+  username: string;
+  password: string;
+  full_name?: string | null;
+  is_admin?: boolean;
+}
+
+interface RegisterResponse {
+  success: boolean;
+  message: string;
+  data: {
+    email: string;
+    expires_in_minutes: number;
+    user_id: number;
+  };
+}
+
+interface VerifyEmailRequest {
+  email: string;
+  verification_code: string;
+}
+
+interface VerifyEmailResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    user: User;
+    access_token?: string;
+    token_type?: string;
+  };
+}
+
+interface ResendVerificationResponse {
+  success: boolean;
+  message: string;
+  data: {
+    expires_in_minutes: number;
+  };
+}
+
 interface BlogPost {
   id: number;
   title: string;
@@ -53,7 +94,16 @@ export class AdminAuth {
     const token = localStorage.getItem(this.TOKEN_KEY);
     const user = this.getUser();
     
-    return !!(token && user?.is_admin);
+    return !!(token && user);
+  }
+  
+  static isAdmin(): boolean {
+    const user = this.getUser();
+    return !!(user?.is_admin);
+  }
+  
+  static getCurrentUser(): User | null {
+    return this.getUser();
   }
   
   static getToken(): string | null {
@@ -73,16 +123,20 @@ export class AdminAuth {
     
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.USER_KEY);
-    window.location.href = '/admin/login';
+    window.location.href = '/login';
   }
   
-  static async login(email: string, password: string): Promise<LoginResponse> {
+  static async login(email: string, password: string): Promise<User> {
+    const formData = new URLSearchParams();
+    formData.append('username', email); // API expects 'username' field, not 'email'
+    formData.append('password', password);
+    
     const response = await fetch(API_URLS.login(), {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: JSON.stringify({ email, password }),
+      body: formData.toString(),
     });
     
     if (!response.ok) {
@@ -96,6 +150,60 @@ export class AdminAuth {
     localStorage.setItem(this.TOKEN_KEY, data.access_token);
     localStorage.setItem(this.USER_KEY, JSON.stringify(data.user));
     
+    return data.user;
+  }
+  
+  static async register(userData: RegisterRequest): Promise<RegisterResponse> {
+    const response = await fetch(API_URLS.register(), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(userData),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Registration failed');
+    }
+    
+    const data: RegisterResponse = await response.json();
+    return data;
+  }
+  
+  static async verifyEmail(email: string, code: string): Promise<VerifyEmailResponse> {
+    const response = await fetch(API_URLS.verifyEmail(), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, verification_code: code }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Email verification failed');
+    }
+    
+    const data: VerifyEmailResponse = await response.json();
+    return data;
+  }
+  
+  static async resendVerification(email: string): Promise<ResendVerificationResponse> {
+    const response = await fetch(API_URLS.resendVerification(), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Failed to resend verification');
+    }
+    
+    const data: ResendVerificationResponse = await response.json();
     return data;
   }
   
