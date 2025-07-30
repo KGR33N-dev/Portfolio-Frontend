@@ -1,0 +1,794 @@
+---
+import Layout from '~/layouts/PageLayout.astro';
+import Headline from '~/components/ui/Headline.astro';
+import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
+import { useTranslations } from '~/i18n/utils';
+import { languages } from '~/i18n';
+import { getFrontendUrl } from '~/config/api';
+
+export function getStaticPaths() {
+  return Object.keys(languages).map(lang => ({
+    params: { lang }
+  }));
+}
+
+const { lang } = Astro.params;
+const t = useTranslations(lang as keyof typeof languages);
+
+const metadata = {
+  title: t('admin.createPost'),
+  description: t('admin.blogManagement'),
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+---
+
+<Layout metadata={metadata}>
+  <WidgetWrapper 
+    id="create-post" 
+    containerClass="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8"
+  >
+    <!-- Header -->
+    <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 mb-8">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+        <div>
+          <Headline 
+            title={t('admin.createPost')}
+            subtitle={t('admin.blogManagement')}
+            classes={{
+              container: '',
+              title: 'text-2xl font-bold text-gray-900 dark:text-white',
+              subtitle: 'text-sm text-gray-600 dark:text-gray-400 mt-1'
+            }}
+          />
+        </div>
+        <a 
+          href={`/${lang}/admin/dashboard`}
+          class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200 font-medium"
+        >
+          ← Dashboard
+        </a>
+      </div>
+    </div>
+
+    <!-- Error/Success Messages -->
+    <div id="error-message" class="hidden bg-red-100 dark:bg-red-900/20 border border-red-400 text-red-700 dark:text-red-400 px-4 py-3 rounded mb-6">
+    </div>
+    
+    <div id="success-message" class="hidden bg-green-100 dark:bg-green-900/20 border border-green-400 text-green-700 dark:text-green-400 px-4 py-3 rounded mb-6">
+    </div>
+
+    <!-- Create Post Form -->
+    <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700">
+      <form id="create-post-form" class="p-6 space-y-6">
+        
+        <!-- Title -->
+        <div>
+          <label for="title" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {t('admin.postTitle')} *
+          </label>
+          <input 
+            id="title" 
+            name="title" 
+            type="text" 
+            required 
+            class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+            placeholder="Enter post title..."
+          />
+        </div>
+
+        <!-- Slug -->
+        <div>
+          <label for="slug" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {t('admin.postSlug')} *
+          </label>
+          <input 
+            id="slug" 
+            name="slug" 
+            type="text" 
+            required 
+            class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+            placeholder="post-url-slug"
+          />
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">URL-friendly version of the title (will be auto-generated)</p>
+        </div>
+
+        <!-- Category and Language Row -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('admin.postCategory')}
+            </label>
+            <select 
+              id="category" 
+              name="category" 
+              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+            >
+              <option value="">Select category...</option>
+              <option value="Programming">Programming</option>
+              <option value="Tutorial">Tutorial</option>
+              <option value="Technology">Technology</option>
+              <option value="Web Development">Web Development</option>
+              <option value="Backend">Backend</option>
+              <option value="Python">Python</option>
+              <option value="FastAPI">FastAPI</option>
+              <option value="Astro">Astro</option>
+              <option value="GameDev">GameDev</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="language" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('admin.postLanguage')}
+            </label>
+            <select 
+              id="language" 
+              name="language" 
+              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+            >
+              <option value="en" selected={lang === 'en'}>English</option>
+              <option value="pl" selected={lang === 'pl'}>Polski</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Featured Image -->
+        <div>
+          <label for="featured_image" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {t('admin.postImage')}
+          </label>
+          <input 
+            id="featured_image" 
+            name="featured_image" 
+            type="url" 
+            class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+            placeholder="https://example.com/image.jpg"
+          />
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">URL to the featured image for this post</p>
+        </div>
+
+        <!-- Tags -->
+        <div>
+          <label for="tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {t('admin.postTags')}
+          </label>
+          <input 
+            id="tags" 
+            name="tags" 
+            type="text" 
+            class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+            placeholder="python, fastapi, tutorial"
+          />
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Separate tags with commas</p>
+        </div>
+
+        <!-- Excerpt -->
+        <div>
+          <label for="excerpt" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {t('admin.postExcerpt')}
+          </label>
+          <textarea 
+            id="excerpt" 
+            name="excerpt" 
+            rows="3"
+            class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+            placeholder="Brief description of the post..."
+          ></textarea>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Short summary that will appear in blog listings</p>
+        </div>
+
+        <!-- Content -->
+        <div>
+          <label for="content" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {t('admin.postContent')} *
+          </label>
+          <div class="relative">
+            <textarea 
+              id="content" 
+              name="content" 
+              rows="20"
+              required
+              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors resize-y min-h-[500px]"
+              placeholder="Write your post content here... (Markdown supported)"
+            ></textarea>
+            <div class="absolute bottom-3 right-3 text-xs text-gray-400 dark:text-gray-500 bg-white dark:bg-slate-900 px-2 py-1 rounded">
+              Markdown supported
+            </div>
+          </div>
+        </div>
+
+        <!-- Meta fields -->
+        <details class="border border-gray-200 dark:border-gray-700 rounded-lg">
+          <summary class="px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 font-medium">
+            SEO Settings (Optional)
+          </summary>
+          <div class="px-4 pb-4 space-y-4">
+            <div>
+              <label for="meta_title" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Meta Title
+              </label>
+              <input 
+                id="meta_title" 
+                name="meta_title" 
+                type="text" 
+                class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                placeholder="SEO title (leave empty to use post title)"
+              />
+            </div>
+            
+            <div>
+              <label for="meta_description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Meta Description
+              </label>
+              <textarea 
+                id="meta_description" 
+                name="meta_description" 
+                rows="2"
+                class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                placeholder="SEO description (leave empty to use excerpt)"
+              ></textarea>
+            </div>
+          </div>
+        </details>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <!-- Debug button for testing backend connection -->
+          <button 
+            type="button" 
+            id="test-backend-btn"
+            class="px-4 py-2 text-sm bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
+          >
+            Test Backend Connection
+          </button>
+          
+          <button 
+            type="submit" 
+            id="save-draft-btn"
+            data-action="draft"
+            class="flex-1 flex items-center justify-center px-6 py-3 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+          >
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+            </svg>
+            <span id="draft-text">{t('admin.savePost')} ({t('admin.draft')})</span>
+          </button>
+          
+          <button 
+            type="submit" 
+            id="publish-btn"
+            data-action="publish"
+            class="flex-1 flex items-center justify-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+          >
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+            </svg>
+            <span id="publish-text">{t('admin.publishPost')}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Access Denied Message (hidden by default) -->
+    <div id="access-denied" class="hidden bg-red-100 dark:bg-red-900/20 border border-red-400 text-red-700 dark:text-red-400 px-6 py-4 rounded-lg text-center">
+      <h3 class="font-semibold text-lg mb-2">{t('admin.accessDenied')}</h3>
+      <p class="mb-4">You need to be logged in as an administrator to create posts.</p>
+      <a href={`/${lang}/login`} class="inline-block px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200">
+        Go to Login
+      </a>
+    </div>
+  </WidgetWrapper>
+</Layout>
+
+<script>
+  import { AdminAuth } from '../../../utils/adminAuth.js';
+  import { API_URLS, getFrontendUrl } from '../../../config/api.js';
+  
+  function initCreatePost() {
+    // Check authentication first
+    if (!AdminAuth.isAuthenticated()) {
+      const currentLang = window.location.pathname.split('/')[1];
+      window.location.href = `/${currentLang}/login`;
+      return;
+    }
+
+    // Check if user is admin
+    const user = AdminAuth.getCurrentUser();
+    if (!user?.is_admin) {
+      const accessDeniedDiv = document.getElementById('access-denied');
+      const createPostContent = document.getElementById('create-post');
+      
+      if (accessDeniedDiv) {
+        accessDeniedDiv.classList.remove('hidden');
+      }
+      if (createPostContent) {
+        createPostContent.style.display = 'none';
+      }
+      return;
+    }
+
+    const form = document.getElementById('create-post-form') as HTMLFormElement;
+    const titleInput = document.getElementById('title') as HTMLInputElement;
+    const slugInput = document.getElementById('slug') as HTMLInputElement;
+    const contentInput = document.getElementById('content') as HTMLTextAreaElement;
+    const categoryInput = document.getElementById('category') as HTMLSelectElement;
+    const languageInput = document.getElementById('language') as HTMLSelectElement;
+    const tagsInput = document.getElementById('tags') as HTMLInputElement;
+    const excerptInput = document.getElementById('excerpt') as HTMLTextAreaElement;
+    const metaTitleInput = document.getElementById('meta_title') as HTMLInputElement;
+    const metaDescriptionInput = document.getElementById('meta_description') as HTMLTextAreaElement;
+    
+    const saveDraftBtn = document.getElementById('save-draft-btn') as HTMLButtonElement;
+    const publishBtn = document.getElementById('publish-btn') as HTMLButtonElement;
+    const testBackendBtn = document.getElementById('test-backend-btn') as HTMLButtonElement;
+    const draftText = document.getElementById('draft-text') as HTMLSpanElement;
+    const publishText = document.getElementById('publish-text') as HTMLSpanElement;
+    
+    const errorDiv = document.getElementById('error-message') as HTMLDivElement;
+    const successDiv = document.getElementById('success-message') as HTMLDivElement;
+
+    // Auto-generate slug from title
+    titleInput?.addEventListener('input', () => {
+      const title = titleInput.value;
+      const slug = generateSlugFromTitle(title);
+      
+      if (slugInput) {
+        slugInput.value = slug;
+      }
+    });
+
+    // Utility function to generate slug
+    function generateSlugFromTitle(title: string): string {
+      const polishChars: { [key: string]: string } = {
+        'ą': 'a', 'ć': 'c', 'ę': 'e', 'ł': 'l', 'ń': 'n',
+        'ó': 'o', 'ś': 's', 'ź': 'z', 'ż': 'z'
+      };
+      
+      return title
+        .toLowerCase()
+        .trim()
+        // Replace Polish characters
+        .replace(/[ąćęłńóśźż]/g, (char) => polishChars[char] || char)
+        // Remove special characters except spaces and hyphens
+        .replace(/[^a-z0-9\s-]/g, '')
+        // Replace spaces with hyphens
+        .replace(/\s+/g, '-')
+        // Replace multiple hyphens with single hyphen
+        .replace(/-+/g, '-')
+        // Remove hyphens from start and end
+        .replace(/^-|-$/g, '');
+    }
+
+    // Function to generate unique slug with timestamp only when needed
+    function generateUniqueSlug(title: string): string {
+      const baseSlug = generateSlugFromTitle(title);
+      const timestamp = Date.now().toString().slice(-6);
+      return `${baseSlug}-${timestamp}`;
+    }
+
+    // Set default language
+    const currentLang = window.location.pathname.split('/')[1];
+    if (languageInput) {
+      languageInput.value = currentLang;
+    }
+
+    function showError(message: string) {
+      if (errorDiv) {
+        errorDiv.textContent = message;
+        errorDiv.classList.remove('hidden');
+      }
+      if (successDiv) {
+        successDiv.classList.add('hidden');
+      }
+    }
+
+    function showSuccess(message: string) {
+      if (successDiv) {
+        successDiv.textContent = message;
+        successDiv.classList.remove('hidden');
+      }
+      if (errorDiv) {
+        errorDiv.classList.add('hidden');
+      }
+    }
+
+    function hideMessages() {
+      if (errorDiv) errorDiv.classList.add('hidden');
+      if (successDiv) successDiv.classList.add('hidden');
+    }
+
+    // Test backend connection
+    async function testBackendConnection() {
+      hideMessages();
+      
+      try {
+        console.log('Testing backend connection...');
+        
+        // Test health endpoint
+        const healthResponse = await fetch('http://localhost:8000/api/health', {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Origin': getFrontendUrl()
+          }
+        });
+        
+        if (healthResponse.ok) {
+          const healthData = await healthResponse.json();
+          console.log('Health check passed:', healthData);
+          
+          // Test auth endpoint
+          const token = AdminAuth.getToken();
+          if (token) {
+            const authResponse = await fetch('http://localhost:8000/api/auth/me', {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json',
+                'Origin': getFrontendUrl()
+              }
+            });
+            
+            if (authResponse.ok) {
+              const userData = await authResponse.json();
+              console.log('Auth test passed:', userData);
+              
+              // Test blog endpoint access
+              const blogResponse = await fetch('http://localhost:8000/api/blog/', {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Accept': 'application/json',
+                  'Origin': getFrontendUrl()
+                }
+              });
+              
+              if (blogResponse.ok) {
+                const blogData = await blogResponse.json();
+                console.log('Blog API test passed:', blogData);
+                showSuccess(`✅ Backend fully operational!\n🏥 Health: ${healthData.status}\n👤 User: ${userData.email}\n📝 Blog API: ${blogData.total} posts found`);
+              } else {
+                throw new Error(`Blog API test failed: ${blogResponse.status}`);
+              }
+              
+            } else {
+              throw new Error(`Auth test failed: ${authResponse.status}`);
+            }
+          } else {
+            throw new Error('No auth token found');
+          }
+        } else {
+          throw new Error(`Health check failed: ${healthResponse.status}`);
+        }
+        
+      } catch (error) {
+        console.error('Backend test failed:', error);
+        let message = 'Backend connection test failed: ';
+        
+        if (error instanceof TypeError && error.message.includes('NetworkError')) {
+          message += 'Network error - check if backend is running on http://localhost:8000';
+        } else if (error instanceof Error) {
+          message += error.message;
+        } else {
+          message += 'Unknown error';
+        }
+        
+        showError(message);
+      }
+    }
+
+    // Flag to prevent concurrent submissions
+    let isSubmitting = false;
+
+    async function submitPost(isDraft: boolean) {
+      hideMessages();
+      
+      // Prevent concurrent submissions
+      if (isSubmitting) {
+        console.log('Submit already in progress, ignoring duplicate call');
+        return;
+      }
+      
+      isSubmitting = true;
+      
+      // Check authentication first
+      if (!AdminAuth.isAuthenticated()) {
+        showError('You must be logged in to create posts');
+        isSubmitting = false;
+        return;
+      }
+      
+      // Check if user is admin
+      const user = AdminAuth.getCurrentUser();
+      if (!user?.is_admin) {
+        showError('Only administrators can create blog posts');
+        isSubmitting = false;
+        return;
+      }
+      
+      // Initialize UI elements
+      const activeBtn = isDraft ? saveDraftBtn : publishBtn;
+      const activeText = isDraft ? draftText : publishText;
+      const originalText = activeText?.textContent || '';
+
+      try {
+        const token = AdminAuth.getToken();
+        console.log('Auth token:', token ? 'Token present' : 'No token found');
+        console.log('User is admin:', user?.is_admin);
+        console.log('User details:', user);
+        
+        // Show loading state
+        if (activeBtn) activeBtn.disabled = true;
+        if (activeText) activeText.textContent = 'Saving...';
+        // Validate required fields
+        if (!titleInput?.value.trim() || !contentInput?.value.trim()) {
+          throw new Error('Title and content are required');
+        }
+        
+        // Validate title length (from API docs)
+        if (titleInput.value.length > 200) {
+          throw new Error('Title cannot be longer than 200 characters');
+        }
+        
+        // Validate and generate slug
+        const slug = slugInput?.value.trim() || generateSlugFromTitle(titleInput.value.trim());
+        if (slug.length > 200) {
+          throw new Error('Slug cannot be longer than 200 characters');
+        }
+        if (!/^[a-z0-9-]+$/.test(slug)) {
+          throw new Error('Slug can only contain lowercase letters, numbers, and hyphens');
+        }
+        
+        // Validate language
+        const language = languageInput?.value || currentLang;
+        if (!['pl', 'en'].includes(language)) {
+          throw new Error('Language must be "pl" or "en"');
+        }
+        
+        // Validate and process tags (max 10 tags, each max 50 chars)
+        const tagsArray = tagsInput?.value 
+          ? tagsInput.value.split(',')
+              .map(tag => tag.trim())
+              .filter(tag => tag.length > 0)
+              .slice(0, 10)
+              .filter(tag => tag.length <= 50)
+          : [];
+
+        // Prepare post data according to API documentation
+        const authorName = user.username || user.full_name || user.email?.split('@')[0] || 'KGR33N';
+        console.log('User data for author:', { username: user.username, full_name: user.full_name, email: user.email, selectedAuthor: authorName });
+        
+        const postData = {
+          title: titleInput.value.trim(),
+          slug: slug,
+          content: contentInput.value.trim(),
+          excerpt: excerptInput?.value.trim() || '',
+          author: authorName, // Użyj nickname/full_name/część emaila przed @
+          meta_title: metaTitleInput?.value.trim() || '',
+          meta_description: metaDescriptionInput?.value.trim() || '',
+          language: language,
+          category: categoryInput?.value || 'general', // Zmieniono z 'programming' na 'general'
+          tags: tagsArray
+        };
+
+        console.log('Submitting post:', postData);
+        
+        console.log('API URL:', API_URLS.createPost());
+        console.log('Is draft mode:', isDraft);
+        
+        if (!token) {
+          throw new Error('No authentication token found. Please login again.');
+        }        console.log('Authorization header will be:', `Bearer ${token.substring(0, 20)}...`);
+
+        // Zawsze najpierw tworzymy post jako draft
+        const response = await fetch(API_URLS.createPost(), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'Origin': getFrontendUrl() // Używamy zmiennej środowiskowej
+          },
+          body: JSON.stringify(postData)
+        });
+
+        console.log('Response status:', response.status);
+        console.log('Response statusText:', response.statusText);
+
+        if (!response.ok) {
+          const contentType = response.headers.get('content-type');
+          let errorData;
+          
+          try {
+            if (contentType && contentType.includes('application/json')) {
+              errorData = await response.json();
+            } else {
+              errorData = { detail: await response.text() };
+            }
+          } catch (parseError) {
+            console.error('Failed to parse error response:', parseError);
+            errorData = { detail: `HTTP ${response.status}: ${response.statusText}` };
+          }
+          
+          console.error('Error response:', errorData);
+          
+          // Handle specific error cases
+          if (response.status === 401) {
+            throw new Error('Authentication failed. Please login again.');
+          } else if (response.status === 403) {
+            throw new Error('You do not have permission to create posts. Admin access required.');
+          } else if (response.status === 409) {
+            // Conflict - slug already exists, throw error with suggestion
+            const newSlug = generateUniqueSlug(titleInput.value.trim());
+            console.log(`Slug conflict detected. Suggested new slug: ${newSlug}`);
+            
+            // Update the form with suggested slug
+            if (slugInput) {
+              slugInput.value = newSlug;
+            }
+            
+            throw new Error(`A post with this slug already exists. A new unique slug has been generated: "${newSlug}". Please try saving again.`);
+          } else if (response.status === 422) {
+            const validationErrors = errorData.detail;
+            if (Array.isArray(validationErrors)) {
+              const errorMessages = validationErrors.map((err: { loc: string[]; msg: string }) => `${err.loc.join('.')}: ${err.msg}`);
+              throw new Error(`Validation errors: ${errorMessages.join(', ')}`);
+            } else {
+              throw new Error(errorData.detail || 'Validation failed');
+            }
+          } else if (response.status === 500) {
+            throw new Error('Server error occurred. Please check if the backend is running and try again.');
+          } else {
+            throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+          }
+        }
+
+        const result = await response.json();
+        console.log('Post created successfully:', result);
+
+        // Jeśli chcemy opublikować post (nie jest draft), wywołaj endpoint publikacji
+        if (!isDraft) {
+          try {
+            console.log('Publishing post...');
+            const publishResponse = await fetch(API_URLS.publishPost(result.id), {
+              method: 'PUT',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'Origin': getFrontendUrl()
+              },
+              body: JSON.stringify({})
+            });
+            
+            if (!publishResponse.ok) {
+              console.warn('Failed to publish post:', publishResponse.status);
+              const publishErrorData = await publishResponse.json().catch(() => ({ detail: 'Unknown publish error' }));
+              console.error('Publish error:', publishErrorData);
+              throw new Error(`Post created but failed to publish: ${publishErrorData.detail}`);
+            } else {
+              console.log('Post published successfully');
+            }
+          } catch (publishError) {
+            console.error('Error publishing post:', publishError);
+            throw new Error(`Post created successfully but failed to publish: ${publishError instanceof Error ? publishError.message : 'Unknown error'}`);
+          }
+        }
+
+        const successMessage = isDraft 
+          ? 'Post saved as draft successfully!' 
+          : 'Post published successfully!';
+        
+        showSuccess(successMessage);
+
+        // Reset form after success
+        setTimeout(() => {
+          form?.reset();
+          const currentLang = window.location.pathname.split('/')[1];
+          window.location.href = `/${currentLang}/admin/dashboard`;
+        }, 2000);
+
+      } catch (error) {
+        console.error('Error creating post:', error);
+        
+        let message = 'Failed to create post';
+        
+        if (error instanceof TypeError && error.message.includes('NetworkError')) {
+          message = 'Network error: Cannot connect to the backend server. Please check if the backend is running on http://localhost:8000 and has CORS properly configured.';
+        } else if (error instanceof TypeError && error.message.includes('fetch')) {
+          message = 'Connection error: Unable to reach the backend server. Please check your internet connection and backend status.';
+        } else if (error instanceof Error) {
+          message = error.message;
+        }
+        
+        showError(message);
+      } finally {
+        // Reset button state
+        if (activeBtn) activeBtn.disabled = false;
+        if (activeText) activeText.textContent = originalText;
+        
+        // Reset submission flag
+        isSubmitting = false;
+      }
+    }
+
+    // Form submission with duplicate prevention - use data attribute to prevent duplicate listeners
+    if (form && !form.dataset.listenerAdded) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const submitEvent = e as SubmitEvent;
+        
+        // Prevent double submission
+        const submitBtn = submitEvent.submitter as HTMLButtonElement;
+        if (submitBtn && submitBtn.disabled) {
+          console.log('Submit button already disabled, preventing duplicate submission');
+          return;
+        }
+        
+        const submitter = submitEvent.submitter as HTMLButtonElement;
+        const action = submitter?.dataset.action;
+        const isDraft = action === 'draft';
+        
+        await submitPost(isDraft);
+      });
+      
+      form.dataset.listenerAdded = 'true';
+    }
+
+    // Test backend button - use data attribute to prevent duplicate listeners
+    if (testBackendBtn && !testBackendBtn.dataset.listenerAdded) {
+      testBackendBtn.addEventListener('click', testBackendConnection);
+      testBackendBtn.dataset.listenerAdded = 'true';
+    }
+  }
+
+  // Prevent duplicate initialization
+  let isInitialized = false;
+  
+  function safeInit() {
+    if (!isInitialized) {
+      console.log('Initializing create post form for the first time');
+      initCreatePost();
+      isInitialized = true;
+    } else {
+      console.log('Form already initialized, skipping duplicate initialization');
+    }
+  }
+
+  // Initialize on page load and navigation
+  document.addEventListener('DOMContentLoaded', safeInit);
+  document.addEventListener('astro:page-load', safeInit);
+</script>
+
+<style>
+  /* Custom styles for the markdown editor */
+  #content {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  
+  /* Loading spinner for buttons */
+  .btn-loading {
+    position: relative;
+  }
+  
+  .btn-loading::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    to {
+      transform: translate(-50%, -50%) rotate(360deg);
+    }
+  }
+</style>

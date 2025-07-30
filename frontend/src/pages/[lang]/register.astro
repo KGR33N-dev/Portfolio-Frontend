@@ -215,7 +215,7 @@ const metadata = {
   import { RateLimiter } from '../../utils/rateLimiter';
   import { PasswordValidator } from '../../utils/passwordValidator';
   
-  document.addEventListener('DOMContentLoaded', () => {
+  function initRegisterPage() {
     // Check if already logged in
     if (AdminAuth.isAuthenticated()) {
       const currentLang = window.location.pathname.split('/')[1];
@@ -261,12 +261,13 @@ const metadata = {
       infoDiv.classList.add('hidden');
     }
     
-    function showInfo(message: string) {
-      infoDiv.textContent = message;
-      infoDiv.classList.remove('hidden');
-      errorDiv.classList.add('hidden');
-      successDiv.classList.add('hidden');
-    }
+    // function showInfo(message: string) {
+    //     infoMessage = message;
+    //     showInfoMessage = true;
+    //     setTimeout(() => {
+    //         showInfoMessage = false;
+    //     }, 3000);
+    // }
     
     function hideMessages() {
       errorDiv.classList.add('hidden');
@@ -417,5 +418,9 @@ const metadata = {
     
     // Initial validation
     validateForm();
-  });
+  }
+  
+  // Initialize on both DOMContentLoaded and astro:page-load
+  document.addEventListener('DOMContentLoaded', initRegisterPage);
+  document.addEventListener('astro:page-load', initRegisterPage);
 </script>

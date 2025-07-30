@@ -6,7 +6,7 @@ import ToggleMenu from '~/components/common/ToggleMenu.astro';
 import Button from '~/components/ui/Button.astro';
 import LanguageSwitcher from '~/components/LanguageSwitcher.astro';
 import CVDownload from '~/components/ui/CVDownload.astro';
-import AuthButton from '~/components/ui/AuthButton.astro';
+import ProfileDropdown from '~/components/ui/ProfileDropdown.astro';
 import { languages } from '~/i18n';
 
 import { trimSlash } from '~/utils/permalinks';
@@ -149,10 +149,10 @@ const isIndexPage = currentPath === '/pl' || currentPath === '/en' || currentPat
             </div>
           )}
           
-          <!-- Auth Button and controls - shown only on non-index pages -->
+          <!-- Profile Dropdown and controls - shown only on non-index pages -->
           {!isIndexPage && (
             <div class="flex items-center">
-              <AuthButton />
+              <ProfileDropdown />
               <div class="flex items-center border-l border-gray-200 dark:border-gray-700 pl-2 ml-2">
                 {
                   showLanguageSwitcher && (

@@ -4,6 +4,8 @@ import { API_CONFIG, API_URLS } from '~/config/api';
 interface User {
   id: number;
   email: string;
+  username?: string; // Dodajemy opcjonalne pole username
+  full_name?: string; // Dodajemy opcjonalne pole full_name
   is_admin: boolean;
   is_active: boolean;
 }
@@ -32,10 +34,10 @@ interface RegisterResponse {
   };
 }
 
-interface VerifyEmailRequest {
-  email: string;
-  verification_code: string;
-}
+// interface VerifyEmailRequest {
+//   email: string;
+//   code: string;
+// }
 
 interface VerifyEmailResponse {
   success: boolean;
@@ -135,6 +137,7 @@ export class AdminAuth {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
+        'Origin': 'http://localhost:4321',
       },
       body: formData.toString(),
     });

@@ -126,7 +126,7 @@ const metadata = {
 <script>
   import { AdminAuth } from '../../utils/adminAuth';
   
-  document.addEventListener('DOMContentLoaded', () => {
+  function initLoginPage() {
     // Check if already logged in
     if (AdminAuth.isAuthenticated()) {
       const currentLang = window.location.pathname.split('/')[1];
@@ -238,5 +238,9 @@ const metadata = {
     
     // Auto-focus email field
     emailInput?.focus();
-  });
+  }
+  
+  // Initialize on both DOMContentLoaded and astro:page-load
+  document.addEventListener('DOMContentLoaded', initLoginPage);
+  document.addEventListener('astro:page-load', initLoginPage);
 </script>

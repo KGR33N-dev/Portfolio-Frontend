@@ -1,0 +1,487 @@
+---
+import Layout from '~/layouts/PageLayout.astro';
+import Headline from '~/components/ui/Headline.astro';
+import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
+import { useTranslations } from '~/i18n/utils';
+import { languages } from '~/i18n';
+
+export function getStaticPaths() {
+  return Object.keys(languages).map(lang => ({
+    params: { lang }
+  }));
+}
+
+const { lang } = Astro.params;
+const t = useTranslations(lang as keyof typeof languages);
+
+const metadata = {
+  title: t('admin.dashboard'),
+  description: t('admin.blogManagement'),
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+---
+
+<Layout metadata={metadata}>
+  <WidgetWrapper 
+    id="admin-dashboard" 
+    containerClass="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8"
+  >
+    <!-- Header with title -->
+    <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 mb-8">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+        <div>
+          <Headline 
+            title={t('admin.dashboard')}
+            subtitle={t('admin.welcome')}
+            classes={{
+              container: '',
+              title: 'text-2xl font-bold text-gray-900 dark:text-white',
+              subtitle: 'text-sm text-gray-600 dark:text-gray-400 mt-1'
+            }}
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex items-center">
+          <div class="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+            <svg class="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-600 dark:text-gray-400">{t('admin.totalPosts')}</p>
+            <p id="total-posts" class="text-2xl font-bold text-gray-900 dark:text-white">-</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex items-center">
+          <div class="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+            <svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-600 dark:text-gray-400">{t('admin.publishedPosts')}</p>
+            <p id="published-posts" class="text-2xl font-bold text-gray-900 dark:text-white">-</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex items-center">
+          <div class="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
+            <svg class="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+            </svg>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-600 dark:text-gray-400">{t('admin.draftPosts')}</p>
+            <p id="draft-posts" class="text-2xl font-bold text-gray-900 dark:text-white">-</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      <!-- Quick Actions Panel -->
+      <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{t('admin.actions')}</h3>
+        </div>
+        <div class="p-6 space-y-4">
+          <button 
+            id="new-post-btn"
+            class="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+          >
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            {t('admin.newPost')}
+          </button>
+          
+          <button 
+            id="manage-posts-btn"
+            class="w-full flex items-center justify-center px-4 py-3 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+          >
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+            </svg>
+            {t('admin.managePosts')}
+          </button>
+          
+          <button 
+            id="settings-btn"
+            class="w-full flex items-center justify-center px-4 py-3 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+          >
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            {t('admin.settings')}
+          </button>
+        </div>
+      </div>
+
+      <!-- Recent Posts Panel -->
+      <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{t('admin.recentPosts')}</h3>
+        </div>
+        <div class="p-6">
+          <div id="recent-posts-list" class="space-y-4">
+            <!-- Recent posts will be loaded here dynamically -->
+            <div class="flex items-center justify-center py-8">
+              <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              <span class="ml-2 text-gray-600 dark:text-gray-400">Loading posts...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Draft Posts Panel -->
+      <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{t('admin.draftPosts')}</h3>
+        </div>
+        <div class="p-6">
+          <div id="draft-posts-list" class="space-y-4">
+            <!-- Draft posts will be loaded here dynamically -->
+            <div class="flex items-center justify-center py-8">
+              <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-600"></div>
+              <span class="ml-2 text-gray-600 dark:text-gray-400">Loading drafts...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- System Status -->
+    <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{t('admin.systemStatus')}</h3>
+      </div>
+      <div class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="flex items-center">
+            <div id="api-status-icon" class="w-3 h-3 rounded-full bg-gray-400 mr-2"></div>
+            <span class="text-sm text-gray-600 dark:text-gray-400">{t('admin.apiConnection')}: </span>
+            <span id="api-status-text" class="text-sm font-medium ml-1">{t('admin.checking')}</span>
+          </div>
+          <div class="flex items-center">
+            <div id="auth-status-icon" class="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+            <span class="text-sm text-gray-600 dark:text-gray-400">{t('admin.authentication')}: </span>
+            <span id="auth-status-text" class="text-sm font-medium text-green-600 ml-1">{t('admin.active')}</span>
+          </div>
+          <div class="flex items-center">
+            <div class="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>
+            <span class="text-sm text-gray-600 dark:text-gray-400">{t('admin.version')}: </span>
+            <span class="text-sm font-medium text-blue-600 ml-1">v1.0.0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Access Denied Message (hidden by default) -->
+    <div id="access-denied" class="hidden bg-red-100 dark:bg-red-900/20 border border-red-400 text-red-700 dark:text-red-400 px-6 py-4 rounded-lg text-center">
+      <h3 class="font-semibold text-lg mb-2">{t('admin.accessDenied')}</h3>
+      <p class="mb-4">You need to be logged in as an administrator to access this page.</p>
+      <a href={`/${lang}/login`} class="inline-block px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200">
+        Go to Login
+      </a>
+    </div>
+  </WidgetWrapper>
+</Layout>
+
+<script define:vars={{ 
+  translations: {
+    loadingPosts: t('admin.loadingPosts'),
+    loadingDrafts: t('admin.loadingDrafts'),
+    noPostsYet: t('admin.noPostsYet'),
+    noDraftPosts: t('admin.noDraftPosts'),
+    createFirstPost: t('admin.createFirstPost'),
+    createNewPost: t('admin.createNewPost'),
+    viewAllPosts: t('admin.viewAllPosts'),
+    errorLoadingData: t('admin.errorLoadingData'),
+    errorLoadingDrafts: t('admin.errorLoadingDrafts'),
+    checkApiServer: t('admin.checkApiServer'),
+    connected: t('admin.connected'),
+    disconnected: t('admin.disconnected'),
+    published: t('admin.published'),
+    draft: t('admin.draft'),
+    edit: t('admin.edit'),
+    created: t('admin.createdAt')
+  }
+}} type="module">
+  import { AdminAuth } from '../../../utils/adminAuth.js';
+  import { API_URLS } from '../../../config/api.js';
+  
+  function initAdminDashboard() {
+    // Check authentication first
+    if (!AdminAuth.isAuthenticated()) {
+      const currentLang = window.location.pathname.split('/')[1];
+      window.location.href = `/${currentLang}/login`;
+      return;
+    }
+
+    // Check if user is admin
+    const user = AdminAuth.getCurrentUser();
+    if (!user?.is_admin) {
+      const accessDeniedDiv = document.getElementById('access-denied');
+      const dashboardContent = document.getElementById('admin-dashboard');
+      
+      if (accessDeniedDiv) {
+        accessDeniedDiv.classList.remove('hidden');
+      }
+      if (dashboardContent) {
+        dashboardContent.style.display = 'none';
+      }
+      return;
+    }
+    const newPostBtn = document.getElementById('new-post-btn');
+    const managePostsBtn = document.getElementById('manage-posts-btn');
+    const settingsBtn = document.getElementById('settings-btn');
+    const accessDeniedDiv = document.getElementById('access-denied');
+    const dashboardContent = document.getElementById('admin-dashboard');
+
+    // Hide access denied message if authenticated
+    if (accessDeniedDiv) {
+      accessDeniedDiv.classList.add('hidden');
+    }
+
+    // Show dashboard content
+    if (dashboardContent) {
+      dashboardContent.classList.remove('hidden');
+    }
+
+    // Quick action buttons
+    newPostBtn?.addEventListener('click', () => {
+      // Redirect to create post page
+      const currentLang = window.location.pathname.split('/')[1];
+      window.location.href = `/${currentLang}/admin/create-post`;
+    });
+
+    managePostsBtn?.addEventListener('click', () => {
+      // Redirect to blog management page
+      const currentLang = window.location.pathname.split('/')[1];
+      window.location.href = `/${currentLang}/blog`;
+    });
+
+    settingsBtn?.addEventListener('click', () => {
+      alert('Settings panel will be implemented in the next update.');
+    });
+
+    // Load dashboard data
+    loadDashboardData();
+    checkSystemStatus();
+  }
+
+  async function loadDashboardData() {
+    try {
+      // Load all posts (including drafts) from admin API
+      const response = await fetch(API_URLS.getAdminPosts(), {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${AdminAuth.getToken()}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const posts = data.items || [];
+        
+        console.log(`Loaded ${posts.length} posts (including drafts) from admin API`);
+        
+        // Calculate statistics
+        const totalPosts = posts.length;
+        const publishedPosts = posts.filter((post) => post.is_published).length;
+        const draftPosts = totalPosts - publishedPosts;
+        
+        // Update statistics
+        const totalPostsEl = document.getElementById('total-posts');
+        const publishedPostsEl = document.getElementById('published-posts');
+        const draftPostsEl = document.getElementById('draft-posts');
+        const recentPostsEl = document.getElementById('recent-posts-list');
+
+        if (totalPostsEl) totalPostsEl.textContent = totalPosts.toString();
+        if (publishedPostsEl) publishedPostsEl.textContent = publishedPosts.toString();
+        if (draftPostsEl) draftPostsEl.textContent = draftPosts.toString();
+
+        // Load recent posts (real data)
+        if (recentPostsEl) {
+          const recentPosts = posts
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .slice(0, 5);
+
+          if (recentPosts.length > 0) {
+            recentPostsEl.innerHTML = `
+              <div class="space-y-3">
+                ${recentPosts.map((post) => `
+                  <div class="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-600 rounded-lg">
+                    <div>
+                      <h4 class="font-medium text-gray-900 dark:text-white">${post.title}</h4>
+                      <p class="text-sm text-gray-600 dark:text-gray-400">
+                        ${new Date(post.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <span class="px-2 py-1 text-xs font-medium ${post.is_published 
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' 
+                      : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+                    } rounded-full">
+                      ${post.is_published ? 'Published' : 'Draft'}
+                    </span>
+                  </div>
+                `).join('')}
+                <div class="text-center py-2">
+                  <a href="/${window.location.pathname.split('/')[1]}/blog" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium">
+                    View all posts →
+                  </a>
+                </div>
+              </div>
+            `;
+          } else {
+            recentPostsEl.innerHTML = `
+              <div class="text-center py-8">
+                <p class="text-gray-600 dark:text-gray-400">No posts yet</p>
+                <button onclick="window.location.href='/${window.location.pathname.split('/')[1]}/admin/create-post'" class="mt-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium">
+                  Create your first post →
+                </button>
+              </div>
+            `;
+          }
+        }
+
+        // Load draft posts
+        displayPostsList(posts);
+      } else {
+        throw new Error('Failed to fetch posts');
+      }
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      
+      // Fallback to static data
+      const totalPostsEl = document.getElementById('total-posts');
+      const publishedPostsEl = document.getElementById('published-posts');
+      const draftPostsEl = document.getElementById('draft-posts');
+      const recentPostsEl = document.getElementById('recent-posts-list');
+      const draftPostsListEl = document.getElementById('draft-posts-list');
+
+      if (totalPostsEl) totalPostsEl.textContent = '0';
+      if (publishedPostsEl) publishedPostsEl.textContent = '0';
+      if (draftPostsEl) draftPostsEl.textContent = '0';
+      
+      // Show error state
+      if (recentPostsEl) {
+        recentPostsEl.innerHTML = `
+          <div class="text-center py-8">
+            <p class="text-red-600 dark:text-red-400">Error loading data</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Make sure the API server is running</p>
+          </div>
+        `;
+      }
+
+      if (draftPostsListEl) {
+        draftPostsListEl.innerHTML = `
+          <div class="text-center py-8">
+            <p class="text-red-600 dark:text-red-400">Error loading drafts</p>
+          </div>
+        `;
+      }
+    }
+  }
+
+  function displayPostsList(posts) {
+    const draftPostsListEl = document.getElementById('draft-posts-list');
+    
+    if (!draftPostsListEl) return;
+
+    const draftPosts = posts.filter(post => !post.is_published);
+
+    if (draftPosts.length > 0) {
+      draftPostsListEl.innerHTML = `
+        <div class="space-y-3">
+          ${draftPosts.map(post => `
+            <div class="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-600 rounded-lg">
+              <div class="flex-1">
+                <h4 class="font-medium text-gray-900 dark:text-white">${post.title}</h4>
+                <p class="text-sm text-gray-600 dark:text-gray-400">
+                  Created: ${new Date(post.created_at).toLocaleDateString()}
+                </p>
+              </div>
+              <div class="flex items-center space-x-2">
+                <span class="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400 rounded-full">
+                  Draft
+                </span>
+                <button 
+                  onclick="window.location.href='/${window.location.pathname.split('/')[1]}/admin/edit-post?id=${post.id}'"
+                  class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium"
+                >
+                  Edit
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    } else {
+      draftPostsListEl.innerHTML = `
+        <div class="text-center py-8">
+          <p class="text-gray-600 dark:text-gray-400">No draft posts</p>
+          <button onclick="window.location.href='/${window.location.pathname.split('/')[1]}/admin/create-post'" class="mt-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium">
+            Create new post →
+          </button>
+        </div>
+      `;
+    }
+    }
+  }
+
+  async function checkSystemStatus() {
+    const apiStatusIcon = document.getElementById('api-status-icon');
+    const apiStatusText = document.getElementById('api-status-text');
+
+    try {
+      // Test API connection
+      const response = await fetch(API_URLS.health(), {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        if (apiStatusIcon) {
+          apiStatusIcon.className = 'w-3 h-3 rounded-full bg-green-500 mr-2';
+        }
+        if (apiStatusText) {
+          apiStatusText.textContent = 'Connected';
+          apiStatusText.className = 'text-sm font-medium text-green-600 ml-1';
+        }
+      } else {
+        throw new Error('API not responding');
+      }
+    } catch {
+      if (apiStatusIcon) {
+        apiStatusIcon.className = 'w-3 h-3 rounded-full bg-red-500 mr-2';
+      }
+      if (apiStatusText) {
+        apiStatusText.textContent = 'Disconnected';
+        apiStatusText.className = 'text-sm font-medium text-red-600 ml-1';
+      }
+    }
+  }
+
+  // Initialize on page load and navigation
+  document.addEventListener('DOMContentLoaded', initAdminDashboard);
+  document.addEventListener('astro:page-load', initAdminDashboard);
+</script>

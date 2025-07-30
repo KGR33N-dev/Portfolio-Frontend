@@ -26,6 +26,10 @@ export default defineConfig({
   output: 'static',
   trailingSlash: 'never',
   
+  devToolbar: {
+    enabled: false
+  },
+  
   i18n: {
     defaultLocale: 'en',
     locales: ['en', 'pl'],

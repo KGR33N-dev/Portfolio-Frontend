@@ -1,25 +1,15 @@
-// API Configuration
-// Zmień USE_LOCAL_API na true aby używać lokalnego backendu
-// Zmień na false aby używać backendu na EC2
-const USE_LOCAL_API = true; // Przełącznik: true = local, false = EC2
+// API Configuration - używa zmiennych środowiskowych
+const API_BASE_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000';
+const FRONTEND_URL = import.meta.env.PUBLIC_FRONTEND_URL || 'http://localhost:4321';
 
-const API_ENDPOINTS = {
-  local: {
-    baseUrl: 'http://localhost:8000',
-    blog: 'http://localhost:8000/api/blog',
-    auth: 'http://localhost:8000/api/auth',
-    admin: 'http://localhost:8000/api/admin'
-  },
-  production: {
-    baseUrl: 'http://51.20.78.79:8000',
-    blog: 'http://51.20.78.79:8000/api/blog',
-    auth: 'http://51.20.78.79:8000/api/auth',
-    admin: 'http://51.20.78.79:8000/api/admin'
-  }
+// Usuwamy stary system przełączania USE_LOCAL_API
+export const API_CONFIG = {
+  baseUrl: API_BASE_URL,
+  blog: `${API_BASE_URL}/api/blog`,
+  auth: `${API_BASE_URL}/api/auth`,
+  admin: `${API_BASE_URL}/api/admin`,
+  frontendUrl: FRONTEND_URL
 };
-
-// Automatyczny wybór endpointów na podstawie USE_LOCAL_API
-export const API_CONFIG = USE_LOCAL_API ? API_ENDPOINTS.local : API_ENDPOINTS.production;
 
 // Helper function do budowania URL-i
 export function getApiUrl(endpoint: keyof typeof API_CONFIG): string {
@@ -28,16 +18,25 @@ export function getApiUrl(endpoint: keyof typeof API_CONFIG): string {
 
 // Helper function do sprawdzania czy używamy lokalnego API
 export function isLocalApi(): boolean {
-  return USE_LOCAL_API;
+  return API_BASE_URL.includes('localhost') || API_BASE_URL.includes('127.0.0.1');
+}
+
+// Helper function do pobrania frontend URL (dla CORS)
+export function getFrontendUrl(): string {
+  return FRONTEND_URL;
 }
 
 // Helper function do budowania pełnych URL-i dla konkretnych endpointów
 export const API_URLS = {
+  // System endpoints
+  health: () => `${API_CONFIG.baseUrl}/api/health`,
+  
   // Blog endpoints
   getAllPosts: () => `${API_CONFIG.blog}/`,
   getPost: (id: number) => `${API_CONFIG.blog}/${id}`,
   createPost: () => `${API_CONFIG.blog}/`,
   updatePost: (id: number) => `${API_CONFIG.blog}/${id}`,
+  publishPost: (id: number) => `${API_CONFIG.blog}/${id}/publish`,
   deletePost: (id: number) => `${API_CONFIG.blog}/${id}`,
   
   // Auth endpoints
@@ -50,8 +49,13 @@ export const API_URLS = {
   // Admin endpoints
   dashboard: () => `${API_CONFIG.admin}/dashboard`,
   stats: () => `${API_CONFIG.admin}/stats`,
+  
+  // Admin blog endpoints (with access to drafts)
+  getAdminPosts: (params?: URLSearchParams) => `${API_CONFIG.blog}/admin/posts${params ? '?' + params.toString() : ''}`,
+  getAdminPost: (id: number) => `${API_CONFIG.blog}/admin/posts/${id}`,
 } as const;
 
 // Status dla debugowania
-console.log(`🔧 API Configuration: Using ${USE_LOCAL_API ? 'LOCAL' : 'PRODUCTION'} backend`);
+console.log(`🔧 API Configuration: Using ${isLocalApi() ? 'LOCAL' : 'PRODUCTION'} backend`);
 console.log(`📡 Base URL: ${API_CONFIG.baseUrl}`);
+console.log(`🌐 Frontend URL: ${API_CONFIG.frontendUrl}`);

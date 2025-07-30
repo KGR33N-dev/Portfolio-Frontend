@@ -1,4 +1,31 @@
-# Konfiguracja API - Przełączanie między lokalnym i zdalnym backendem
+# Konfiguracja API - Environment Variables
+
+## 🚀 Przegląd
+
+Projekt używa zmiennych środowiskowych do konfiguracji API, co pozwala na łatwe przełączanie między środowiskami deweloperskim a produkcyjnym.
+
+## 🔧 Konfiguracja Environment Variables
+
+### Plik `.env`
+
+```bash
+PUBLIC_API_URL=http://localhost:8000
+PUBLIC_FRONTEND_URL=http://localhost:4321
+```
+
+### Dostępne środowiska:
+
+**Lokalne (development):**
+```bash
+PUBLIC_API_URL=http://localhost:8000
+PUBLIC_FRONTEND_URL=http://localhost:4321
+```
+
+**Produkcyjne:**
+```bash
+PUBLIC_API_URL=http://51.20.78.79:8000
+PUBLIC_FRONTEND_URL=https://your-domain.com
+```
 
 ## 🚀 Szybkie przełączanie (NAJŁATWIEJSZE)
 
@@ -22,77 +49,88 @@ Po zmianie uruchom: `npm run build` lub `npm run dev`
 
 ## 🔧 Ręczne przełączanie
 
-Aby przełączyć między lokalnym a zdalnym backendem, edytuj plik:
-```
-src/config/api.ts
-```
+Edytuj plik `.env`:
 
-Zmień wartość `USE_LOCAL_API`:
-- `true` = lokalny backend (http://localhost:8000)
-- `false` = zdalny backend (http://51.20.78.79:8000)
-
-```typescript
-const USE_LOCAL_API = false; // Zmień na true aby używać lokalnego API
+### Lokalne API
+```bash
+PUBLIC_API_URL=http://localhost:8000
+PUBLIC_FRONTEND_URL=http://localhost:4321
 ```
 
-## Konfiguracja endpointów
-
-### Lokalny backend (developement)
-- Base URL: `http://localhost:8000`
-- Blog API: `http://localhost:8000/api/blog`
-- Auth API: `http://localhost:8000/api/auth`
-- Admin API: `http://localhost:8000/api/admin`
-
-### Zdalny backend (production - EC2)
-- Base URL: `http://51.20.78.79:8000`
-- Blog API: `http://51.20.78.79:8000/api/blog`
-- Auth API: `http://51.20.78.79:8000/api/auth`
-- Admin API: `http://51.20.78.79:8000/api/admin`
-
-## Status w konsoli
-
-Po zmianie konfiguracji zobaczysz w konsoli przeglądarki:
-```
-🔧 API Configuration: Using LOCAL backend
-📡 Base URL: http://localhost:8000
-```
-lub
-```
-🔧 API Configuration: Using PRODUCTION backend
-📡 Base URL: http://51.20.78.79:8000
+### Produkcyjne API
+```bash
+PUBLIC_API_URL=http://51.20.78.79:8000
+PUBLIC_FRONTEND_URL=https://your-domain.com
 ```
 
-## Pliki zaktualizowane
+## 📝 Development Workflow
 
-1. **src/config/api.ts** - główna konfiguracja API
-2. **src/utils/adminAuth.ts** - używa nowej konfiguracji
-3. **src/pages/[lang]/blog.astro** - strona bloga
-4. **src/pages/admin/posts/[id]/edit.astro** - edycja postów
-5. **src/pages/admin/posts/new.astro** - tworzenie postów
+### Praca lokalna:
+1. Uruchom backend FastAPI lokalnie
+2. Ustaw `PUBLIC_API_URL=http://localhost:8000` w `.env`
+3. Uruchom frontend: `npm run dev`
 
-## Jak testować lokalnie
+### Deploy na produkcję:
+1. Ustaw `PUBLIC_API_URL=http://51.20.78.79:8000` w `.env`
+2. Ustaw `PUBLIC_FRONTEND_URL=https://your-domain.com` w `.env`
+3. Build: `npm run build`
 
-1. Uruchom lokalny backend FastAPI na porcie 8000
-2. Zmień `USE_LOCAL_API = true` w `src/config/api.ts`
-3. Przebuduj projekt: `npm run build` lub `npm run dev`
-4. Sprawdź w konsoli przeglądarki, czy używany jest lokalny API
+## ⚠️ Ważne uwagi
 
-## Przywracanie produkcji
+- **Nigdy nie commituj** pliku `.env` z ustawieniami produkcyjnymi
+- Przed push'em sprawdź czy `.env` zawiera lokalne ustawienia
+- Użyj `.env.example` jako template dla nowych środowisk
+- Zmienne `PUBLIC_*` są dostępne w przeglądarce
 
-1. Zmień `USE_LOCAL_API = false` w `src/config/api.ts`
-2. Przebuduj projekt
-3. Sprawdź w konsoli, czy używany jest zdalny API
+## 🔍 Troubleshooting
 
-## Bezpieczeństwo
+### Problemy z CORS
+Sprawdź czy backend ma poprawnie skonfigurowane CORS origins.
 
-- Nigdy nie commituj z `USE_LOCAL_API = true` do głównej gałęzi
-- Lokalny backend powinien być używany tylko podczas developmentu
-- W produkcji zawsze używaj zdalnego backendu na EC2
+### API nie odpowiada
+1. Sprawdź czy backend jest uruchomiony
+2. Zweryfikuj URL w `.env`
+3. Sprawdź logi w konsoli przeglądarki
 
-## Debugowanie
+### Cache problemy
+Po zmianie `.env` wykonaj:
+```bash
+npm run build
+# lub
+rm -rf dist/ && npm run dev
+```
 
-Sprawdź w konsoli przeglądarki (F12):
-- Status połączenia z API
-- URL używanych endpointów
-- Odpowiedzi z serwera
-- Ewentualne błędy połączenia
+## 📋 Dostępne Backendy
+
+### 🏠 Lokalny Backend
+- **URL:** `http://localhost:8000`
+- **Wymaga:** Uruchomienie lokalnego serwera FastAPI
+- **Używany:** Podczas developmentu
+- **Dostęp:** Tylko z lokalnej maszyny
+
+### ☁️ Zdalny Backend (EC2)
+- **URL:** `http://51.20.78.79:8000` 
+- **Status:** Gotowy do użycia
+- **Używany:** Do testów i produkcji
+- **Dostęp:** Publiczny
+
+## 🔍 Debugging
+
+### Sprawdź aktualną konfigurację:
+```bash
+./switch-api.sh status
+```
+
+### Logi w konsoli:
+Po uruchomieniu zobaczysz w konsoli przeglądarki:
+```
+🔧 API Configuration: Using LOCAL/PRODUCTION backend
+📡 Base URL: http://localhost:8000 (lub 51.20.78.79:8000)
+🌐 Frontend URL: http://localhost:4321
+```
+
+### Problemy z CORS:
+Jeśli masz problemy z CORS, sprawdź:
+1. Czy backend jest uruchomiony
+2. Czy konfiguracja CORS w FastAPI zawiera frontend URL
+3. Czy używasz poprawnego portu

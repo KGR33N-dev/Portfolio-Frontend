@@ -1,13 +1,24 @@
 ---
 import { APP_BLOG } from 'astrowind:config';
-
+import { API_URLS } from '~/config/api';
 import Grid from '~/components/blog/Grid.astro';
-
-import { getBlogPermalink } from '~/utils/permalinks';
-import { findLatestPosts } from '~/utils/blog';
+import { getBlogPermalink, getPermalink } from '~/utils/permalinks';
 import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
-import type { Widget } from '~/types';
+import type { Widget, Post } from '~/types';
 import Button from '~/components/ui/Button.astro';
+
+interface BlogPost {
+  id: number;
+  title: string;
+  slug: string;
+  excerpt?: string;
+  content?: string;
+  published_at?: string;
+  tags?: string[];
+  category?: string;
+  featured_image?: string;
+  status?: string;
+}
 
 export interface Props extends Widget {
   title?: string;
@@ -30,7 +41,33 @@ const {
   bg = await Astro.slots.render('bg'),
 } = Astro.props;
 
-const posts = APP_BLOG.isEnabled ? await findLatestPosts({ count }) : [];
+let posts: Post[] = [];
+
+// Fetch latest posts from the API
+if (APP_BLOG.isEnabled) {
+  try {
+    const response = await fetch(`${API_URLS.getAllPosts()}?limit=${count}&sort=published_at&order=desc`);
+    if (response.ok) {
+      const data = await response.json();
+      const blogPosts: BlogPost[] = data.posts || [];
+      
+      // Transform API data to Post type
+      posts = blogPosts.map((blogPost: BlogPost) => ({
+        id: blogPost.id.toString(),
+        slug: blogPost.slug,
+        permalink: getPermalink(blogPost.slug, 'post'),
+        publishDate: blogPost.published_at ? new Date(blogPost.published_at) : new Date(),
+        title: blogPost.title,
+        excerpt: blogPost.excerpt,
+        image: blogPost.featured_image,
+        category: blogPost.category ? { slug: blogPost.category, title: blogPost.category } : undefined,
+        tags: blogPost.tags?.map(tag => ({ slug: tag, title: tag })) || [],
+      }));
+    }
+  } catch (error) {
+    console.error('Error fetching latest posts:', error);
+  }
+}
 ---
 
 {

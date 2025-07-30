@@ -3,34 +3,44 @@
 # Skrypt do przełączania między lokalnym a zdalnym API
 # Usage: ./switch-api.sh [local|remote|status]
 
-API_CONFIG_FILE="src/config/api.ts"
+ENV_FILE=".env"
 
-if [ ! -f "$API_CONFIG_FILE" ]; then
-    echo "❌ Plik konfiguracyjny nie istnieje: $API_CONFIG_FILE"
+if [ ! -f "$ENV_FILE" ]; then
+    echo "❌ Plik .env nie istnieje"
     exit 1
 fi
 
 function show_status() {
-    local line=$(grep "const USE_LOCAL_API = " "$API_CONFIG_FILE")
-    if [[ "$line" == *"= true"* ]]; then
-        echo "🔧 Aktualnie używany: LOKALNY backend (localhost:8000)"
+    local api_url=$(grep "^PUBLIC_API_URL=" "$ENV_FILE" | cut -d'=' -f2-)
+    local frontend_url=$(grep "^PUBLIC_FRONTEND_URL=" "$ENV_FILE" | cut -d'=' -f2-)
+    
+    echo "🔧 Aktualna konfiguracja:"
+    echo "📡 API URL: $api_url"
+    echo "🌐 Frontend URL: $frontend_url"
+    
+    if [[ "$api_url" == *"localhost"* ]]; then
+        echo "🏠 Tryb: LOKALNY"
     else
-        echo "🔧 Aktualnie używany: ZDALNY backend (EC2: 51.20.78.79:8000)"
+        echo "☁️ Tryb: PRODUKCYJNY"
     fi
 }
 
 function switch_to_local() {
-    sed -i 's/const USE_LOCAL_API = false;/const USE_LOCAL_API = true;/g' "$API_CONFIG_FILE"
+    sed -i 's|PUBLIC_API_URL=.*|PUBLIC_API_URL=http://localhost:8000|g' "$ENV_FILE"
+    sed -i 's|PUBLIC_FRONTEND_URL=.*|PUBLIC_FRONTEND_URL=http://localhost:4321|g' "$ENV_FILE"
     echo "✅ Przełączono na LOKALNY backend"
-    echo "📍 Backend URL: http://localhost:8000"
+    echo "📍 API URL: http://localhost:8000"
+    echo "🌐 Frontend URL: http://localhost:4321"
     echo "💡 Pamiętaj aby uruchomić lokalny serwer FastAPI!"
 }
 
 function switch_to_remote() {
-    sed -i 's/const USE_LOCAL_API = true;/const USE_LOCAL_API = false;/g' "$API_CONFIG_FILE"
+    sed -i 's|PUBLIC_API_URL=.*|PUBLIC_API_URL=http://51.20.78.79:8000|g' "$ENV_FILE"
+    sed -i 's|PUBLIC_FRONTEND_URL=.*|PUBLIC_FRONTEND_URL=https://your-domain.com|g' "$ENV_FILE"
     echo "✅ Przełączono na ZDALNY backend"
-    echo "📍 Backend URL: http://51.20.78.79:8000"
-    echo "🌐 Używa serwera na EC2"
+    echo "📍 API URL: http://51.20.78.79:8000"
+    echo "🌐 Frontend URL: https://your-domain.com"
+    echo "☁️ Używa serwera produkcyjnego"
 }
 
 case "$1" in

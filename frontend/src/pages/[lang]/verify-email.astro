@@ -149,7 +149,7 @@ const metadata = {
 <script>
   import { AdminAuth } from '../../utils/adminAuth';
   
-  document.addEventListener('DOMContentLoaded', () => {
+  function initVerifyEmailPage() {
     // Check if already logged in
     if (AdminAuth.isAuthenticated()) {
       const currentLang = window.location.pathname.split('/')[1];
@@ -177,7 +177,7 @@ const metadata = {
     const successDiv = document.getElementById('success-message') as HTMLDivElement;
     const infoDiv = document.getElementById('info-message') as HTMLDivElement;
     
-    let resendTimeout: NodeJS.Timeout | null = null;
+    // let resendTimeout: NodeJS.Timeout | null = null;
     let countdownInterval: NodeJS.Timeout | null = null;
     
     function showError(message: string) {
@@ -270,7 +270,7 @@ const metadata = {
       hideMessages();
       
       try {
-        const result = await AdminAuth.verifyEmail(email, code);
+        // const result = await AdminAuth.verifyEmail(email, code);
         
         // Success
         showSuccess('Email verified successfully! Redirecting...');
@@ -326,5 +326,9 @@ const metadata = {
     if (emailFromUrl) {
       startResendCountdown();
     }
-  });
+  }
+  
+  // Initialize on both DOMContentLoaded and astro:page-load
+  document.addEventListener('DOMContentLoaded', initVerifyEmailPage);
+  document.addEventListener('astro:page-load', initVerifyEmailPage);
 </script>
