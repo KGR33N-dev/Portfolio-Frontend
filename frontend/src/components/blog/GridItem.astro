@@ -1,37 +1,38 @@
 ---
-import { APP_BLOG } from 'astrowind:config';
-import type { Post } from '~/types';
-
+import type { Post } from '~/types/blog';
+import { useTranslations } from '~/i18n/utils';
+import { languages } from '~/i18n';
 import Image from '~/components/common/Image.astro';
-
 import { findImage } from '~/utils/images';
-import { getPermalink } from '~/utils/permalinks';
 
 export interface Props {
   post: Post;
+  lang?: string;
 }
 
-const { post } = Astro.props;
-const image = await findImage(post.image);
+const { post, lang = 'en' } = Astro.props;
+const t = useTranslations(lang as keyof typeof languages);
+const image = await findImage(post.featured_image);
 
-const link = APP_BLOG?.post?.isEnabled ? getPermalink(post.permalink, 'post') : '';
+// Use post.permalink directly from our types (which includes language)
+const link = post.permalink;
 ---
 
 <article
-  class="mb-6 transition intersect-once intersect-quarter motion-safe:md:opacity-0 motion-safe:md:intersect:animate-fade"
+  class="mb-6 transition intersect-once intersect-quarter motion-safe:md:opacity-0 motion-safe:md:intersect:animate-fade bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl hover:-translate-y-1 border border-gray-100 dark:border-gray-700"
 >
-  <div class="relative md:h-64 bg-gray-400 dark:bg-slate-700 rounded shadow-lg mb-6">
+  <div class="relative md:h-64 bg-gray-400 dark:bg-slate-700 rounded-t-xl shadow-lg mb-0">
     {
       image &&
         (link ? (
           <a href={link}>
             <Image
               src={image}
-              class="w-full md:h-full rounded shadow-lg bg-gray-400 dark:bg-slate-700"
+              class="w-full md:h-full rounded-t-xl shadow-lg bg-gray-400 dark:bg-slate-700 object-cover transition-transform duration-300 hover:scale-105"
               widths={[400, 900]}
               width={400}
               sizes="(max-width: 900px) 400px, 900px"
-              alt={post.title}
+              alt={post.currentTitle}
               aspectRatio="16:9"
               layout="cover"
               loading="lazy"
@@ -41,11 +42,11 @@ const link = APP_BLOG?.post?.isEnabled ? getPermalink(post.permalink, 'post') : 
         ) : (
           <Image
             src={image}
-            class="w-full md:h-full rounded shadow-lg bg-gray-400 dark:bg-slate-700"
+            class="w-full md:h-full rounded-t-xl shadow-lg bg-gray-400 dark:bg-slate-700 object-cover"
             widths={[400, 900]}
             width={400}
             sizes="(max-width: 900px) 400px, 900px"
-            alt={post.title}
+            alt={post.currentTitle}
             aspectRatio="16:9"
             layout="cover"
             loading="lazy"
@@ -55,17 +56,91 @@ const link = APP_BLOG?.post?.isEnabled ? getPermalink(post.permalink, 'post') : 
     }
   </div>
 
-  <h3 class="text-xl sm:text-2xl font-bold leading-tight mb-2 font-heading dark:text-slate-300">
-    {
-      link ? (
-        <a class="inline-block hover:text-primary dark:hover:text-blue-700 transition ease-in duration-200" href={link}>
-          {post.title}
-        </a>
-      ) : (
-        post.title
-      )
-    }
-  </h3>
+  <div class="p-6">
+    <!-- Category and Date -->
+    <div class="flex items-center gap-3 mb-4">
+      {post.category && (
+        <span class="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-3 py-1 rounded-full">
+          {post.category}
+        </span>
+      )}
+      <time class="text-xs text-gray-500 dark:text-gray-400 flex items-center">
+        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
+        </svg>
+        {new Date(post.publishDate).toLocaleDateString(lang === 'pl' ? 'pl-PL' : 'en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        })}
+      </time>
+    </div>
 
-  <p class="text-muted dark:text-slate-400 text-lg">{post.excerpt}</p>
+    <!-- Title -->
+    <h3 class="text-xl sm:text-2xl font-bold leading-tight mb-2 font-heading dark:text-slate-300">
+      {
+        link ? (
+          <a class="inline-block hover:text-primary dark:hover:text-blue-700 transition ease-in duration-200" href={link}>
+            {post.currentTitle}
+          </a>
+        ) : (
+          post.currentTitle
+        )
+      }
+    </h3>
+
+    <!-- Excerpt -->
+    <p class="text-muted dark:text-slate-400 text-lg mb-4 line-clamp-3 leading-relaxed">
+      {post.currentExcerpt}
+    </p>
+
+    <!-- Tags -->
+    {post.tags && post.tags.length > 0 && (
+      <div class="flex flex-wrap gap-2 mb-4">
+        {post.tags.slice(0, 3).map((tag) => (
+          <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded">
+            #{tag}
+          </span>
+        ))}
+        {post.tags.length > 3 && (
+          <span class="text-xs text-gray-500 dark:text-gray-400">
+            +{post.tags.length - 3} {t('blog.more')}
+          </span>
+        )}
+      </div>
+    )}
+
+    <!-- Footer -->
+    <div class="flex items-center justify-between">
+      {link && (
+        <a 
+          href={link}
+          class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 font-semibold transition-colors group"
+        >
+          {t('blog.readMore')}
+          <svg class="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
+      )}
+      
+      {post.readingTime && (
+        <div class="flex items-center text-xs text-gray-500 dark:text-gray-400">
+          <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+          </svg>
+          {post.readingTime} {t('blog.readTime')}
+        </div>
+      )}
+    </div>
+  </div>
 </article>
+
+<style>
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+</style>

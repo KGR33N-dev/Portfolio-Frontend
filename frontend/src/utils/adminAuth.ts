@@ -1,4 +1,5 @@
 import { API_CONFIG, API_URLS } from '~/config/api';
+import type { CreatePostData, ApiPost } from '~/types/blog';
 
 // Types for better TypeScript support
 interface User {
@@ -57,34 +58,6 @@ interface ResendVerificationResponse {
   };
 }
 
-interface BlogPost {
-  id: number;
-  title: string;
-  slug: string;
-  content: string;
-  excerpt?: string;
-  author?: string;
-  category?: string;
-  tags?: string[];
-  featured_image?: string;
-  language: string;
-  is_published: boolean;
-  created_at: string;
-  updated_at?: string;
-}
-
-interface BlogPostCreate {
-  title: string;
-  slug: string;
-  content: string;
-  excerpt?: string;
-  category?: string;
-  tags?: string[];
-  featured_image?: string;
-  language: string;
-  is_published: boolean;
-}
-
 // Frontend Security Utils
 export class AdminAuth {
   private static readonly TOKEN_KEY = 'admin_token';
@@ -125,7 +98,10 @@ export class AdminAuth {
     
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.USER_KEY);
-    window.location.href = '/login';
+    
+    // Get current language from URL
+    const currentLang = window.location.pathname.split('/')[1] || 'en';
+    window.location.href = `/${currentLang}/login`;
   }
   
   static async login(email: string, password: string): Promise<User> {
@@ -254,7 +230,7 @@ export class AdminAuth {
 
 // API Client for Blog Management
 export class BlogAPI {
-  static async createPost(postData: BlogPostCreate): Promise<BlogPost> {
+  static async createPost(postData: CreatePostData): Promise<ApiPost> {
     const response = await AdminAuth.makeAuthenticatedRequest(
       API_URLS.createPost(),
       {
@@ -264,13 +240,14 @@ export class BlogAPI {
     );
     
     if (!response.ok) {
-      throw new Error('Failed to create post');
+      const errorData = await response.text();
+      throw new Error(`Failed to create post: ${errorData}`);
     }
     
     return response.json();
   }
   
-  static async updatePost(postId: number, postData: Partial<BlogPostCreate>): Promise<BlogPost> {
+  static async updatePost(postId: number, postData: Partial<CreatePostData>): Promise<ApiPost> {
     const response = await AdminAuth.makeAuthenticatedRequest(
       API_URLS.updatePost(postId),
       {
@@ -280,7 +257,40 @@ export class BlogAPI {
     );
     
     if (!response.ok) {
-      throw new Error('Failed to update post');
+      const errorData = await response.text();
+      throw new Error(`Failed to update post: ${errorData}`);
+    }
+    
+    return response.json();
+  }
+  
+  static async publishPost(postId: number): Promise<ApiPost> {
+    const response = await AdminAuth.makeAuthenticatedRequest(
+      API_URLS.publishPost(postId),
+      {
+        method: 'PUT',
+      }
+    );
+    
+    if (!response.ok) {
+      const errorData = await response.text();
+      throw new Error(`Failed to publish post: ${errorData}`);
+    }
+    
+    return response.json();
+  }
+  
+  static async unpublishPost(postId: number): Promise<ApiPost> {
+    const response = await AdminAuth.makeAuthenticatedRequest(
+      API_URLS.unpublishPost(postId),
+      {
+        method: 'PUT',
+      }
+    );
+    
+    if (!response.ok) {
+      const errorData = await response.text();
+      throw new Error(`Failed to unpublish post: ${errorData}`);
     }
     
     return response.json();
@@ -295,21 +305,82 @@ export class BlogAPI {
     );
     
     if (!response.ok) {
-      throw new Error('Failed to delete post');
+      const errorData = await response.text();
+      throw new Error(`Failed to delete post: ${errorData}`);
     }
   }
   
-  static async getAllPosts(includeUnpublished = true): Promise<BlogPost[]> {
-    const response = await AdminAuth.makeAuthenticatedRequest(
-      `${API_URLS.getAllPosts()}?include_unpublished=${includeUnpublished}`
-    );
+  static async getAllPosts(params?: { status?: 'all' | 'published' | 'draft' }): Promise<ApiPost[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.status && params.status !== 'all') {
+      if (params.status === 'published') {
+        queryParams.append('published', 'true');
+      } else if (params.status === 'draft') {
+        queryParams.append('published', 'false');
+      }
+    }
+    
+    const url = params ? `${API_URLS.getAdminPosts()}?${queryParams.toString()}` : API_URLS.getAdminPosts();
+    const response = await AdminAuth.makeAuthenticatedRequest(url);
     
     if (!response.ok) {
-      throw new Error('Failed to fetch posts');
+      const errorData = await response.text();
+      throw new Error(`Failed to fetch posts: ${errorData}`);
     }
     
     const data = await response.json();
     return data.items || data; // Handle both paginated and simple array responses
+  }
+  
+  // Helper function to create a sample multilingual post
+  static async createSamplePost(): Promise<ApiPost> {
+    const samplePostData: CreatePostData = {
+      slug: 'sample-multilingual-post',
+      author: 'KGR33N',
+      category: 'gamedev',
+      featured_image: 'https://via.placeholder.com/800x400/4f46e5/ffffff?text=Sample+Post',
+      tags: ['javascript', 'astro', 'multilingual'],
+      translations: [
+        {
+          language_code: 'en',
+          title: 'Welcome to the new multilingual blog!',
+          content: `# Welcome to our new multilingual blog system!
+
+This is a sample post to demonstrate the new multilingual functionality. You can now create posts in multiple languages and display them based on the user's language preference.
+
+## Features:
+- **Multilingual support**: Posts can have translations in multiple languages
+- **Language detection**: Automatic language detection and fallback
+- **SEO optimization**: Meta titles and descriptions per language
+- **Easy management**: Create and manage translations from the admin panel
+
+This post demonstrates how the new system works. You can edit this post or create new ones from the admin dashboard.`,
+          excerpt: 'A sample post demonstrating the new multilingual blog functionality.',
+          meta_title: 'Welcome to Multilingual Blog - Sample Post',
+          meta_description: 'Discover how our new multilingual blog system works with this sample post.'
+        },
+        {
+          language_code: 'pl',
+          title: 'Witamy w nowym wielojęzycznym blogu!',
+          content: `# Witamy w naszym nowym wielojęzycznym systemie blogowym!
+
+To jest przykładowy post demonstrujący nową funkcjonalność wielojęzyczną. Teraz możesz tworzyć posty w wielu językach i wyświetlać je na podstawie preferencji językowych użytkownika.
+
+## Funkcje:
+- **Wsparcie wielojęzyczne**: Posty mogą mieć tłumaczenia w wielu językach
+- **Wykrywanie języka**: Automatyczne wykrywanie języka i fallback
+- **Optymalizacja SEO**: Meta tytuły i opisy dla każdego języka
+- **Łatwe zarządzanie**: Tworzenie i zarządzanie tłumaczeniami z panelu admina
+
+Ten post pokazuje jak działa nowy system. Możesz edytować ten post lub utworzyć nowe z panelu administracyjnego.`,
+          excerpt: 'Przykładowy post demonstrujący nową funkcjonalność wielojęzycznego bloga.',
+          meta_title: 'Witamy w Wielojęzycznym Blogu - Przykładowy Post',
+          meta_description: 'Odkryj jak działa nasz nowy wielojęzyczny system blogowy dzięki temu przykładowemu postowi.'
+        }
+      ]
+    };
+    
+    return this.createPost(samplePostData);
   }
   
   static async getCategories(): Promise<string[]> {
@@ -352,4 +423,9 @@ export class BlogAPI {
     const data = await response.json();
     return data.url;
   }
+}
+
+// Make AdminAuth available globally for script tags
+if (typeof window !== 'undefined') {
+  (window as typeof window & { AdminAuth: typeof AdminAuth }).AdminAuth = AdminAuth;
 }

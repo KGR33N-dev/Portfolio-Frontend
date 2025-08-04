@@ -64,174 +64,218 @@ const metadata = {
     <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700">
       <form id="create-post-form" class="p-6 space-y-6">
         
-        <!-- Title -->
-        <div>
-          <label for="title" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {t('admin.postTitle')} *
-          </label>
-          <input 
-            id="title" 
-            name="title" 
-            type="text" 
-            required 
-            class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
-            placeholder="Enter post title..."
-          />
-        </div>
-
-        <!-- Slug -->
-        <div>
-          <label for="slug" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {t('admin.postSlug')} *
-          </label>
-          <input 
-            id="slug" 
-            name="slug" 
-            type="text" 
-            required 
-            class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
-            placeholder="post-url-slug"
-          />
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">URL-friendly version of the title (will be auto-generated)</p>
-        </div>
-
-        <!-- Category and Language Row -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('admin.postCategory')}
+        <!-- General Post Settings -->
+        <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{t('admin.generalSettings')}</h3>
+          
+          <!-- Slug -->
+          <div class="mb-6">
+            <label for="slug" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('admin.postSlugRequired')}
             </label>
-            <select 
-              id="category" 
-              name="category" 
+            <input 
+              id="slug" 
+              name="slug" 
+              type="text" 
+              required 
               class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
-            >
-              <option value="">Select category...</option>
-              <option value="Programming">Programming</option>
-              <option value="Tutorial">Tutorial</option>
-              <option value="Technology">Technology</option>
-              <option value="Web Development">Web Development</option>
-              <option value="Backend">Backend</option>
-              <option value="Python">Python</option>
-              <option value="FastAPI">FastAPI</option>
-              <option value="Astro">Astro</option>
-              <option value="GameDev">GameDev</option>
-            </select>
+              placeholder={t('admin.postSlugPlaceholder')}
+            />
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('admin.urlSlugDescription')}</p>
           </div>
 
-          <div>
-            <label for="language" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('admin.postLanguage')}
-            </label>
-            <select 
-              id="language" 
-              name="language" 
-              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
-            >
-              <option value="en" selected={lang === 'en'}>English</option>
-              <option value="pl" selected={lang === 'pl'}>Polski</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Featured Image -->
-        <div>
-          <label for="featured_image" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {t('admin.postImage')}
-          </label>
-          <input 
-            id="featured_image" 
-            name="featured_image" 
-            type="url" 
-            class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
-            placeholder="https://example.com/image.jpg"
-          />
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">URL to the featured image for this post</p>
-        </div>
-
-        <!-- Tags -->
-        <div>
-          <label for="tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {t('admin.postTags')}
-          </label>
-          <input 
-            id="tags" 
-            name="tags" 
-            type="text" 
-            class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
-            placeholder="python, fastapi, tutorial"
-          />
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Separate tags with commas</p>
-        </div>
-
-        <!-- Excerpt -->
-        <div>
-          <label for="excerpt" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {t('admin.postExcerpt')}
-          </label>
-          <textarea 
-            id="excerpt" 
-            name="excerpt" 
-            rows="3"
-            class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
-            placeholder="Brief description of the post..."
-          ></textarea>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Short summary that will appear in blog listings</p>
-        </div>
-
-        <!-- Content -->
-        <div>
-          <label for="content" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {t('admin.postContent')} *
-          </label>
-          <div class="relative">
-            <textarea 
-              id="content" 
-              name="content" 
-              rows="20"
-              required
-              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors resize-y min-h-[500px]"
-              placeholder="Write your post content here... (Markdown supported)"
-            ></textarea>
-            <div class="absolute bottom-3 right-3 text-xs text-gray-400 dark:text-gray-500 bg-white dark:bg-slate-900 px-2 py-1 rounded">
-              Markdown supported
-            </div>
-          </div>
-        </div>
-
-        <!-- Meta fields -->
-        <details class="border border-gray-200 dark:border-gray-700 rounded-lg">
-          <summary class="px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 font-medium">
-            SEO Settings (Optional)
-          </summary>
-          <div class="px-4 pb-4 space-y-4">
+          <!-- Author and Category Row -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
-              <label for="meta_title" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Meta Title
+              <label for="author" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t('admin.author')}
               </label>
               <input 
-                id="meta_title" 
-                name="meta_title" 
+                id="author" 
+                name="author" 
                 type="text" 
                 class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
-                placeholder="SEO title (leave empty to use post title)"
+                placeholder={t('admin.authorPlaceholder')}
               />
             </div>
-            
+
             <div>
-              <label for="meta_description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Meta Description
+              <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t('admin.category')}
               </label>
-              <textarea 
-                id="meta_description" 
-                name="meta_description" 
-                rows="2"
+              <select 
+                id="category" 
+                name="category" 
                 class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
-                placeholder="SEO description (leave empty to use excerpt)"
-              ></textarea>
+              >
+                <option value="">{t('admin.selectCategory')}</option>
+                <option value="programming">Programming</option>
+                <option value="tutorial">Tutorial</option>
+                <option value="technology">Technology</option>
+                <option value="web-development">Web Development</option>
+                <option value="backend">Backend</option>
+                <option value="python">Python</option>
+                <option value="fastapi">FastAPI</option>
+                <option value="astro">Astro</option>
+                <option value="gamedev">GameDev</option>
+                <option value="general">General</option>
+              </select>
             </div>
           </div>
-        </details>
+
+          <!-- Featured Image -->
+          <div class="mb-6">
+            <label for="featured_image" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('admin.featuredImage')}
+            </label>
+            <input 
+              id="featured_image" 
+              name="featured_image" 
+              type="url" 
+              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+              placeholder={t('admin.imageUrlPlaceholder')}
+            />
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('admin.featuredImageDescription')}</p>
+          </div>
+
+          <!-- Tags -->
+          <div>
+            <label for="tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('admin.postTags')}
+            </label>
+            <input 
+              id="tags" 
+              name="tags" 
+              type="text" 
+              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+              placeholder={t('admin.tagsPlaceholder')}
+            />
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('admin.separateTagsComma')}</p>
+          </div>
+        </div>
+
+        <!-- Translation Management -->
+        <div>
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{t('admin.translations')}</h3>
+            <div class="flex gap-2">
+              <button 
+                type="button" 
+                id="add-polish-btn"
+                class="px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                {t('admin.addPolish')}
+              </button>
+              <button 
+                type="button" 
+                id="add-english-btn"
+                class="px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                {t('admin.addEnglish')}
+              </button>
+            </div>
+          </div>
+
+          <!-- Translation sections will be added here dynamically -->
+          <div id="translations-container" class="space-y-6">
+            <!-- Default translation section for current language -->
+            <div class="translation-section border border-gray-200 dark:border-gray-700 rounded-lg p-6" data-lang={lang}>
+              <div class="flex justify-between items-center mb-4">
+                <h4 class="text-md font-medium text-gray-900 dark:text-white">
+                  {lang === 'pl' ? t('admin.polishVersion') : t('admin.englishVersion')}
+                </h4>
+                <button 
+                  type="button" 
+                  class="remove-translation-btn text-red-500 hover:text-red-700 text-sm"
+                  data-lang={lang}
+                  style="display: none;"
+                >
+                  {t('admin.remove')}
+                </button>
+              </div>
+
+              <div class="space-y-4">
+                <!-- Title -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('admin.titleRequired')}
+                  </label>
+                  <input 
+                    name={`title-${lang}`}
+                    type="text" 
+                    required 
+                    class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                    placeholder={t('admin.enterPostTitlePlaceholder')}
+                  />
+                </div>
+
+                <!-- Excerpt -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('admin.excerpt')}
+                  </label>
+                  <textarea 
+                    name={`excerpt-${lang}`}
+                    rows="3"
+                    class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                    placeholder={t('admin.excerptDescription')}
+                  ></textarea>
+                </div>
+
+                <!-- Content -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('admin.contentRequired')}
+                  </label>
+                  <div class="relative">
+                    <textarea 
+                      name={`content-${lang}`}
+                      rows="20"
+                      required
+                      class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors resize-y min-h-[500px]"
+                      placeholder={t('admin.writeContentMarkdown')}
+                    ></textarea>
+                    <div class="absolute bottom-3 right-3 text-xs text-gray-400 dark:text-gray-500 bg-white dark:bg-slate-900 px-2 py-1 rounded">
+                      {t('admin.markdownSupported')}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Meta fields -->
+                <details class="border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <summary class="px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 font-medium">
+                    {t('admin.seoSettingsOptional')}
+                  </summary>
+                  <div class="px-4 pb-4 space-y-4">
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {t('admin.metaTitle')}
+                      </label>
+                      <input 
+                        name={`meta_title-${lang}`}
+                        type="text" 
+                        class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                        placeholder={t('admin.seoTitlePlaceholder')}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {t('admin.metaDescription')}
+                      </label>
+                      <textarea 
+                        name={`meta_description-${lang}`}
+                        rows="2"
+                        class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                        placeholder={t('admin.seoDescriptionPlaceholder')}
+                      ></textarea>
+                    </div>
+                  </div>
+                </details>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- Action Buttons -->
         <div class="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200 dark:border-gray-700">
@@ -241,7 +285,7 @@ const metadata = {
             id="test-backend-btn"
             class="px-4 py-2 text-sm bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
           >
-            Test Backend Connection
+            {t('admin.testBackendConnection')}
           </button>
           
           <button 
@@ -310,15 +354,6 @@ const metadata = {
     }
 
     const form = document.getElementById('create-post-form') as HTMLFormElement;
-    const titleInput = document.getElementById('title') as HTMLInputElement;
-    const slugInput = document.getElementById('slug') as HTMLInputElement;
-    const contentInput = document.getElementById('content') as HTMLTextAreaElement;
-    const categoryInput = document.getElementById('category') as HTMLSelectElement;
-    const languageInput = document.getElementById('language') as HTMLSelectElement;
-    const tagsInput = document.getElementById('tags') as HTMLInputElement;
-    const excerptInput = document.getElementById('excerpt') as HTMLTextAreaElement;
-    const metaTitleInput = document.getElementById('meta_title') as HTMLInputElement;
-    const metaDescriptionInput = document.getElementById('meta_description') as HTMLTextAreaElement;
     
     const saveDraftBtn = document.getElementById('save-draft-btn') as HTMLButtonElement;
     const publishBtn = document.getElementById('publish-btn') as HTMLButtonElement;
@@ -328,25 +363,258 @@ const metadata = {
     
     const errorDiv = document.getElementById('error-message') as HTMLDivElement;
     const successDiv = document.getElementById('success-message') as HTMLDivElement;
+    
+    const addPolishBtn = document.getElementById('add-polish-btn') as HTMLButtonElement;
+    const addEnglishBtn = document.getElementById('add-english-btn') as HTMLButtonElement;
+    const translationsContainer = document.getElementById('translations-container') as HTMLDivElement;
 
-    // Auto-generate slug from title
-    titleInput?.addEventListener('input', () => {
-      const title = titleInput.value;
-      const slug = generateSlugFromTitle(title);
+    // Function to collect all translations from form
+    function collectTranslations(): Array<{
+      language_code: string;
+      title: string;
+      content: string;
+      excerpt: string;
+      meta_title: string;
+      meta_description: string;
+    }> {
+      const translations: Array<{
+        language_code: string;
+        title: string;
+        content: string;
+        excerpt: string;
+        meta_title: string;
+        meta_description: string;
+      }> = [];
+      const translationSections = document.querySelectorAll('.translation-section');
       
-      if (slugInput) {
+      translationSections.forEach(section => {
+        const lang = section.getAttribute('data-lang');
+        if (!lang) return;
+        
+        const titleInput = section.querySelector(`input[name="title-${lang}"]`) as HTMLInputElement;
+        const excerptInput = section.querySelector(`textarea[name="excerpt-${lang}"]`) as HTMLTextAreaElement;
+        const contentInput = section.querySelector(`textarea[name="content-${lang}"]`) as HTMLTextAreaElement;
+        const metaTitleInput = section.querySelector(`input[name="meta_title-${lang}"]`) as HTMLInputElement;
+        const metaDescInput = section.querySelector(`textarea[name="meta_description-${lang}"]`) as HTMLTextAreaElement;
+        
+        if (titleInput?.value.trim() && contentInput?.value.trim()) {
+          translations.push({
+            language_code: lang,
+            title: titleInput.value.trim(),
+            content: contentInput.value.trim(),
+            excerpt: excerptInput?.value.trim() || '',
+            meta_title: metaTitleInput?.value.trim() || '',
+            meta_description: metaDescInput?.value.trim() || ''
+          });
+        }
+      });
+      
+      return translations;
+    }
+
+    // Function to create a new translation section
+    function createTranslationSection(lang: string) {
+      const langName = lang === 'pl' ? '🇵🇱 Polish' : '🇺🇸 English';
+      
+      const section = document.createElement('div');
+      section.className = 'translation-section border border-gray-200 dark:border-gray-700 rounded-lg p-6';
+      section.setAttribute('data-lang', lang);
+      
+      section.innerHTML = `
+        <div class="flex justify-between items-center mb-4">
+          <h4 class="text-md font-medium text-gray-900 dark:text-white">
+            ${langName} Version
+          </h4>
+          <button 
+            type="button" 
+            class="remove-translation-btn text-red-500 hover:text-red-700 text-sm"
+            data-lang="${lang}"
+          >
+            Remove
+          </button>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Title -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Title *
+            </label>
+            <input 
+              name="title-${lang}" 
+              type="text" 
+              required 
+              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+              placeholder="Enter post title..."
+            />
+          </div>
+
+          <!-- Excerpt -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Excerpt
+            </label>
+            <textarea 
+              name="excerpt-${lang}"
+              rows="3"
+              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+              placeholder="Brief description of the post..."
+            ></textarea>
+          </div>
+
+          <!-- Content -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Content *
+            </label>
+            <div class="relative">
+              <textarea 
+                name="content-${lang}"
+                rows="20"
+                required
+                class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors resize-y min-h-[500px]"
+                placeholder="Write your post content here... (Markdown supported)"
+              ></textarea>
+              <div class="absolute bottom-3 right-3 text-xs text-gray-400 dark:text-gray-500 bg-white dark:bg-slate-900 px-2 py-1 rounded">
+                Markdown supported
+              </div>
+            </div>
+          </div>
+
+          <!-- Meta fields -->
+          <details class="border border-gray-200 dark:border-gray-700 rounded-lg">
+            <summary class="px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 font-medium">
+              SEO Settings (Optional)
+            </summary>
+            <div class="px-4 pb-4 space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Meta Title
+                </label>
+                <input 
+                  name="meta_title-${lang}"
+                  type="text" 
+                  class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                  placeholder="SEO title (leave empty to use post title)"
+                />
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Meta Description
+                </label>
+                <textarea 
+                  name="meta_description-${lang}"
+                  rows="2"
+                  class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                  placeholder="SEO description (leave empty to use excerpt)"
+                ></textarea>
+              </div>
+            </div>
+          </details>
+        </div>
+      `;
+      
+      return section;
+    }
+
+    // Auto-generate slug from first translation title
+    function updateSlugFromTranslations() {
+      const firstTitleInput = document.querySelector('input[name^="title-"]') as HTMLInputElement;
+      const slugInput = document.querySelector('input[name="slug"]') as HTMLInputElement;
+      
+      // Only auto-generate if slug field is empty
+      if (firstTitleInput && slugInput && firstTitleInput.value && !slugInput.value.trim()) {
+        const slug = generateSlugFromTitle(firstTitleInput.value);
         slugInput.value = slug;
+        console.log('Auto-generated slug:', slug, 'from title:', firstTitleInput.value);
+      }
+    }
+
+    // Event listeners for adding translations
+    addPolishBtn?.addEventListener('click', () => {
+      // Check if Polish translation already exists
+      if (document.querySelector('[data-lang="pl"]')) {
+        showError('Polish translation already exists');
+        return;
+      }
+      
+      const section = createTranslationSection('pl');
+      translationsContainer.appendChild(section);
+      
+      // Add event listener for remove button
+      const removeBtn = section.querySelector('.remove-translation-btn');
+      removeBtn?.addEventListener('click', () => {
+        section.remove();
+        updateRemoveButtonsVisibility();
+      });
+      
+      updateRemoveButtonsVisibility();
+    });
+
+    addEnglishBtn?.addEventListener('click', () => {
+      // Check if English translation already exists
+      if (document.querySelector('[data-lang="en"]')) {
+        showError('English translation already exists');
+        return;
+      }
+      
+      const section = createTranslationSection('en');
+      translationsContainer.appendChild(section);
+      
+      // Add event listener for remove button
+      const removeBtn = section.querySelector('.remove-translation-btn');
+      removeBtn?.addEventListener('click', () => {
+        section.remove();
+        updateRemoveButtonsVisibility();
+      });
+      
+      updateRemoveButtonsVisibility();
+    });
+
+    // Function to update visibility of remove buttons
+    function updateRemoveButtonsVisibility() {
+      const translationSections = document.querySelectorAll('.translation-section');
+      const removeButtons = document.querySelectorAll('.remove-translation-btn');
+      
+      // Show remove buttons only if there's more than one translation
+      removeButtons.forEach(btn => {
+        const btnElement = btn as HTMLButtonElement;
+        btnElement.style.display = translationSections.length > 1 ? 'block' : 'none';
+      });
+      
+      // Update add button states
+      if (addPolishBtn) {
+        addPolishBtn.disabled = !!document.querySelector('[data-lang="pl"]');
+      }
+      if (addEnglishBtn) {
+        addEnglishBtn.disabled = !!document.querySelector('[data-lang="en"]');
+      }
+    }
+
+    // Set up auto-slug generation for the first title field
+    document.addEventListener('input', (e) => {
+      const target = e.target as HTMLInputElement;
+      if (target && target.name && target.name.startsWith('title-')) {
+        updateSlugFromTranslations();
       }
     });
 
+    // Initialize remove button visibility
+    updateRemoveButtonsVisibility();
+
     // Utility function to generate slug
     function generateSlugFromTitle(title: string): string {
+      if (!title || title.trim().length === 0) {
+        return 'untitled-post';
+      }
+      
       const polishChars: { [key: string]: string } = {
         'ą': 'a', 'ć': 'c', 'ę': 'e', 'ł': 'l', 'ń': 'n',
         'ó': 'o', 'ś': 's', 'ź': 'z', 'ż': 'z'
       };
       
-      return title
+      let slug = title
         .toLowerCase()
         .trim()
         // Replace Polish characters
@@ -359,6 +627,14 @@ const metadata = {
         .replace(/-+/g, '-')
         // Remove hyphens from start and end
         .replace(/^-|-$/g, '');
+      
+      // If slug is empty or too short, add prefix
+      if (!slug || slug.length < 3) {
+        slug = `post-${slug || 'untitled'}`;
+      }
+      
+      console.log('Generated slug:', slug, 'from title:', title);
+      return slug;
     }
 
     // Function to generate unique slug with timestamp only when needed
@@ -369,10 +645,7 @@ const metadata = {
     }
 
     // Set default language
-    const currentLang = window.location.pathname.split('/')[1];
-    if (languageInput) {
-      languageInput.value = currentLang;
-    }
+    // Language is now determined dynamically from the translation sections
 
     function showError(message: string) {
       if (errorDiv) {
@@ -520,18 +793,36 @@ const metadata = {
         // Show loading state
         if (activeBtn) activeBtn.disabled = true;
         if (activeText) activeText.textContent = 'Saving...';
-        // Validate required fields
-        if (!titleInput?.value.trim() || !contentInput?.value.trim()) {
-          throw new Error('Title and content are required');
+        // Validate required fields - sprawdz czy mamy przynajmniej jedna tradlumaczenie
+        const translations = collectTranslations();
+        if (translations.length === 0) {
+          throw new Error('At least one translation is required');
         }
         
-        // Validate title length (from API docs)
-        if (titleInput.value.length > 200) {
-          throw new Error('Title cannot be longer than 200 characters');
+        // Validate that each translation has title and content
+        for (const translation of translations) {
+          if (!translation.title.trim() || !translation.content.trim()) {
+            throw new Error(`Title and content are required for ${translation.language_code} translation`);
+          }
+          
+          // Validate title length
+          if (translation.title.length > 200) {
+            throw new Error(`Title for ${translation.language_code} cannot be longer than 200 characters`);
+          }
         }
         
         // Validate and generate slug
-        const slug = slugInput?.value.trim() || generateSlugFromTitle(titleInput.value.trim());
+        const slugInput = document.querySelector('input[name="slug"]') as HTMLInputElement;
+        let slug = slugInput?.value.trim();
+        
+        // If no slug provided, generate from first translation title
+        if (!slug) {
+          slug = generateSlugFromTitle(translations[0].title);
+          console.log('Generated slug from title:', slug);
+        } else {
+          console.log('Using provided slug:', slug);
+        }
+        
         if (slug.length > 200) {
           throw new Error('Slug cannot be longer than 200 characters');
         }
@@ -539,13 +830,8 @@ const metadata = {
           throw new Error('Slug can only contain lowercase letters, numbers, and hyphens');
         }
         
-        // Validate language
-        const language = languageInput?.value || currentLang;
-        if (!['pl', 'en'].includes(language)) {
-          throw new Error('Language must be "pl" or "en"');
-        }
-        
         // Validate and process tags (max 10 tags, each max 50 chars)
+        const tagsInput = document.querySelector('input[name="tags"]') as HTMLInputElement;
         const tagsArray = tagsInput?.value 
           ? tagsInput.value.split(',')
               .map(tag => tag.trim())
@@ -554,45 +840,84 @@ const metadata = {
               .filter(tag => tag.length <= 50)
           : [];
 
-        // Prepare post data according to API documentation
-        const authorName = user.username || user.full_name || user.email?.split('@')[0] || 'KGR33N';
-        console.log('User data for author:', { username: user.username, full_name: user.full_name, email: user.email, selectedAuthor: authorName });
+        // Prepare post data according to new API structure
+        const authorInput = document.querySelector('input[name="author"]') as HTMLInputElement;
+        const categoryInput = document.querySelector('select[name="category"]') as HTMLSelectElement;
+        const featuredImageInput = document.querySelector('input[name="featured_image"]') as HTMLInputElement;
         
+        const authorName = authorInput?.value.trim() || user.username || user.full_name || user.email?.split('@')[0] || 'KGR33N';
+        
+        // Try new multilingual API structure first
         const postData = {
-          title: titleInput.value.trim(),
           slug: slug,
-          content: contentInput.value.trim(),
-          excerpt: excerptInput?.value.trim() || '',
-          author: authorName, // Użyj nickname/full_name/część emaila przed @
-          meta_title: metaTitleInput?.value.trim() || '',
-          meta_description: metaDescriptionInput?.value.trim() || '',
-          language: language,
-          category: categoryInput?.value || 'general', // Zmieniono z 'programming' na 'general'
-          tags: tagsArray
+          author: authorName,
+          category: categoryInput?.value || 'general',
+          featured_image: featuredImageInput?.value.trim() || undefined,
+          tags: tagsArray,
+          translations: translations
         };
 
-        console.log('Submitting post:', postData);
+        console.log('Submitting multilingual post:', postData);
+        console.log('Translations being sent:', JSON.stringify(postData.translations, null, 2));
         
         console.log('API URL:', API_URLS.createPost());
         console.log('Is draft mode:', isDraft);
         
         if (!token) {
           throw new Error('No authentication token found. Please login again.');
-        }        console.log('Authorization header will be:', `Bearer ${token.substring(0, 20)}...`);
+        }        
+        
+        console.log('Authorization header will be:', `Bearer ${token.substring(0, 20)}...`);
 
-        // Zawsze najpierw tworzymy post jako draft
-        const response = await fetch(API_URLS.createPost(), {
+        // Tworzymy post z wieloma tłumaczeniami
+        let response = await fetch(API_URLS.createPost(), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
-            'Origin': getFrontendUrl() // Używamy zmiennej środowiskowej
+            'Origin': getFrontendUrl()
           },
           body: JSON.stringify(postData)
         });
 
         console.log('Response status:', response.status);
         console.log('Response statusText:', response.statusText);
+
+        // If new API structure fails, try fallback to old structure
+        if (!response.ok && response.status === 422) {
+          console.log('⚠️ New API structure failed, trying fallback to old structure...');
+          
+          // Use first translation as main content
+          const firstTranslation = translations[0];
+          const oldPostData = {
+            title: firstTranslation.title,
+            slug: slug,
+            content: firstTranslation.content,
+            excerpt: firstTranslation.excerpt || '',
+            author: authorName,
+            meta_title: firstTranslation.meta_title || '',
+            meta_description: firstTranslation.meta_description || '',
+            language: firstTranslation.language_code,
+            category: categoryInput?.value || 'general',
+            tags: tagsArray,
+            featured_image: featuredImageInput?.value.trim() || undefined
+          };
+          
+          console.log('Trying old API structure:', oldPostData);
+          
+          response = await fetch(API_URLS.createPost(), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+              'Origin': getFrontendUrl()
+            },
+            body: JSON.stringify(oldPostData)
+          });
+          
+          console.log('Fallback response status:', response.status);
+          console.log('Fallback response statusText:', response.statusText);
+        }
 
         if (!response.ok) {
           const contentType = response.headers.get('content-type');
@@ -610,6 +935,7 @@ const metadata = {
           }
           
           console.error('Error response:', errorData);
+          console.error('Response headers:', Object.fromEntries(response.headers.entries()));
           
           // Handle specific error cases
           if (response.status === 401) {
@@ -618,12 +944,12 @@ const metadata = {
             throw new Error('You do not have permission to create posts. Admin access required.');
           } else if (response.status === 409) {
             // Conflict - slug already exists, throw error with suggestion
-            const newSlug = generateUniqueSlug(titleInput.value.trim());
+            const newSlug = generateUniqueSlug(translations[0]?.title || 'untitled');
             console.log(`Slug conflict detected. Suggested new slug: ${newSlug}`);
             
             // Update the form with suggested slug
             if (slugInput) {
-              slugInput.value = newSlug;
+              (slugInput as HTMLInputElement).value = newSlug;
             }
             
             throw new Error(`A post with this slug already exists. A new unique slug has been generated: "${newSlug}". Please try saving again.`);
@@ -636,7 +962,13 @@ const metadata = {
               throw new Error(errorData.detail || 'Validation failed');
             }
           } else if (response.status === 500) {
-            throw new Error('Server error occurred. Please check if the backend is running and try again.');
+            // For 500 errors, provide more context about what might be wrong
+            const errorMessage = errorData.detail || 'Server error occurred';
+            if (errorMessage.includes('translations') || errorMessage.includes('language_code')) {
+              throw new Error(`Server error: The backend might not support the new multilingual API structure yet. Error: ${errorMessage}`);
+            } else {
+              throw new Error(`Server error occurred: ${errorMessage}. Please check if the backend is running and try again.`);
+            }
           } else {
             throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
           }

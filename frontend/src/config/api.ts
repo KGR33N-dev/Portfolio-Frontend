@@ -31,13 +31,59 @@ export const API_URLS = {
   // System endpoints
   health: () => `${API_CONFIG.baseUrl}/api/health`,
   
-  // Blog endpoints
-  getAllPosts: () => `${API_CONFIG.blog}/`,
+  // Blog endpoints (nowa wielojęzyczna struktura)
+  getAllPosts: (params?: {
+    limit?: number;
+    page?: number;
+    per_page?: number;
+    tags?: string;
+    ids?: string;
+    sort?: 'published_at' | 'created_at' | 'title';
+    order?: 'asc' | 'desc';
+    published?: boolean;
+    published_only?: boolean;
+    language?: string;
+    category?: string;
+    status?: 'all' | 'published' | 'draft';
+  }) => {
+    const url = new URL(`${API_CONFIG.blog}/`);
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          url.searchParams.append(key, value.toString());
+        }
+      });
+    }
+    return url.toString();
+  },
+  
+  // Single post endpoints (nowa struktura)
   getPost: (id: number) => `${API_CONFIG.blog}/${id}`,
+  getPostBySlug: (slug: string, params?: { language?: string }) => {
+    const url = new URL(`${API_CONFIG.blog}/${slug}`);
+    if (params?.language) {
+      url.searchParams.append('language', params.language);
+    }
+    return url.toString();
+  },
+  
+  // Post management (wielojęzyczne)
   createPost: () => `${API_CONFIG.blog}/`,
   updatePost: (id: number) => `${API_CONFIG.blog}/${id}`,
   publishPost: (id: number) => `${API_CONFIG.blog}/${id}/publish`,
+  unpublishPost: (id: number) => `${API_CONFIG.blog}/${id}/unpublish`,
   deletePost: (id: number) => `${API_CONFIG.blog}/${id}`,
+  
+  // Translation management
+  addTranslation: (postId: number) => `${API_CONFIG.blog}/${postId}/translations`,
+  updateTranslation: (postId: number, languageCode: string) => `${API_CONFIG.blog}/${postId}/translations/${languageCode}`,
+  deleteTranslation: (postId: number, languageCode: string) => `${API_CONFIG.blog}/${postId}/translations/${languageCode}`,
+  
+  // Language management
+  getLanguages: () => `${API_CONFIG.baseUrl}/api/languages/`,
+  addLanguage: () => `${API_CONFIG.baseUrl}/api/languages/`,
+  updateLanguage: (id: number) => `${API_CONFIG.baseUrl}/api/languages/${id}`,
+  deleteLanguage: (id: number) => `${API_CONFIG.baseUrl}/api/languages/${id}`,
   
   // Auth endpoints
   login: () => `${API_CONFIG.auth}/login`,
@@ -50,8 +96,24 @@ export const API_URLS = {
   dashboard: () => `${API_CONFIG.admin}/dashboard`,
   stats: () => `${API_CONFIG.admin}/stats`,
   
-  // Admin blog endpoints (with access to drafts)
-  getAdminPosts: (params?: URLSearchParams) => `${API_CONFIG.blog}/admin/posts${params ? '?' + params.toString() : ''}`,
+  // Admin blog endpoints (nowa struktura - dostęp do wszystkich postów i drafts)
+  getAdminPosts: (params?: {
+    page?: number;
+    per_page?: number;
+    status?: 'all' | 'published' | 'draft';
+    language?: string;
+    category?: string;
+  }) => {
+    const url = new URL(`${API_CONFIG.blog}/admin/posts`);
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          url.searchParams.append(key, value.toString());
+        }
+      });
+    }
+    return url.toString();
+  },
   getAdminPost: (id: number) => `${API_CONFIG.blog}/admin/posts/${id}`,
 } as const;
 
@@ -59,3 +121,56 @@ export const API_URLS = {
 console.log(`🔧 API Configuration: Using ${isLocalApi() ? 'LOCAL' : 'PRODUCTION'} backend`);
 console.log(`📡 Base URL: ${API_CONFIG.baseUrl}`);
 console.log(`🌐 Frontend URL: ${API_CONFIG.frontendUrl}`);
+
+// Utility functions for common API calls
+export const BlogAPI = {
+  // Filtrowanie po tagach
+  getPostsByTags: (tags: string[], limit?: number) => 
+    API_URLS.getAllPosts({ 
+      tags: tags.join(','), 
+      limit,
+      published: true 
+    }),
+  
+  // Konkretne posty
+  getPostsByIds: (ids: number[]) => 
+    API_URLS.getAllPosts({ 
+      ids: ids.join(',') 
+    }),
+  
+  // Sortowanie
+  getPostsSorted: (sortBy: 'published_at' | 'created_at' | 'title' = 'published_at', order: 'asc' | 'desc' = 'desc', limit?: number) =>
+    API_URLS.getAllPosts({ 
+      sort: sortBy, 
+      order, 
+      limit,
+      published: true 
+    }),
+  
+  // Posty dla konkretnego języka
+  getPostsByLanguage: (language: string, limit?: number) =>
+    API_URLS.getAllPosts({ 
+      language, 
+      limit,
+      published: true 
+    }),
+  
+  // Kombinacja filtrów
+  getPostsFiltered: (filters: {
+    tags?: string[];
+    language?: string;
+    limit?: number;
+    page?: number;
+    sort?: 'published_at' | 'created_at' | 'title';
+    order?: 'asc' | 'desc';
+  }) => API_URLS.getAllPosts({
+    ...filters,
+    tags: filters.tags?.join(','),
+    published: true
+  })
+};
+
+// Make API_URLS available globally for script tags
+if (typeof window !== 'undefined') {
+  (window as typeof window & { API_URLS: typeof API_URLS }).API_URLS = API_URLS;
+}
