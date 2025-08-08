@@ -85,12 +85,34 @@ export const API_URLS = {
   updateLanguage: (id: number) => `${API_CONFIG.baseUrl}/api/languages/${id}`,
   deleteLanguage: (id: number) => `${API_CONFIG.baseUrl}/api/languages/${id}`,
   
+  // Comments endpoints
+  getComments: (postId: number, params?: {
+    page?: number;
+    per_page?: number;
+    approved?: boolean;
+  }) => {
+    const url = new URL(`${API_CONFIG.blog}/${postId}/comments`);
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          url.searchParams.append(key, value.toString());
+        }
+      });
+    }
+    return url.toString();
+  },
+  createComment: (postId: number) => `${API_CONFIG.blog}/${postId}/comments`,
+  updateComment: (postId: number, commentId: number) => `${API_CONFIG.blog}/${postId}/comments/${commentId}`,
+  deleteComment: (postId: number, commentId: number) => `${API_CONFIG.blog}/${postId}/comments/${commentId}`,
+  approveComment: (postId: number, commentId: number) => `${API_CONFIG.blog}/${postId}/comments/${commentId}/approve`,
+  
   // Auth endpoints
   login: () => `${API_CONFIG.auth}/login`,
   register: () => `${API_CONFIG.auth}/register`,
   verify: () => `${API_CONFIG.auth}/verify`,
   verifyEmail: () => `${API_CONFIG.auth}/verify-email`,
   resendVerification: () => `${API_CONFIG.auth}/resend-verification`,
+  me: () => `${API_CONFIG.auth}/me`, // Endpoint to check current user session
   
   // Admin endpoints
   dashboard: () => `${API_CONFIG.admin}/dashboard`,

@@ -1,0 +1,608 @@
+---
+import { Icon } from 'astro-icon/components';
+import { useTranslations } from '~/i18n/utils';
+import { languages } from '~/i18n';
+import type { Post } from '~/types/blog';
+
+export interface Props {
+  post: Post;
+  lang?: string;
+}
+
+const { post, lang = 'en' } = Astro.props;
+const t = useTranslations(lang as keyof typeof languages);
+---
+
+<section class="mt-16 mb-8">
+  <div class="max-w-3xl mx-auto px-4 sm:px-6">
+    <!-- Comments Header -->
+    <div class="border-t border-gray-200 dark:border-gray-700 pt-8">
+      <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+        <Icon name="tabler:message" class="w-6 h-6 mr-2" />
+        {t('comments.title')}
+      </h3>
+    </div>
+
+    <!-- Comments Container - This will be populated by JavaScript -->
+    <div id="comments-container" data-post-id={post.id} data-lang={lang}>
+      <!-- Loading State -->
+      <div id="comments-loading" class="flex items-center justify-center py-8">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <span class="ml-3 text-gray-600 dark:text-gray-400">{t('comments.loading')}</span>
+      </div>
+
+      <!-- Comments List - Will be populated by JavaScript -->
+      <div id="comments-list" class="hidden space-y-6">
+        <!-- Comments will be inserted here -->
+      </div>
+
+      <!-- No Comments State -->
+      <div id="no-comments" class="hidden text-center py-8">
+        <Icon name="tabler:message-off" class="w-12 h-12 mx-auto text-gray-400 mb-4" />
+        <p class="text-gray-600 dark:text-gray-400 text-lg mb-2">{t('comments.noComments')}</p>
+        <p class="text-gray-500 dark:text-gray-500">{t('comments.beFirst')}</p>
+      </div>
+
+      <!-- Error State -->
+      <div id="comments-error" class="hidden text-center py-8">
+        <Icon name="tabler:alert-triangle" class="w-12 h-12 mx-auto text-red-400 mb-4" />
+        <p class="text-red-600 dark:text-red-400 text-lg mb-4" id="error-message"></p>
+        <button 
+          id="retry-comments" 
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          <Icon name="tabler:refresh" class="w-4 h-4 mr-2" />
+          {t('blog.retry')}
+        </button>
+      </div>
+    </div>
+
+    <!-- Add Comment Section -->
+    <div id="add-comment-section" class="mt-8 border-t border-gray-200 dark:border-gray-700 pt-8">
+      <!-- Not Logged In State -->
+      <div id="not-logged-in" class="text-center py-6 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <Icon name="tabler:lock" class="w-12 h-12 mx-auto text-gray-400 mb-4" />
+        <p class="text-gray-600 dark:text-gray-400 text-lg mb-4">{t('comments.loginRequired')}</p>
+        <a 
+          href={`/${lang}/login`}
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          <Icon name="tabler:login" class="w-4 h-4 mr-2" />
+          {t('auth.loginButton')}
+        </a>
+      </div>
+
+      <!-- Logged In - Comment Form -->
+      <div id="comment-form-container" class="hidden">
+        <!-- User Info Display -->
+        <div id="user-info" class="flex items-center justify-between mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+          <div class="flex items-center">
+            <Icon name="tabler:user" class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" />
+            <span id="user-display-name" class="text-blue-800 dark:text-blue-200 font-medium"></span>
+          </div>
+          <button 
+            id="logout-btn"
+            class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
+          >
+            {t('auth.logout')}
+          </button>
+        </div>
+
+        <!-- Reply indicator (hidden by default) -->
+        <div id="reply-indicator" class="hidden bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
+          <div class="flex items-center justify-between">
+            <span class="text-blue-800 dark:text-blue-200 text-sm">
+              <Icon name="tabler:arrow-down-right" class="w-4 h-4 inline mr-1" />
+              <span id="reply-text"></span>
+            </span>
+            <button type="button" id="cancel-reply" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200">
+              <Icon name="tabler:x" class="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        <!-- Simple Comment Form -->
+        <form id="comment-form" class="space-y-4">
+          <div>
+            <label for="comment-content" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('comments.writeComment')}
+            </label>
+            <textarea
+              id="comment-content"
+              name="content"
+              rows="4"
+              required
+              placeholder={t('comments.writeComment')}
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white resize-none"
+            ></textarea>
+            <div class="text-red-500 text-sm mt-1 hidden" id="content-error"></div>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              {t('comments.moderationNote')}
+            </p>
+            <div class="flex space-x-3">
+              <button
+                type="button"
+                id="cancel-reply-btn"
+                class="hidden px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 dark:hover:bg-gray-500"
+              >
+                {t('comments.cancel')}
+              </button>
+              <button
+                type="submit"
+                id="submit-comment"
+                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span id="submit-text">{t('comments.submitComment')}</span>
+                <Icon name="tabler:send" class="w-4 h-4 ml-2" />
+              </button>
+            </div>
+          </div>
+        </form>
+
+        <!-- Success Message -->
+        <div id="comment-success" class="hidden mt-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+          <div class="flex items-center">
+            <Icon name="tabler:check" class="w-5 h-5 text-green-600 dark:text-green-400 mr-2" />
+            <span class="text-green-800 dark:text-green-200">{t('comments.success')}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Comment Template (hidden) -->
+<template id="comment-template">
+  <div class="comment bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+    <div class="flex items-start space-x-4">
+      <div class="flex-shrink-0">
+        <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+          <Icon name="tabler:user" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
+        </div>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center space-x-2">
+            <h4 class="comment-author text-sm font-semibold text-gray-900 dark:text-white"></h4>
+            <span class="comment-date text-xs text-gray-500 dark:text-gray-400"></span>
+          </div>
+          <button class="reply-btn text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 flex items-center">
+            <Icon name="tabler:arrow-back-up" class="w-4 h-4 mr-1" />
+            <span class="reply-text">{t('comments.reply')}</span>
+          </button>
+        </div>
+        <div class="comment-content prose prose-sm dark:prose-invert max-w-none"></div>
+        <div class="comment-replies mt-4 space-y-4 border-l-2 border-gray-200 dark:border-gray-700 pl-6 hidden">
+          <!-- Replies will be inserted here -->
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script is:inline>
+  // Simplified Comments functionality with authentication
+  function initComments() {
+    let postId = null;
+    let lang = 'en';
+    let parentId = null;
+    const apiBaseUrl = 'http://localhost:8000';
+    let isSubmitting = false;
+    let currentUser = null;
+    
+    function init() {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setup);
+      } else {
+        setup();
+      }
+    }
+
+    async function setup() {
+      const container = document.getElementById('comments-container');
+      if (!container) return;
+
+      postId = container.dataset.postId;
+      lang = container.dataset.lang || 'en';
+
+      await checkAuthenticationStatus();
+      setupEventListeners();
+      loadComments();
+    }
+
+    async function checkAuthenticationStatus() {
+      // Check if user is logged in using AdminAuth
+      if (typeof window !== 'undefined' && window.AdminAuth) {
+        // First check if we have stored credentials
+        const storedUser = window.AdminAuth.getCurrentUser();
+        const token = window.AdminAuth.getToken();
+        
+        if (storedUser && token) {
+          try {
+            // Verify the session is still valid on the server
+            const validUser = await window.AdminAuth.checkSession();
+            if (validUser) {
+              currentUser = validUser;
+              showAuthenticatedState();
+              return;
+            }
+          } catch (error) {
+            console.warn('Session validation failed:', error);
+            // Session invalid, clear stored data
+            window.AdminAuth.logout();
+          }
+        }
+        
+        // If we get here, user is not authenticated
+        currentUser = null;
+        showUnauthenticatedState();
+      } else {
+        showUnauthenticatedState();
+      }
+    }
+
+    function showAuthenticatedState() {
+      const notLoggedIn = document.getElementById('not-logged-in');
+      const formContainer = document.getElementById('comment-form-container');
+      const userDisplayName = document.getElementById('user-display-name');
+      
+      if (notLoggedIn) notLoggedIn.classList.add('hidden');
+      if (formContainer) formContainer.classList.remove('hidden');
+      
+      if (userDisplayName && currentUser) {
+        const displayName = currentUser.full_name || currentUser.username || currentUser.email;
+        userDisplayName.textContent = displayName;
+      }
+    }
+
+    function showUnauthenticatedState() {
+      const notLoggedIn = document.getElementById('not-logged-in');
+      const formContainer = document.getElementById('comment-form-container');
+      
+      if (notLoggedIn) notLoggedIn.classList.remove('hidden');
+      if (formContainer) formContainer.classList.add('hidden');
+    }
+
+    function setupEventListeners() {
+      // Form submission
+      const form = document.getElementById('comment-form');
+      if (form) {
+        form.addEventListener('submit', handleSubmit);
+      }
+
+      // Logout button
+      const logoutBtn = document.getElementById('logout-btn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', logout);
+      }
+
+      // Cancel reply
+      const cancelReply = document.getElementById('cancel-reply');
+      const cancelReplyBtn = document.getElementById('cancel-reply-btn');
+      if (cancelReply) {
+        cancelReply.addEventListener('click', cancelReplyAction);
+      }
+      if (cancelReplyBtn) {
+        cancelReplyBtn.addEventListener('click', cancelReplyAction);
+      }
+
+      const retryBtn = document.getElementById('retry-comments');
+      if (retryBtn) {
+        retryBtn.addEventListener('click', loadComments);
+      }
+    }
+
+    function logout() {
+      if (window.AdminAuth) {
+        window.AdminAuth.logout();
+      }
+    }
+
+    async function loadComments() {
+      if (!postId) return;
+
+      showLoading();
+
+      try {
+        const url = `${apiBaseUrl}/api/blog/${postId}/comments?approved=true&per_page=100`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        renderComments(data.items || []);
+      } catch (error) {
+        console.error('Error loading comments:', error);
+        showError(error.message);
+      }
+    }
+
+    function renderComments(comments) {
+      const container = document.getElementById('comments-list');
+      const noComments = document.getElementById('no-comments');
+      const loading = document.getElementById('comments-loading');
+      const errorDiv = document.getElementById('comments-error');
+
+      if (loading) loading.classList.add('hidden');
+      if (errorDiv) errorDiv.classList.add('hidden');
+
+      if (comments.length === 0) {
+        if (container) container.classList.add('hidden');
+        if (noComments) noComments.classList.remove('hidden');
+        return;
+      }
+
+      const rootComments = comments.filter(c => !c.parentId);
+      const replyMap = new Map();
+      
+      comments.filter(c => c.parentId).forEach(reply => {
+        if (!replyMap.has(reply.parentId)) {
+          replyMap.set(reply.parentId, []);
+        }
+        replyMap.get(reply.parentId).push(reply);
+      });
+
+      if (container) {
+        container.innerHTML = '';
+        rootComments.forEach(comment => {
+          const commentElement = createCommentElement(comment, replyMap.get(comment.id) || []);
+          container.appendChild(commentElement);
+        });
+        
+        container.classList.remove('hidden');
+        if (noComments) noComments.classList.add('hidden');
+      }
+    }
+
+    function createCommentElement(comment, replies = []) {
+      const template = document.getElementById('comment-template');
+      if (!template || !template.content) return document.createElement('div');
+
+      const clone = template.content.cloneNode(true);
+      const commentDiv = clone.querySelector('.comment');
+      
+      const author = clone.querySelector('.comment-author');
+      const date = clone.querySelector('.comment-date');
+      const content = clone.querySelector('.comment-content');
+      const replyBtn = clone.querySelector('.reply-btn');
+      const repliesContainer = clone.querySelector('.comment-replies');
+
+      if (author) author.textContent = comment.author || comment.user?.full_name || comment.user?.username || 'Anonymous';
+      if (date) date.textContent = formatDate(comment.createdAt || comment.created_at);
+      if (content) {
+        // Handle both plain text and potential HTML content
+        if (comment.content.includes('<') && comment.content.includes('>')) {
+          content.innerHTML = sanitizeHtml(comment.content);
+        } else {
+          content.textContent = comment.content;
+        }
+      }
+
+      // Setup reply button (only show if user is authenticated)
+      if (replyBtn && currentUser) {
+        replyBtn.addEventListener('click', () => startReply(comment.id, comment.author || comment.user?.full_name || comment.user?.username || 'Anonymous'));
+      } else if (replyBtn) {
+        replyBtn.style.display = 'none';
+      }
+
+      if (replies.length > 0 && repliesContainer) {
+        replies.forEach(reply => {
+          const replyElement = createCommentElement(reply);
+          repliesContainer.appendChild(replyElement);
+        });
+        repliesContainer.classList.remove('hidden');
+      }
+
+      return commentDiv;
+    }
+
+    async function handleSubmit(e) {
+      e.preventDefault();
+      
+      if (isSubmitting || !currentUser) return;
+
+      const form = e.target;
+      const formData = new FormData(form);
+      
+      // Simple validation
+      const content = formData.get('content')?.trim();
+      if (!content) {
+        showValidationError('content', getTranslation('comments.required'));
+        return;
+      }
+
+      isSubmitting = true;
+      setSubmitButtonState(true);
+
+      try {
+        const commentData = {
+          content: content,
+          parentId: parentId
+        };
+
+        const token = window.AdminAuth?.getToken();
+        const response = await fetch(`${apiBaseUrl}/api/blog/${postId}/comments`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(commentData)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        showSuccess();
+        form.reset();
+        cancelReplyAction();
+        
+        setTimeout(() => loadComments(), 1000);
+
+      } catch (error) {
+        console.error('Error submitting comment:', error);
+        showSubmissionError(error.message);
+      } finally {
+        isSubmitting = false;
+        setSubmitButtonState(false);
+      }
+    }
+
+    function showValidationError(field, message) {
+      const errorElement = document.getElementById(`${field}-error`);
+      if (errorElement) {
+        errorElement.textContent = message;
+        errorElement.classList.remove('hidden');
+        
+        // Clear error after a few seconds
+        setTimeout(() => {
+          errorElement.classList.add('hidden');
+        }, 5000);
+      }
+    }
+
+    function startReply(commentId, authorName) {
+      parentId = commentId;
+      
+      const indicator = document.getElementById('reply-indicator');
+      const replyText = document.getElementById('reply-text');
+      const cancelBtn = document.getElementById('cancel-reply-btn');
+      
+      if (indicator && replyText) {
+        replyText.textContent = `${getTranslation('comments.replyTo')} ${authorName}`;
+        indicator.classList.remove('hidden');
+        if (cancelBtn) cancelBtn.classList.remove('hidden');
+      }
+
+      const form = document.getElementById('comment-form');
+      if (form) {
+        form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const textarea = document.getElementById('comment-content');
+        if (textarea) {
+          setTimeout(() => textarea.focus(), 300);
+        }
+      }
+    }
+
+    function cancelReplyAction() {
+      parentId = null;
+      
+      const indicator = document.getElementById('reply-indicator');
+      const cancelBtn = document.getElementById('cancel-reply-btn');
+      
+      if (indicator) indicator.classList.add('hidden');
+      if (cancelBtn) cancelBtn.classList.add('hidden');
+    }
+
+    function setSubmitButtonState(isSubmittingState) {
+      const submitBtn = document.getElementById('submit-comment');
+      const submitText = document.getElementById('submit-text');
+      
+      if (submitBtn && submitText) {
+        submitBtn.disabled = isSubmittingState;
+        submitText.textContent = isSubmittingState 
+          ? getTranslation('comments.posting')
+          : getTranslation('comments.submitComment');
+      }
+    }
+
+    function showSuccess() {
+      const successDiv = document.getElementById('comment-success');
+      if (successDiv) {
+        successDiv.classList.remove('hidden');
+        setTimeout(() => {
+          successDiv.classList.add('hidden');
+        }, 5000);
+      }
+    }
+
+    function showSubmissionError(message) {
+      alert(getTranslation('comments.error') + '\n\n' + message);
+    }
+
+    function showLoading() {
+      const loading = document.getElementById('comments-loading');
+      const list = document.getElementById('comments-list');
+      const noComments = document.getElementById('no-comments');
+      const errorDiv = document.getElementById('comments-error');
+      
+      if (loading) loading.classList.remove('hidden');
+      if (list) list.classList.add('hidden');
+      if (noComments) noComments.classList.add('hidden');
+      if (errorDiv) errorDiv.classList.add('hidden');
+    }
+
+    function showError(message) {
+      const loading = document.getElementById('comments-loading');
+      const errorDiv = document.getElementById('comments-error');
+      const errorMessage = document.getElementById('error-message');
+      
+      if (loading) loading.classList.add('hidden');
+      if (errorDiv) {
+        errorDiv.classList.remove('hidden');
+        if (errorMessage) {
+          errorMessage.textContent = message;
+        }
+      }
+    }
+
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      const locale = lang === 'pl' ? 'pl-PL' : 'en-US';
+      
+      return date.toLocaleDateString(locale, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function getTranslation(key) {
+      const translations = {
+        en: {
+          'comments.required': 'This field is required',
+          'comments.posting': 'Posting comment...',
+          'comments.submitComment': 'Submit Comment',
+          'comments.replyTo': 'Reply to',
+          'comments.error': 'Error adding comment. Please try again.'
+        },
+        pl: {
+          'comments.required': 'To pole jest wymagane',
+          'comments.posting': 'Wysyłanie komentarza...',
+          'comments.submitComment': 'Wyślij Komentarz',
+          'comments.replyTo': 'Odpowiedz na',
+          'comments.error': 'Błąd podczas dodawania komentarza. Spróbuj ponownie.'
+        }
+      };
+
+      return translations[lang]?.[key] || translations.en[key] || key;
+    }
+
+    function sanitizeHtml(html) {
+      // Basic HTML sanitization - remove dangerous elements
+      const div = document.createElement('div');
+      div.innerHTML = html;
+      
+      // Remove script tags and other dangerous elements
+      const scripts = div.querySelectorAll('script, iframe, object, embed');
+      scripts.forEach(script => script.remove());
+      
+      return div.innerHTML;
+    }
+
+    // Initialize
+    init();
+  }
+
+  // Start comments when script loads
+  initComments();
+</script>

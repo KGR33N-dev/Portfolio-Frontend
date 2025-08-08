@@ -69,6 +69,39 @@ export interface Tag {
   description?: string;
 }
 
+// Comment types
+export interface Comment {
+  id: number;
+  postId: number;
+  author: string;
+  email: string;
+  website?: string;
+  content: string;
+  createdAt: string;
+  updatedAt?: string;
+  parentId?: number; // For nested replies
+  isApproved: boolean;
+  replies?: Comment[];
+}
+
+export interface CreateCommentData {
+  postId: number;
+  author: string;
+  email: string;
+  website?: string;
+  content: string;
+  parentId?: number;
+}
+
+// Comment API Response
+export interface CommentApiResponse {
+  items: Comment[];
+  total: number;
+  page: number;
+  per_page: number;
+  pages: number;
+}
+
 // Struktura odpowiedzi API
 export interface BlogApiResponse {
   items: ApiPost[];

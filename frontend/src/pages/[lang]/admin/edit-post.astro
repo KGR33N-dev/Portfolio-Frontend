@@ -390,8 +390,8 @@ const metadata = {
     try {
       console.log('Loading post with ID:', currentPostId);
       
-      // Use getAllPosts with ids filter to get the specific post
-      const response = await fetch(API_URLS.getAllPosts({ ids: currentPostId }), {
+      // Use admin endpoint to get the specific post (including drafts)
+      const response = await fetch(API_URLS.getAdminPost(currentPostId), {
         headers: {
           'Authorization': `Bearer ${AdminAuth.getToken()}`,
           'Accept': 'application/json'
@@ -402,14 +402,14 @@ const metadata = {
         throw new Error(`Failed to load post: ${response.status}`);
       }
 
-      const data = await response.json();
-      console.log('API Response:', data);
+      const post = await response.json();
+      console.log('API Response:', post);
       
-      if (!data.items || data.items.length === 0) {
+      if (!post) {
         throw new Error('Post not found');
       }
 
-      currentPost = data.items[0];
+      currentPost = post;
       console.log('Loaded post:', currentPost);
       populateForm(currentPost);
       showForm();

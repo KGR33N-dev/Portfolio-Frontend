@@ -138,7 +138,7 @@ const metadata = {
             <!-- Draft posts will be loaded here dynamically -->
             <div class="flex items-center justify-center py-8">
               <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-600"></div>
-              <span class="ml-2 text-gray-600 dark:text-gray-400">Loading drafts...</span>
+              <span class="ml-2 text-gray-600 dark:text-gray-400">{t('admin.loadingDrafts')}</span>
             </div>
           </div>
         </div>
@@ -167,7 +167,7 @@ const metadata = {
           <!-- All posts will be loaded here dynamically -->
           <div class="flex items-center justify-center py-8">
             <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-            <span class="ml-2 text-gray-600 dark:text-gray-400">Loading posts...</span>
+            <span class="ml-2 text-gray-600 dark:text-gray-400">{t('admin.loadingPosts')}</span>
           </div>
         </div>
         <!-- Pagination -->
@@ -206,9 +206,9 @@ const metadata = {
     <!-- Access Denied Message (hidden by default) -->
     <div id="access-denied" class="hidden bg-red-100 dark:bg-red-900/20 border border-red-400 text-red-700 dark:text-red-400 px-6 py-4 rounded-lg text-center">
       <h3 class="font-semibold text-lg mb-2">{t('admin.accessDenied')}</h3>
-      <p class="mb-4">You need to be logged in as an administrator to access this page.</p>
+      <p class="mb-4">{t('admin.adminAccessRequired')}</p>
       <a href={`/${lang}/login`} class="inline-block px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200">
-        Go to Login
+        {t('admin.goToLogin')}
       </a>
     </div>
   </WidgetWrapper>
@@ -245,27 +245,49 @@ const metadata = {
     }
     
     const AdminAuth = window.AdminAuth;
-    // Check authentication first
-    if (!AdminAuth.isAuthenticated()) {
+    
+    // Check authentication first - verify with server
+    async function checkAuth() {
+      // First check if we have stored credentials
+      if (!AdminAuth.isAuthenticated()) {
+        redirectToLogin();
+        return false;
+      }
+      
+      try {
+        // Verify the session is still valid on the server
+        const user = await AdminAuth.checkSession();
+        if (!user) {
+          redirectToLogin();
+          return false;
+        }
+        
+        // Check if user is admin
+        if (!user.is_admin) {
+          const accessDeniedDiv = document.getElementById('access-denied');
+          const dashboardContent = document.getElementById('admin-dashboard');
+          
+          if (accessDeniedDiv) accessDeniedDiv.classList.remove('hidden');
+          if (dashboardContent) dashboardContent.classList.add('hidden');
+          return false;
+        }
+        
+        return true;
+      } catch (error) {
+        console.error('Authentication check failed:', error);
+        redirectToLogin();
+        return false;
+      }
+    }
+    
+    function redirectToLogin() {
       const currentLang = window.location.pathname.split('/')[1];
       window.location.href = `/${currentLang}/login`;
-      return;
     }
-
-    // Check if user is admin
-    const user = AdminAuth.getCurrentUser();
-    if (!user?.is_admin) {
-      const accessDeniedDiv = document.getElementById('access-denied');
-      const dashboardContent = document.getElementById('admin-dashboard');
-      
-      if (accessDeniedDiv) {
-        accessDeniedDiv.classList.remove('hidden');
-      }
-      if (dashboardContent) {
-        dashboardContent.style.display = 'none';
-      }
-      return;
-    }
+    
+    // Wait for auth check before proceeding
+    const isAuthenticated = await checkAuth();
+    if (!isAuthenticated) return;
     const newPostBtn = document.getElementById('new-post-btn');
     const settingsBtn = document.getElementById('settings-btn');
     const accessDeniedDiv = document.getElementById('access-denied');
@@ -363,13 +385,13 @@ const metadata = {
                       ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' 
                       : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
                     } rounded-full">
-                      ${post.is_published ? 'Published' : 'Draft'}
+                      ${post.is_published ? translations.published : translations.draft}
                     </span>
                   </div>
                 `).join('')}
                 <div class="text-center py-2">
                   <a href="/${window.location.pathname.split('/')[1]}/blog" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium">
-                    View all posts →
+                    ${translations.viewAllPostsArrow}
                   </a>
                 </div>
               </div>
@@ -377,9 +399,9 @@ const metadata = {
           } else {
             recentPostsEl.innerHTML = `
               <div class="text-center py-8">
-                <p class="text-gray-600 dark:text-gray-400">No posts yet</p>
+                <p class="text-gray-600 dark:text-gray-400">${translations.noPostsYet}</p>
                 <button onclick="window.location.href='/${window.location.pathname.split('/')[1]}/admin/create-post'" class="mt-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium">
-                  Create your first post →
+                  ${translations.createYourFirstPost}
                 </button>
               </div>
             `;
@@ -744,8 +766,8 @@ const metadata = {
       console.error('Error loading all posts:', error);
       allPostsListEl.innerHTML = `
         <div class="text-center py-8">
-          <p class="text-red-600 dark:text-red-400">Error loading posts</p>
-          <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Make sure the API server is running</p>
+          <p class="text-red-600 dark:text-red-400">${translations.errorLoadingData}</p>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">${translations.checkApiServer}</p>
         </div>
       `;
       if (paginationEl) paginationEl.innerHTML = '';
@@ -765,8 +787,31 @@ const metadata = {
   };
 
   window.deletePost = function(postId, postTitle) {
-    if (confirm(`Are you sure you want to delete "${postTitle}"? This action cannot be undone.`)) {
+    if (confirm(`${translations.deleteConfirmation} "${postTitle}"? ${translations.actionCannotBeUndone}`)) {
       deletePostById(postId);
+    }
+  };
+
+  // Function to create sample multilingual post
+  window.createSamplePost = async function() {
+    try {
+      const button = event.target;
+      button.textContent = translations.creating;
+      button.disabled = true;
+      
+      await AdminAuth.createSamplePost();
+      
+      alert('Sample multilingual post created successfully!');
+      
+      // Reload dashboard data
+      loadDashboardData();
+    } catch (error) {
+      console.error('Error creating sample post:', error);
+      alert(`Error creating sample post: ${error.message}`);
+    } finally {
+      const button = event.target;
+      button.textContent = translations.createSamplePost;
+      button.disabled = false;
     }
   };
 
@@ -777,7 +822,7 @@ const metadata = {
       });
 
       if (response.ok) {
-        alert('Post deleted successfully');
+        alert(translations.postDeletedSuccessfully);
         loadAllPosts(); // Refresh the list
         loadDashboardData(); // Refresh stats
       } else {
@@ -785,7 +830,7 @@ const metadata = {
       }
     } catch (error) {
       console.error('Error deleting post:', error);
-      alert('Error deleting post. Please try again.');
+      alert(translations.errorDeletingPost);
     }
   }
 

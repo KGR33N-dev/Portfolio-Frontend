@@ -19,7 +19,6 @@ if (!slug) {
 }
 
 let currentPost: Post | null = null;
-let error: string | null = null;
 
 try {
   console.log(`🔍 Fetching post: ${slug} (${lang})`);
@@ -66,7 +65,7 @@ try {
   
 } catch (e) {
   console.error('❌ Error fetching post:', e);
-  error = e instanceof Error ? e.message : 'Unknown error';
+  // Error variable removed as it was unused
 }
 
 // If still no post found, return 404

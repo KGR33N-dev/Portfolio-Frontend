@@ -188,7 +188,7 @@ export class AdminAuth {
   
   static async checkSession(): Promise<User | null> {
     try {
-      const response = await this.makeAuthenticatedRequest(`${API_CONFIG.auth}/me`);
+      const response = await this.makeAuthenticatedRequest(API_URLS.me());
       if (response.ok) {
         const user: User = await response.json();
         localStorage.setItem(this.USER_KEY, JSON.stringify(user));
