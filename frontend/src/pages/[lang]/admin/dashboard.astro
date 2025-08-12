@@ -116,6 +116,16 @@ const metadata = {
           </button>
           
           <button 
+            id="languages-btn"
+            class="w-full flex items-center justify-center px-4 py-3 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+          >
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"></path>
+            </svg>
+            {t('admin.manageLanguages')}
+          </button>
+          
+          <button 
             id="settings-btn"
             class="w-full flex items-center justify-center px-4 py-3 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
           >
@@ -249,14 +259,14 @@ const metadata = {
     // Check authentication first - verify with server
     async function checkAuth() {
       // First check if we have stored credentials
-      if (!AdminAuth.isAuthenticated()) {
+      if (!AdminAuth.hasToken()) {
         redirectToLogin();
         return false;
       }
       
       try {
         // Verify the session is still valid on the server
-        const user = await AdminAuth.checkSession();
+        const user = await AdminAuth.verifyUser();
         if (!user) {
           redirectToLogin();
           return false;
@@ -290,6 +300,7 @@ const metadata = {
     if (!isAuthenticated) return;
     const newPostBtn = document.getElementById('new-post-btn');
     const settingsBtn = document.getElementById('settings-btn');
+    const languagesBtn = document.getElementById('languages-btn');
     const accessDeniedDiv = document.getElementById('access-denied');
     const dashboardContent = document.getElementById('admin-dashboard');
 
@@ -308,6 +319,12 @@ const metadata = {
       // Redirect to create post page
       const currentLang = window.location.pathname.split('/')[1];
       window.location.href = `/${currentLang}/admin/create-post`;
+    });
+
+    languagesBtn?.addEventListener('click', () => {
+      // Redirect to language management page
+      const currentLang = window.location.pathname.split('/')[1];
+      window.location.href = `/${currentLang}/admin/languages`;
     });
 
     settingsBtn?.addEventListener('click', () => {
@@ -783,7 +800,7 @@ const metadata = {
 
   window.editPost = function(postId) {
     const currentLang = window.location.pathname.split('/')[1];
-    window.location.href = `/${currentLang}/admin/edit-post?id=${postId}`;
+    window.location.href = `/${currentLang}/admin/edit-post/${postId}`;
   };
 
   window.deletePost = function(postId, postTitle) {

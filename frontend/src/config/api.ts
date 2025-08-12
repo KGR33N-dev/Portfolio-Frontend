@@ -8,6 +8,7 @@ export const API_CONFIG = {
   blog: `${API_BASE_URL}/api/blog`,
   auth: `${API_BASE_URL}/api/auth`,
   admin: `${API_BASE_URL}/api/admin`,
+  comments: `${API_BASE_URL}/api/comments`,
   frontendUrl: FRONTEND_URL
 };
 
@@ -79,12 +80,6 @@ export const API_URLS = {
   updateTranslation: (postId: number, languageCode: string) => `${API_CONFIG.blog}/${postId}/translations/${languageCode}`,
   deleteTranslation: (postId: number, languageCode: string) => `${API_CONFIG.blog}/${postId}/translations/${languageCode}`,
   
-  // Language management
-  getLanguages: () => `${API_CONFIG.baseUrl}/api/languages/`,
-  addLanguage: () => `${API_CONFIG.baseUrl}/api/languages/`,
-  updateLanguage: (id: number) => `${API_CONFIG.baseUrl}/api/languages/${id}`,
-  deleteLanguage: (id: number) => `${API_CONFIG.baseUrl}/api/languages/${id}`,
-  
   // Comments endpoints
   getComments: (postId: number, params?: {
     page?: number;
@@ -105,6 +100,28 @@ export const API_URLS = {
   updateComment: (postId: number, commentId: number) => `${API_CONFIG.blog}/${postId}/comments/${commentId}`,
   deleteComment: (postId: number, commentId: number) => `${API_CONFIG.blog}/${postId}/comments/${commentId}`,
   approveComment: (postId: number, commentId: number) => `${API_CONFIG.blog}/${postId}/comments/${commentId}/approve`,
+  
+  // New Comments API endpoints (using /api/comments structure)
+  getPostComments: (postId: number, params?: {
+    page?: number;
+    per_page?: number;
+    approved?: boolean;
+  }) => {
+    const url = new URL(`${API_CONFIG.comments}/post/${postId}`);
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          url.searchParams.append(key, value.toString());
+        }
+      });
+    }
+    return url.toString();
+  },
+  createPostComment: (postId: number) => `${API_CONFIG.comments}/post/${postId}`,
+  updatePostComment: (commentId: number) => `${API_CONFIG.comments}/${commentId}`,
+  deletePostComment: (commentId: number) => `${API_CONFIG.comments}/${commentId}`,
+  likeComment: (commentId: number) => `${API_CONFIG.comments}/${commentId}/like`,
+  approvePostComment: (commentId: number) => `${API_CONFIG.comments}/${commentId}/approve`,
   
   // Auth endpoints
   login: () => `${API_CONFIG.auth}/login`,
@@ -137,6 +154,25 @@ export const API_URLS = {
     return url.toString();
   },
   getAdminPost: (id: number) => `${API_CONFIG.blog}/admin/posts/${id}`,
+  
+  // Language management endpoints
+  getLanguages: (activeOnly = true) => {
+    const url = new URL(`${API_CONFIG.baseUrl}/api/languages/`);
+    url.searchParams.append('active_only', activeOnly.toString());
+    return url.toString();
+  },
+  getLanguageCodes: (activeOnly = true) => {
+    const url = new URL(`${API_CONFIG.baseUrl}/api/languages/codes`);
+    url.searchParams.append('active_only', activeOnly.toString());
+    return url.toString();
+  },
+  getLanguage: (code: string) => `${API_CONFIG.baseUrl}/api/languages/${code}`,
+  createLanguage: () => `${API_CONFIG.baseUrl}/api/languages/`,
+  updateLanguage: (code: string) => `${API_CONFIG.baseUrl}/api/languages/${code}`,
+  deleteLanguage: (code: string) => `${API_CONFIG.baseUrl}/api/languages/${code}`,
+  activateLanguage: (code: string) => `${API_CONFIG.baseUrl}/api/languages/${code}/activate`,
+  deactivateLanguage: (code: string) => `${API_CONFIG.baseUrl}/api/languages/${code}/deactivate`,
+  getLanguageStats: () => `${API_CONFIG.baseUrl}/api/languages/stats/usage`,
 } as const;
 
 // Status dla debugowania

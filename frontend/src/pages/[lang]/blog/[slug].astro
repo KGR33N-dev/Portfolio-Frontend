@@ -3,8 +3,13 @@ import Layout from '~/layouts/PageLayout.astro';
 import { languages } from '~/i18n';
 import { API_URLS } from '~/config/api';
 import SinglePost from '~/components/blog/SinglePost.astro';
+import Comments from '~/components/blog/Comments.astro';
 import { convertApiPostToPost } from '~/types/blog';
 import type { Post, ApiPost, Translation } from '~/types/blog';
+import type { Language } from '~/types/language';
+
+// Use SSR for dynamic blog posts to support preview mode and fallback handling
+export const prerender = false;
 
 const { lang, slug } = Astro.params;
 
@@ -18,49 +23,95 @@ if (!slug) {
   return Astro.redirect('/404');
 }
 
+// Check if this is a preview request for draft posts
+const isPreviewMode = Astro.url.searchParams.get('preview') === 'true';
+const adminToken = Astro.url.searchParams.get('admin_token');
+
 let currentPost: Post | null = null;
 
 try {
   console.log(`🔍 Fetching post: ${slug} (${lang})`);
   
-  // Try to fetch all posts first, then find by slug (more reliable)
-  const allPostsResponse = await fetch(API_URLS.getAllPosts({
-    published: true,
-    per_page: 100 // Get enough posts to find our slug
-  }));
-  
-  if (allPostsResponse.ok) {
-    const allPosts = await allPostsResponse.json();
-    console.log('📊 All posts fetched:', allPosts.total);
+  // For preview mode, try to fetch from admin API first (includes drafts)
+  if (isPreviewMode && adminToken) {
+    console.log('🔍 Preview mode detected, trying admin API...');
     
-    // Find post by slug
-    const foundPost = allPosts.items.find((p: ApiPost) => p.slug === slug);
-    
-    if (foundPost && foundPost.is_published) {
-      console.log(`✅ Found post ${foundPost.id} with slug ${slug}`);
-      console.log('Available translations:', foundPost.translations?.map(t => t.language_code));
+    try {
+      // Note: This requires the admin API to support slug-based lookup
+      // You might need to modify this based on your backend implementation
+      const adminPostsResponse = await fetch(API_URLS.getAdminPosts(), {
+        headers: {
+          'Authorization': `Bearer ${adminToken}`
+        }
+      });
       
-      // Check if requested language is available
-      const hasRequestedLang = foundPost.translations?.some((t: Translation) => t.language_code === lang);
-      
-      if (hasRequestedLang) {
-        currentPost = convertApiPostToPost(foundPost, lang);
-        console.log('✅ Post loaded with requested language:', currentPost.title);
-      } else {
-        // Use first available language as fallback but keep the URL structure
-        const fallbackLang = foundPost.translations?.[0]?.language_code || 'en';
-        console.log(`⚠️ Post found but no ${lang} translation, using ${fallbackLang} with ${lang} URL structure`);
-        currentPost = convertApiPostToPost(foundPost, lang); // This will use fallback translation but keep lang in permalink
+      if (adminPostsResponse.ok) {
+        const adminPosts = await adminPostsResponse.json();
+        const foundAdminPost = adminPosts.items?.find((p: ApiPost) => p.slug === slug);
+        
+        if (foundAdminPost) {
+          console.log(`✅ Found post in admin API: ${foundAdminPost.id} (published: ${foundAdminPost.is_published})`);
+          
+          // Check if requested language is available
+          const hasRequestedLang = foundAdminPost.translations?.some((t: Translation) => t.language_code === lang);
+          
+          if (hasRequestedLang) {
+            currentPost = convertApiPostToPost(foundAdminPost, lang);
+            console.log('✅ Post loaded with requested language from admin API:', currentPost.title);
+          } else {
+            // Use first available language as fallback
+            const fallbackLang = foundAdminPost.translations?.[0]?.language_code || 'en';
+            console.log(`⚠️ Post found but no ${lang} translation, using ${fallbackLang} with ${lang} URL structure`);
+            currentPost = convertApiPostToPost(foundAdminPost, lang);
+          }
+        }
       }
-    } else if (foundPost) {
-      console.log('❌ Post found but not published');
-    } else {
-      console.log('❌ Post not found with slug:', slug);
+    } catch (adminError) {
+      console.log('⚠️ Admin API failed, falling back to public API:', adminError);
     }
-  } else {
-    console.log(`⚠️ All posts API returned ${allPostsResponse.status}`);
-    const errorText = await allPostsResponse.text();
-    console.error('API Error:', errorText);
+  }
+  
+  // If not found in admin API or not preview mode, try public API
+  if (!currentPost) {
+    // Try to fetch all posts first, then find by slug (more reliable)
+    const allPostsResponse = await fetch(API_URLS.getAllPosts({
+      published: true,
+      per_page: 100 // Get enough posts to find our slug
+    }));
+    
+    if (allPostsResponse.ok) {
+      const allPosts = await allPostsResponse.json();
+      console.log('📊 All posts fetched:', allPosts.total);
+      
+      // Find post by slug
+      const foundPost = allPosts.items.find((p: ApiPost) => p.slug === slug);
+      
+      if (foundPost && foundPost.is_published) {
+        console.log(`✅ Found post ${foundPost.id} with slug ${slug}`);
+        console.log('Available translations:', foundPost.translations?.map(t => t.language_code));
+        
+        // Check if requested language is available
+        const hasRequestedLang = foundPost.translations?.some((t: Translation) => t.language_code === lang);
+        
+        if (hasRequestedLang) {
+          currentPost = convertApiPostToPost(foundPost, lang);
+          console.log('✅ Post loaded with requested language:', currentPost.title);
+        } else {
+          // Use first available language as fallback but keep the URL structure
+          const fallbackLang = foundPost.translations?.[0]?.language_code || 'en';
+          console.log(`⚠️ Post found but no ${lang} translation, using ${fallbackLang} with ${lang} URL structure`);
+          currentPost = convertApiPostToPost(foundPost, lang); // This will use fallback translation but keep lang in permalink
+        }
+      } else if (foundPost) {
+        console.log('❌ Post found but not published');
+      } else {
+        console.log('❌ Post not found with slug:', slug);
+      }
+    } else {
+      console.log(`⚠️ All posts API returned ${allPostsResponse.status}`);
+      const errorText = await allPostsResponse.text();
+      console.error('API Error:', errorText);
+    }
   }
   
 } catch (e) {
@@ -103,4 +154,5 @@ const metadata = {
 
 <Layout metadata={metadata}>
   <SinglePost post={currentPost} url={Astro.url} lang={lang} />
+  <Comments postId={currentPost.id} lang={lang as unknown as Language} />
 </Layout>

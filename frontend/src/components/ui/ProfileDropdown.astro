@@ -112,121 +112,123 @@ const t = useTranslations(lang as keyof typeof languages);
 </div>
 
 <script>
-  function initProfileDropdown() {
-    // Check authentication status
-    const token = localStorage.getItem('admin_token');
-    const userStr = localStorage.getItem('admin_user');
-    let user: { email?: string; is_admin?: boolean } | null = null;
-    
-    try {
-      user = userStr ? JSON.parse(userStr) : null;
-    } catch {
-      console.warn('Failed to parse admin user data');
-    }
-
-    const isAuthenticated = !!(token && user);
-
-    // Get elements
+  import { AdminAuth } from '../../utils/adminAuth';
+  
+  async function initProfileDropdown() {
     const loginBtn = document.getElementById('profile-login-btn') as HTMLAnchorElement;
-    const profileDropdown = document.getElementById('profile-dropdown') as HTMLDivElement;
-    const toggleBtn = document.getElementById('profile-toggle-btn') as HTMLButtonElement;
-    const dropdownMenu = document.getElementById('profile-dropdown-menu') as HTMLDivElement;
-    const logoutBtn = document.getElementById('profile-logout-btn') as HTMLButtonElement;
-    const adminDashboardLink = document.getElementById('admin-dashboard-link') as HTMLAnchorElement;
-    const accountSettingsLink = document.getElementById('account-settings-link') as HTMLAnchorElement;
-    const userEmail = document.getElementById('user-email') as HTMLParagraphElement;
-    const userRole = document.getElementById('user-role') as HTMLParagraphElement;
+    const profileDropdown = document.getElementById('profile-dropdown');
+    
+    console.log('🔍 ProfileDropdown Debug:');
+    console.log('Login button found:', !!loginBtn);
+    console.log('Profile dropdown found:', !!profileDropdown);
 
-    // Set current language
-    const currentLang = window.location.pathname.split('/')[1] || 'en';
-
-    // Set login URL
+    // Set login URL with current language
     if (loginBtn) {
+      const currentLang = window.location.pathname.split('/')[1] || 'en';
       loginBtn.href = `/${currentLang}/login`;
+      console.log('Login URL set to:', loginBtn.href);
     }
 
-    console.log('ProfileDropdown init:', { isAuthenticated, user });
-
-    if (isAuthenticated && user) {
-      // Show profile dropdown, hide login
-      if (loginBtn) loginBtn.style.display = 'none';
-      if (profileDropdown) profileDropdown.style.display = 'block';
-
-      // Set user info
-      if (userEmail && user.email) {
-        userEmail.textContent = user.email;
+    // Quick check for token
+    const token = localStorage.getItem('access_token');
+    console.log('Token exists:', !!token);
+    
+    if (!token) {
+      // No token - show login button, hide profile dropdown
+      console.log('No token - showing login button');
+      if (loginBtn) {
+        loginBtn.style.display = 'inline-flex';
+        console.log('Login button shown');
       }
-      if (userRole) {
-        userRole.textContent = user.is_admin ? 'Administrator' : 'User';
+      if (profileDropdown) {
+        profileDropdown.style.display = 'none';
+        console.log('Profile dropdown hidden');
       }
+      return;
+    }
 
-      // Set admin dashboard link
-      if (adminDashboardLink) {
-        adminDashboardLink.href = `/${currentLang}/admin/dashboard`;
-        if (user.is_admin) {
-          adminDashboardLink.style.display = 'block';
-        } else {
-          adminDashboardLink.style.display = 'none';
-        }
-      }
+    console.log('Token found - verifying with API...');
 
-      // Set account settings link (placeholder for now)
-      if (accountSettingsLink) {
-        accountSettingsLink.href = `/${currentLang}/account/settings`;
-      }
-
-    } else {
-      // Show login button, hide profile dropdown
+    // Verify authentication securely via API
+    const user = await AdminAuth.verifyUser();
+    
+    console.log('User verification result:', user);
+    
+    if (!user) {
+      // Invalid token - show login button, hide profile dropdown
+      console.log('Invalid token - showing login button');
       if (loginBtn) loginBtn.style.display = 'inline-flex';
       if (profileDropdown) profileDropdown.style.display = 'none';
+      return;
     }
 
-    // Setup dropdown toggle functionality
-    if (toggleBtn && dropdownMenu) {
-      // Remove old listeners
-      const newToggleBtn = toggleBtn.cloneNode(true) as HTMLButtonElement;
-      toggleBtn.parentNode?.replaceChild(newToggleBtn, toggleBtn);
+    console.log('User authenticated - showing profile dropdown for:', user.email, 'Admin:', user.is_admin);
+
+    // Valid user - hide login button, show profile dropdown
+    if (loginBtn) loginBtn.style.display = 'none';
+    if (profileDropdown) profileDropdown.style.display = 'block';
+    
+    // Update profile info
+    const emailElement = document.getElementById('user-email');
+    const roleElement = document.getElementById('user-role');
+    const adminDashboardLink = document.getElementById('admin-dashboard-link') as HTMLAnchorElement;
+    const accountSettingsLink = document.getElementById('account-settings-link') as HTMLAnchorElement;
+    
+    if (emailElement) {
+      emailElement.textContent = user.email || '';
+    }
+    
+    if (roleElement) {
+      roleElement.textContent = user.is_admin ? 'Administrator' : 'User';
+    }
+    
+    // Setup admin dashboard link
+    if (adminDashboardLink) {
+      if (user.is_admin) {
+        const currentLang = window.location.pathname.split('/')[1] || 'en';
+        adminDashboardLink.href = `/${currentLang}/admin/dashboard`;
+        adminDashboardLink.style.display = 'block';
+      } else {
+        adminDashboardLink.style.display = 'none';
+      }
+    }
+
+    // Setup account settings link
+    if (accountSettingsLink) {
+      const currentLang = window.location.pathname.split('/')[1] || 'en';
+      accountSettingsLink.href = `/${currentLang}/account/settings`;
+    }
+
+    // Handle dropdown toggle
+    const dropdownToggle = document.getElementById('profile-toggle-btn');
+    const dropdownMenu = document.getElementById('profile-dropdown-menu');
+    
+    if (dropdownToggle && dropdownMenu) {
+      // Remove existing listeners
+      const newToggle = dropdownToggle.cloneNode(true) as HTMLElement;
+      dropdownToggle.parentNode?.replaceChild(newToggle, dropdownToggle);
       
-      newToggleBtn.addEventListener('click', (e) => {
+      newToggle.addEventListener('click', (e) => {
         e.stopPropagation();
-        const isOpen = !dropdownMenu.classList.contains('hidden');
-        
-        if (isOpen) {
-          dropdownMenu.classList.add('hidden');
-          newToggleBtn.setAttribute('aria-expanded', 'false');
-        } else {
-          dropdownMenu.classList.remove('hidden');
-          newToggleBtn.setAttribute('aria-expanded', 'true');
-        }
+        dropdownMenu.classList.toggle('hidden');
       });
-
+      
       // Close dropdown when clicking outside
-      document.addEventListener('click', (e) => {
-        if (!profileDropdown.contains(e.target as Node)) {
-          dropdownMenu.classList.add('hidden');
-          newToggleBtn.setAttribute('aria-expanded', 'false');
-        }
-      });
-
-      // Close dropdown on escape key
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !dropdownMenu.classList.contains('hidden')) {
-          dropdownMenu.classList.add('hidden');
-          newToggleBtn.setAttribute('aria-expanded', 'false');
-          newToggleBtn.focus();
-        }
+      document.addEventListener('click', () => {
+        dropdownMenu.classList.add('hidden');
       });
     }
 
     // Setup logout functionality
+    const logoutBtn = document.getElementById('profile-logout-btn');
     if (logoutBtn) {
       // Remove old listeners
-      const newLogoutBtn = logoutBtn.cloneNode(true) as HTMLButtonElement;
+      const newLogoutBtn = logoutBtn.cloneNode(true) as HTMLElement;
       logoutBtn.parentNode?.replaceChild(newLogoutBtn, logoutBtn);
       
       newLogoutBtn.addEventListener('click', () => {
-        localStorage.removeItem('admin_token');
-        localStorage.removeItem('admin_user');
+        console.log('Logout clicked');
+        AdminAuth.logout();
         window.location.reload();
       });
     }
@@ -240,7 +242,7 @@ const t = useTranslations(lang as keyof typeof languages);
   
   // Listen for storage changes (if user logs in/out in another tab)
   window.addEventListener('storage', (e) => {
-    if (e.key === 'admin_token' || e.key === 'admin_user') {
+    if (e.key === 'access_token') {
       initProfileDropdown();
     }
   });

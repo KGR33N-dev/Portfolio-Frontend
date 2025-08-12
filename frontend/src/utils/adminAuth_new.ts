@@ -1,4 +1,4 @@
-import { API_URLS } from '~/config/api';
+import { API_CONFIG, API_URLS } from '~/config/api';
 import type { CreatePostData, ApiPost } from '~/types/blog';
 
 // Types for better TypeScript support
@@ -148,13 +148,7 @@ export class AdminAuth {
     return !!(user?.is_admin);
   }
 
-  // Method to check if token exists (quick check without API call)
-  static hasToken(): boolean {
-    if (typeof window === 'undefined') return false;
-    return !!localStorage.getItem('access_token');
-  }
-
-  // Check if user is authenticated (API-based verification - secure)
+  // Secure method to check authentication (via API)
   static async isAuthenticatedSecure(): Promise<boolean> {
     const user = await this.verifyUser();
     return !!user;
@@ -237,7 +231,7 @@ export class AdminAuth {
     }
   }
 
-  static async getAdminPosts(params: Record<string, string | number | boolean> = {}): Promise<{ posts: ApiPost[]; total: number; page: number; per_page: number }> {
+  static async getAdminPosts(params: any = {}): Promise<{ posts: ApiPost[]; total: number; page: number; per_page: number }> {
     const url = API_URLS.getAdminPosts(params);
     const response = await this.makeAuthenticatedRequest(url);
 
@@ -291,16 +285,4 @@ export class AdminAuth {
     const data: ResendVerificationResponse = await response.json();
     return data;
   }
-
-}
-
-// Export AdminAuth to window for global access (needed for dashboard and other scripts)
-declare global {
-  interface Window {
-    AdminAuth: typeof AdminAuth;
-  }
-}
-
-if (typeof window !== 'undefined') {
-  window.AdminAuth = AdminAuth;
 }

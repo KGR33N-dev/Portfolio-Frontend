@@ -1,0 +1,781 @@
+---
+import Layout from '~/layouts/PageLayout.astro';
+import Headline from '~/components/ui/Headline.astro';
+import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
+import { useTranslations } from '~/i18n/utils';
+import { languages } from '~/i18n';
+
+export function getStaticPaths() {
+  return Object.keys(languages).map(lang => ({
+    params: { lang }
+  }));
+}
+
+const { lang } = Astro.params;
+const t = useTranslations(lang as keyof typeof languages);
+
+const metadata = {
+  title: t('admin.languageManagement'),
+  description: t('admin.languageSettings'),
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+---
+
+<Layout metadata={metadata}>
+  <WidgetWrapper 
+    id="language-management" 
+    containerClass="max-w-6xl mx-auto py-12 px-4 sm:px-6 lg:px-8"
+  >
+    <!-- Header -->
+    <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 mb-8">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+        <div>
+          <Headline 
+            title={t('admin.languageManagement')}
+            subtitle={t('admin.manageLanguages')}
+            classes={{
+              container: '',
+              title: 'text-2xl font-bold text-gray-900 dark:text-white',
+              subtitle: 'text-sm text-gray-600 dark:text-gray-400 mt-1'
+            }}
+          />
+        </div>
+        <a 
+          href={`/${lang}/admin/dashboard`}
+          class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200 font-medium"
+        >
+          ← Dashboard
+        </a>
+      </div>
+    </div>
+
+    <!-- Error/Success Messages -->
+    <div id="error-message" class="hidden bg-red-100 dark:bg-red-900/20 border border-red-400 text-red-700 dark:text-red-400 px-4 py-3 rounded mb-6">
+    </div>
+    
+    <div id="success-message" class="hidden bg-green-100 dark:bg-green-900/20 border border-green-400 text-green-700 dark:text-green-400 px-4 py-3 rounded mb-6">
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex items-center">
+          <div class="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+            <svg class="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"></path>
+            </svg>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-600 dark:text-gray-400">{t('admin.totalLanguages')}</p>
+            <p id="total-languages" class="text-2xl font-bold text-gray-900 dark:text-white">-</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex items-center">
+          <div class="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+            <svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-600 dark:text-gray-400">{t('admin.activeLanguages')}</p>
+            <p id="active-languages" class="text-2xl font-bold text-gray-900 dark:text-white">-</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex items-center">
+          <div class="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+            <svg class="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-600 dark:text-gray-400">{t('admin.languagesInUse')}</p>
+            <p id="languages-in-use" class="text-2xl font-bold text-gray-900 dark:text-white">-</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex items-center justify-center">
+          <button 
+            id="add-language-btn"
+            class="w-full flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+          >
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            {t('admin.addNewLanguage')}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Language List -->
+    <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 mb-8">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{t('admin.languageList')}</h3>
+        <div class="flex space-x-2">
+          <label class="flex items-center">
+            <input 
+              type="checkbox" 
+              id="show-active-only" 
+              checked
+              class="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <span class="text-sm text-gray-700 dark:text-gray-300">{t('admin.showActiveOnly')}</span>
+          </label>
+        </div>
+      </div>
+      <div class="p-6">
+        <div id="languages-table-container">
+          <!-- Languages table will be loaded here -->
+          <div class="flex items-center justify-center py-8">
+            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            <span class="ml-2 text-gray-600 dark:text-gray-400">{t('admin.loadingPosts')}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add/Edit Language Modal -->
+    <div id="language-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-slate-900">
+        <div class="mt-3">
+          <div class="flex justify-between items-center mb-4">
+            <h3 id="modal-title" class="text-lg font-medium text-gray-900 dark:text-white">{t('admin.addNewLanguage')}</h3>
+            <button id="close-modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          
+          <form id="language-form" class="space-y-4">
+            <input type="hidden" id="language-id" name="id">
+            <input type="hidden" id="form-action" name="action" value="create">
+            
+            <div>
+              <label for="language-code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t('admin.languageCode')} *
+              </label>
+              <input 
+                type="text" 
+                id="language-code" 
+                name="code" 
+                required
+                maxlength="3"
+                class="w-full py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-slate-800 focus:border-blue-500 focus:ring-blue-500"
+                placeholder={t('admin.languageCodePlaceholder')}
+              />
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('admin.languageCodeInvalid')}</p>
+            </div>
+            
+            <div>
+              <label for="language-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t('admin.languageName')} *
+              </label>
+              <input 
+                type="text" 
+                id="language-name" 
+                name="name" 
+                required
+                class="w-full py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-slate-800 focus:border-blue-500 focus:ring-blue-500"
+                placeholder={t('admin.languageNamePlaceholder')}
+              />
+            </div>
+            
+            <div>
+              <label for="language-native-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t('admin.languageNativeName')} *
+              </label>
+              <input 
+                type="text" 
+                id="language-native-name" 
+                name="native_name" 
+                required
+                class="w-full py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-slate-800 focus:border-blue-500 focus:ring-blue-500"
+                placeholder={t('admin.languageNativeNamePlaceholder')}
+              />
+            </div>
+            
+            <div id="edit-only-fields" class="hidden">
+              <label class="flex items-center">
+                <input 
+                  type="checkbox" 
+                  id="language-active" 
+                  name="is_active"
+                  class="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <span class="text-sm text-gray-700 dark:text-gray-300">{t('admin.languageActive')}</span>
+              </label>
+            </div>
+            
+            <div class="flex justify-end space-x-3 pt-4">
+              <button 
+                type="button" 
+                id="cancel-language"
+                class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+              >
+                {t('admin.cancelLanguage')}
+              </button>
+              <button 
+                type="submit" 
+                id="save-language"
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                <span id="save-text">{t('admin.saveLanguage')}</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Access Denied Message (hidden by default) -->
+    <div id="access-denied" class="hidden bg-red-100 dark:bg-red-900/20 border border-red-400 text-red-700 dark:text-red-400 px-6 py-4 rounded-lg text-center">
+      <h3 class="font-semibold text-lg mb-2">{t('admin.accessDenied')}</h3>
+      <p class="mb-4">{t('admin.adminAccessRequired')}</p>
+      <a href={`/${lang}/login`} class="inline-block px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200">
+        {t('admin.goToLogin')}
+      </a>
+    </div>
+  </WidgetWrapper>
+</Layout>
+
+<script define:vars={{ 
+  translations: {
+    languageCreatedSuccessfully: t('admin.languageCreatedSuccessfully'),
+    languageUpdatedSuccessfully: t('admin.languageUpdatedSuccessfully'),
+    languageDeletedSuccessfully: t('admin.languageDeletedSuccessfully'),
+    languageActivatedSuccessfully: t('admin.languageActivatedSuccessfully'),
+    languageDeactivatedSuccessfully: t('admin.languageDeactivatedSuccessfully'),
+    errorLoadingLanguages: t('admin.errorLoadingLanguages'),
+    errorCreatingLanguage: t('admin.errorCreatingLanguage'),
+    errorUpdatingLanguage: t('admin.errorUpdatingLanguage'),
+    errorDeletingLanguage: t('admin.errorDeletingLanguage'),
+    confirmDeleteLanguage: t('admin.confirmDeleteLanguage'),
+    confirmDeactivateLanguage: t('admin.confirmDeactivateLanguage'),
+    languageUsedByPosts: t('admin.languageUsedByPosts'),
+    noLanguagesFound: t('admin.noLanguagesFound'),
+    addNewLanguage: t('admin.addNewLanguage'),
+    editLanguage: t('admin.editLanguage'),
+    createLanguage: t('admin.createLanguage'),
+    updateLanguage: t('admin.updateLanguage'),
+    languageActive: t('admin.languageActive'),
+    languageInactive: t('admin.languageInactive'),
+    languageActions: t('admin.languageActions'),
+    edit: t('admin.edit'),
+    deleteText: t('admin.deleteLanguage'),
+    activate: t('admin.activateLanguage'),
+    deactivate: t('admin.deactivateLanguage'),
+    languageAlreadyExists: t('admin.languageAlreadyExists'),
+    languageCodeRequired: t('admin.languageCodeRequired'),
+    languageNameRequired: t('admin.languageNameRequired'),
+    languageNativeNameRequired: t('admin.languageNativeNameRequired'),
+    languageCodeInvalid: t('admin.languageCodeInvalid'),
+    languageCannotDeleteInUse: t('admin.languageCannotDeleteInUse')
+  }
+}} type="module">
+  
+  async function initLanguageManagement() {
+    // Import required modules
+    const { LanguageAPI, LanguageUtils } = await import('/src/utils/languageAPI.ts');
+    const { AdminAuth } = await import('/src/utils/adminAuth.js');
+    
+    // Check authentication first
+    if (!AdminAuth.isAuthenticated()) {
+      const currentLang = window.location.pathname.split('/')[1];
+      window.location.href = `/${currentLang}/login`;
+      return;
+    }
+
+    // Check if user is admin
+    try {
+      const user = await AdminAuth.checkSession();
+      if (!user?.is_admin) {
+        const accessDeniedDiv = document.getElementById('access-denied');
+        const managementContent = document.getElementById('language-management');
+        
+        if (accessDeniedDiv) accessDeniedDiv.classList.remove('hidden');
+        if (managementContent) managementContent.style.display = 'none';
+        return;
+      }
+    } catch (error) {
+      console.error('Authentication check failed:', error);
+      const currentLang = window.location.pathname.split('/')[1];
+      window.location.href = `/${currentLang}/login`;
+      return;
+    }
+
+    // DOM elements
+    const errorDiv = document.getElementById('error-message');
+    const successDiv = document.getElementById('success-message');
+    const modal = document.getElementById('language-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const languageForm = document.getElementById('language-form');
+    const addLanguageBtn = document.getElementById('add-language-btn');
+    const closeModalBtn = document.getElementById('close-modal');
+    const cancelBtn = document.getElementById('cancel-language');
+    const showActiveOnlyCheckbox = document.getElementById('show-active-only');
+    const tableContainer = document.getElementById('languages-table-container');
+
+    // State
+    let currentLanguages = [];
+    let isEditing = false;
+
+    // Initialize
+    await loadLanguages();
+    await loadStats();
+
+    // Event listeners
+    addLanguageBtn?.addEventListener('click', () => openModal('create'));
+    closeModalBtn?.addEventListener('click', closeModal);
+    cancelBtn?.addEventListener('click', closeModal);
+    showActiveOnlyCheckbox?.addEventListener('change', loadLanguages);
+    languageForm?.addEventListener('submit', handleFormSubmit);
+
+    // Close modal on outside click
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+
+    // Functions
+    function showError(message) {
+      if (errorDiv) {
+        errorDiv.textContent = message;
+        errorDiv.classList.remove('hidden');
+      }
+      if (successDiv) {
+        successDiv.classList.add('hidden');
+      }
+    }
+
+    function showSuccess(message) {
+      if (successDiv) {
+        successDiv.textContent = message;
+        successDiv.classList.remove('hidden');
+      }
+      if (errorDiv) {
+        errorDiv.classList.add('hidden');
+      }
+    }
+
+    function hideMessages() {
+      if (errorDiv) errorDiv.classList.add('hidden');
+      if (successDiv) successDiv.classList.add('hidden');
+    }
+
+    async function loadLanguages() {
+      if (!tableContainer) return;
+
+      // Show loading
+      tableContainer.innerHTML = `
+        <div class="flex items-center justify-center py-8">
+          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          <span class="ml-2 text-gray-600 dark:text-gray-400">Loading languages...</span>
+        </div>
+      `;
+
+      try {
+        const activeOnly = showActiveOnlyCheckbox?.checked ?? true;
+        const languages = await LanguageAPI.getLanguages(activeOnly);
+        currentLanguages = languages;
+        
+        if (languages.length === 0) {
+          tableContainer.innerHTML = `
+            <div class="text-center py-8">
+              <p class="text-gray-600 dark:text-gray-400">${translations.noLanguagesFound}</p>
+            </div>
+          `;
+          return;
+        }
+
+        // Create table
+        const tableHTML = `
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead class="bg-gray-50 dark:bg-slate-800">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Language</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Code</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Posts</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Created</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-gray-700">
+                ${languages.map(lang => `
+                  <tr class="hover:bg-gray-50 dark:hover:bg-slate-800">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center">
+                        <span class="text-2xl mr-3">${LanguageUtils.getLanguageFlag(lang.code)}</span>
+                        <div>
+                          <div class="text-sm font-medium text-gray-900 dark:text-white">${lang.native_name}</div>
+                          <div class="text-sm text-gray-500 dark:text-gray-400">${lang.name}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded">${lang.code}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${lang.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'}">
+                        ${lang.is_active ? translations.languageActive : translations.languageInactive}
+                      </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      <span class="font-medium">0</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      ${new Date(lang.created_at).toLocaleDateString()}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div class="flex space-x-2">
+                        <button 
+                          onclick="window.editLanguage('${lang.code}')"
+                          class="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
+                        >
+                          ${translations.edit}
+                        </button>
+                        ${lang.is_active ? `
+                          <button 
+                            onclick="window.toggleLanguageStatus('${lang.code}', false)"
+                            class="text-orange-600 dark:text-orange-400 hover:text-orange-900 dark:hover:text-orange-300"
+                            title="Deactivate language (keeps data)"
+                          >
+                            ${translations.deactivate}
+                          </button>
+                        ` : `
+                          <button 
+                            onclick="window.toggleLanguageStatus('${lang.code}', true)"
+                            class="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300"
+                            title="Activate language"
+                          >
+                            ${translations.activate}
+                          </button>
+                        `}
+                        <button 
+                          onclick="window.deleteLanguage('${lang.code}')"
+                          class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                          title="Permanently delete language (only if not used by posts)"
+                        >
+                          ${translations.deleteText}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        tableContainer.innerHTML = tableHTML;
+      } catch (error) {
+        console.error('Error loading languages:', error);
+        showError(`${translations.errorLoadingLanguages}: ${error.message}`);
+        tableContainer.innerHTML = `
+          <div class="text-center py-8">
+            <p class="text-red-600 dark:text-red-400">${translations.errorLoadingLanguages}</p>
+          </div>
+        `;
+      }
+    }
+
+    async function loadStats() {
+      try {
+        // Load basic stats first
+        const languages = await LanguageAPI.getLanguages(false); // Get all languages
+        const activeLanguages = languages.filter(lang => lang.is_active);
+        
+        // Update stats
+        const totalLangEl = document.getElementById('total-languages');
+        const activeLangEl = document.getElementById('active-languages');
+        const inUseLangEl = document.getElementById('languages-in-use');
+
+        if (totalLangEl) totalLangEl.textContent = languages.length.toString();
+        if (activeLangEl) activeLangEl.textContent = activeLanguages.length.toString();
+        if (inUseLangEl) inUseLangEl.textContent = '0'; // Will be updated with actual stats
+
+        // Try to load detailed stats
+        try {
+          const stats = await LanguageAPI.getLanguageStats();
+          const languagesWithPosts = stats.languages.filter(lang => lang.posts_count > 0);
+          if (inUseLangEl) inUseLangEl.textContent = languagesWithPosts.length.toString();
+        } catch (error) {
+          console.warn('Could not load detailed language stats:', error);
+        }
+      } catch (error) {
+        console.error('Error loading language stats:', error);
+      }
+    }
+
+    function openModal(mode, language = null) {
+      isEditing = mode === 'edit';
+      const formAction = document.getElementById('form-action');
+      const editOnlyFields = document.getElementById('edit-only-fields');
+      const codeInput = document.getElementById('language-code');
+      
+      if (formAction) formAction.value = mode;
+      
+      if (isEditing && language) {
+        modalTitle.textContent = translations.editLanguage;
+        document.getElementById('save-text').textContent = translations.updateLanguage;
+        
+        // Fill form with language data
+        document.getElementById('language-id').value = language.id;
+        document.getElementById('language-code').value = language.code;
+        document.getElementById('language-name').value = language.name;
+        document.getElementById('language-native-name').value = language.native_name;
+        document.getElementById('language-active').checked = language.is_active;
+        
+        // Disable code editing
+        codeInput.disabled = true;
+        codeInput.classList.add('bg-gray-100', 'dark:bg-gray-800');
+        
+        // Show edit-only fields
+        editOnlyFields.classList.remove('hidden');
+      } else {
+        modalTitle.textContent = translations.addNewLanguage;
+        document.getElementById('save-text').textContent = translations.createLanguage;
+        
+        // Reset form
+        languageForm.reset();
+        document.getElementById('language-id').value = '';
+        
+        // Enable code editing
+        codeInput.disabled = false;
+        codeInput.classList.remove('bg-gray-100', 'dark:bg-gray-800');
+        
+        // Hide edit-only fields
+        editOnlyFields.classList.add('hidden');
+      }
+      
+      modal.classList.remove('hidden');
+    }
+
+    function closeModal() {
+      modal.classList.add('hidden');
+      languageForm.reset();
+      hideMessages();
+    }
+
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+      hideMessages();
+
+      const formData = new FormData(languageForm);
+      const action = formData.get('action');
+      
+      // Check if already submitting
+      const saveBtn = document.getElementById('save-language');
+      if (saveBtn.disabled) {
+        console.log('Form submission already in progress, ignoring duplicate submission');
+        return;
+      }
+      
+      // Validation
+      const code = formData.get('code')?.toString().toLowerCase().trim();
+      const name = formData.get('name')?.toString().trim();
+      const nativeName = formData.get('native_name')?.toString().trim();
+
+      if (!code) {
+        showError(translations.languageCodeRequired);
+        return;
+      }
+
+      if (!LanguageUtils.validateLanguageCode(code)) {
+        showError(translations.languageCodeInvalid);
+        return;
+      }
+
+      if (!name) {
+        showError(translations.languageNameRequired);
+        return;
+      }
+
+      if (!nativeName) {
+        showError(translations.languageNativeNameRequired);
+        return;
+      }
+
+      // Check for duplicates (only for create)
+      if (action === 'create' && currentLanguages.some(lang => lang.code === code)) {
+        showError(translations.languageAlreadyExists);
+        return;
+      }
+
+      try {
+        const saveText = document.getElementById('save-text');
+        
+        // Disable button and show loading state
+        saveBtn.disabled = true;
+        saveText.textContent = action === 'create' ? 'Creating...' : 'Updating...';
+
+        // Debug logging
+        console.log('Creating language with data:', { code, name, native_name: nativeName });
+        console.log('Existing language codes:', currentLanguages.map(l => l.code));
+
+        if (action === 'create') {
+          const result = await LanguageAPI.createLanguage({
+            code,
+            name,
+            native_name: nativeName
+          }, AdminAuth.getToken());
+          
+          console.log('Language created successfully:', result);
+          showSuccess(translations.languageCreatedSuccessfully);
+        } else {
+          const isActive = formData.get('is_active') === 'on';
+          const result = await LanguageAPI.updateLanguage(code, {
+            name,
+            native_name: nativeName,
+            is_active: isActive
+          }, AdminAuth.getToken());
+          
+          console.log('Language updated successfully:', result);
+          showSuccess(translations.languageUpdatedSuccessfully);
+        }
+
+        closeModal();
+        await loadLanguages();
+        await loadStats();
+        
+      } catch (error) {
+        console.error('Error saving language:', error);
+        console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+        
+        const errorMsg = action === 'create' ? translations.errorCreatingLanguage : translations.errorUpdatingLanguage;
+        showError(`${errorMsg}: ${error.message}`);
+      } finally {
+        // Re-enable button and restore text
+        saveBtn.disabled = false;
+        const saveText = document.getElementById('save-text');
+        saveText.textContent = action === 'create' ? translations.createLanguage : translations.updateLanguage;
+      }
+    }
+
+    // Global functions for button actions
+    window.editLanguage = async function(code) {
+      try {
+        const language = await LanguageAPI.getLanguage(code);
+        openModal('edit', language);
+      } catch (error) {
+        console.error('Error loading language for edit:', error);
+        showError(`Error loading language: ${error.message}`);
+      }
+    };
+
+    // Track operations in progress to prevent double-clicks
+    const operationsInProgress = new Set();
+
+    window.toggleLanguageStatus = async function(code, activate) {
+      const operationKey = `toggle-${code}`;
+      
+      // Prevent double-click
+      if (operationsInProgress.has(operationKey)) {
+        console.log('Toggle operation already in progress for', code);
+        return;
+      }
+
+      const action = activate ? 'activate' : 'deactivate';
+      const confirmMsg = activate ? 
+        `Are you sure you want to activate language "${code}"?` : 
+        `Are you sure you want to deactivate language "${code}"?`;
+
+      if (!confirm(confirmMsg)) return;
+
+      operationsInProgress.add(operationKey);
+
+      try {
+        console.log(`Attempting to ${action} language:`, code);
+        console.log('Using endpoint:', activate ? 
+          `/api/languages/${code}/activate` : 
+          `/api/languages/${code}/deactivate`);
+        console.log('Admin token available:', !!AdminAuth.getToken());
+
+        if (activate) {
+          const result = await LanguageAPI.activateLanguage(code, AdminAuth.getToken());
+          console.log('Activation result:', result);
+          showSuccess(translations.languageActivatedSuccessfully);
+        } else {
+          const result = await LanguageAPI.deactivateLanguage(code, AdminAuth.getToken());
+          console.log('Deactivation result:', result);
+          showSuccess(translations.languageDeactivatedSuccessfully);
+        }
+
+        await loadLanguages();
+        await loadStats();
+      } catch (error) {
+        console.error(`Error ${action}ing language:`, error);
+        console.error('Full error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
+        showError(`Error ${action}ing language: ${error.message}`);
+      } finally {
+        operationsInProgress.delete(operationKey);
+      }
+    };
+
+    window.deleteLanguage = async function(code) {
+      const operationKey = `delete-${code}`;
+      
+      // Prevent double-click
+      if (operationsInProgress.has(operationKey)) {
+        console.log('Delete operation already in progress for', code);
+        return;
+      }
+
+      const confirmMsg = `${translations.confirmDeleteLanguage} "${code}"?\n\nThis will permanently remove the language from the system. If the language is used by posts, you should deactivate it instead.`;
+      
+      if (!confirm(confirmMsg)) return;
+
+      operationsInProgress.add(operationKey);
+
+      try {
+        await LanguageAPI.deleteLanguage(code, AdminAuth.getToken());
+        showSuccess(translations.languageDeletedSuccessfully);
+        
+        await loadLanguages();
+        await loadStats();
+      } catch (error) {
+        console.error('Error deleting language:', error);
+        
+        // Check if the error is about language being in use
+        if (error.message.includes('used by posts') || error.message.includes('in use')) {
+          const useDeactivateMsg = `${translations.languageUsedByPosts}\n\nWould you like to deactivate it instead?`;
+          if (confirm(useDeactivateMsg)) {
+            try {
+              await LanguageAPI.deactivateLanguage(code, AdminAuth.getToken());
+              showSuccess(translations.languageDeactivatedSuccessfully);
+              await loadLanguages();
+              await loadStats();
+            } catch (deactivateError) {
+              console.error('Error deactivating language:', deactivateError);
+              showError(`Error deactivating language: ${deactivateError.message}`);
+            }
+          }
+        } else {
+          showError(`${translations.errorDeletingLanguage}: ${error.message}`);
+        }
+      } finally {
+        operationsInProgress.delete(operationKey);
+      }
+    };
+  }
+
+  // Initialize on page load
+  document.addEventListener('DOMContentLoaded', initLanguageManagement);
+  document.addEventListener('astro:page-load', initLanguageManagement);
+</script>

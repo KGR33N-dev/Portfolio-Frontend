@@ -4,7 +4,6 @@ import Headline from '~/components/ui/Headline.astro';
 import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
 import { useTranslations } from '~/i18n/utils';
 import { languages } from '~/i18n';
-import { getFrontendUrl } from '~/config/api';
 
 export function getStaticPaths() {
   return Object.keys(languages).map(lang => ({
@@ -158,121 +157,17 @@ const metadata = {
         <div>
           <div class="flex justify-between items-center mb-4">
             <h3 class="text-lg font-medium text-gray-900 dark:text-white">{t('admin.translations')}</h3>
-            <div class="flex gap-2">
-              <button 
-                type="button" 
-                id="add-polish-btn"
-                class="px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                {t('admin.addPolish')}
-              </button>
-              <button 
-                type="button" 
-                id="add-english-btn"
-                class="px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                {t('admin.addEnglish')}
-              </button>
+            <div id="translation-status" class="text-sm text-gray-600 dark:text-gray-400">
+              Loading languages...
             </div>
           </div>
 
           <!-- Translation sections will be added here dynamically -->
           <div id="translations-container" class="space-y-6">
-            <!-- Default translation section for current language -->
-            <div class="translation-section border border-gray-200 dark:border-gray-700 rounded-lg p-6" data-lang={lang}>
-              <div class="flex justify-between items-center mb-4">
-                <h4 class="text-md font-medium text-gray-900 dark:text-white">
-                  {lang === 'pl' ? t('admin.polishVersion') : t('admin.englishVersion')}
-                </h4>
-                <button 
-                  type="button" 
-                  class="remove-translation-btn text-red-500 hover:text-red-700 text-sm"
-                  data-lang={lang}
-                  style="display: none;"
-                >
-                  {t('admin.remove')}
-                </button>
-              </div>
-
-              <div class="space-y-4">
-                <!-- Title -->
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('admin.titleRequired')}
-                  </label>
-                  <input 
-                    name={`title-${lang}`}
-                    type="text" 
-                    required 
-                    class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
-                    placeholder={t('admin.enterPostTitlePlaceholder')}
-                  />
-                </div>
-
-                <!-- Excerpt -->
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('admin.excerpt')}
-                  </label>
-                  <textarea 
-                    name={`excerpt-${lang}`}
-                    rows="3"
-                    class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
-                    placeholder={t('admin.excerptDescription')}
-                  ></textarea>
-                </div>
-
-                <!-- Content -->
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('admin.contentRequired')}
-                  </label>
-                  <div class="relative">
-                    <textarea 
-                      name={`content-${lang}`}
-                      rows="20"
-                      required
-                      class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors resize-y min-h-[500px]"
-                      placeholder={t('admin.writeContentMarkdown')}
-                    ></textarea>
-                    <div class="absolute bottom-3 right-3 text-xs text-gray-400 dark:text-gray-500 bg-white dark:bg-slate-900 px-2 py-1 rounded">
-                      {t('admin.markdownSupported')}
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Meta fields -->
-                <details class="border border-gray-200 dark:border-gray-700 rounded-lg">
-                  <summary class="px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 font-medium">
-                    {t('admin.seoSettingsOptional')}
-                  </summary>
-                  <div class="px-4 pb-4 space-y-4">
-                    <div>
-                      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        {t('admin.metaTitle')}
-                      </label>
-                      <input 
-                        name={`meta_title-${lang}`}
-                        type="text" 
-                        class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
-                        placeholder={t('admin.seoTitlePlaceholder')}
-                      />
-                    </div>
-                    
-                    <div>
-                      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        {t('admin.metaDescription')}
-                      </label>
-                      <textarea 
-                        name={`meta_description-${lang}`}
-                        rows="2"
-                        class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
-                        placeholder={t('admin.seoDescriptionPlaceholder')}
-                      ></textarea>
-                    </div>
-                  </div>
-                </details>
-              </div>
+            <!-- Loading state -->
+            <div id="loading-languages" class="text-center py-8">
+              <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+              <span class="text-gray-600 dark:text-gray-400">Loading available languages...</span>
             </div>
           </div>
         </div>
@@ -329,8 +224,9 @@ const metadata = {
 <script>
   import { AdminAuth } from '../../../utils/adminAuth.js';
   import { API_URLS, getFrontendUrl } from '../../../config/api.js';
+  import { LanguageAPI } from '../../../utils/languageAPI.js';
   
-  function initCreatePost() {
+  async function initCreatePost() {
     // Check authentication first
     if (!AdminAuth.isAuthenticated()) {
       const currentLang = window.location.pathname.split('/')[1];
@@ -364,11 +260,218 @@ const metadata = {
     const errorDiv = document.getElementById('error-message') as HTMLDivElement;
     const successDiv = document.getElementById('success-message') as HTMLDivElement;
     
-    const addPolishBtn = document.getElementById('add-polish-btn') as HTMLButtonElement;
-    const addEnglishBtn = document.getElementById('add-english-btn') as HTMLButtonElement;
+    // Set the author field to the logged-in user's username (nickname)
+    const authorInput = document.getElementById('author') as HTMLInputElement;
+    if (authorInput && !authorInput.value) {
+      const defaultAuthor = user.username || user.full_name || user.email?.split('@')[0] || '';
+      authorInput.value = defaultAuthor;
+      authorInput.placeholder = `Default: ${defaultAuthor || 'Enter author name'}`;
+    }
+    
     const translationsContainer = document.getElementById('translations-container') as HTMLDivElement;
+    const translationStatus = document.getElementById('translation-status') as HTMLDivElement;
+    const loadingDiv = document.getElementById('loading-languages') as HTMLDivElement;
 
-    // Function to collect all translations from form
+    // Load available languages from the system
+    interface SimpleLanguage {
+      code: string;
+      name: string;
+      native_name: string;
+      is_active: boolean;
+    }
+    
+    let availableLanguages: SimpleLanguage[] = [];
+    let requiredLanguages: SimpleLanguage[] = [];
+    
+    try {
+      console.log('Loading languages from system...');
+      availableLanguages = await LanguageAPI.getLanguages(true); // Only active languages
+      requiredLanguages = availableLanguages.filter(lang => lang.is_active);
+      
+      console.log('Available active languages:', availableLanguages);
+      console.log('Required languages for posts:', requiredLanguages);
+      
+      if (requiredLanguages.length === 0) {
+        throw new Error('No active languages found in the system. Please activate at least one language in Language Management.');
+      }
+      
+      // Update status
+      if (translationStatus) {
+        translationStatus.textContent = `Required translations: ${requiredLanguages.length} languages`;
+      }
+      
+      // Create translation sections for all required languages
+      await createAllTranslationSections();
+      
+    } catch (error) {
+      console.error('Error loading languages:', error);
+      showError(`Failed to load languages: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      // Fallback to default languages if API fails
+      console.log('Using fallback default languages');
+      requiredLanguages = [
+        { code: 'en', name: 'English', native_name: 'English', is_active: true },
+        { code: 'pl', name: 'Polish', native_name: 'Polski', is_active: true }
+      ];
+      
+      if (translationStatus) {
+        translationStatus.textContent = `Using fallback languages: ${requiredLanguages.length} languages`;
+      }
+      
+      await createAllTranslationSections();
+    }
+
+    // Function to get language flag emoji
+    function getLanguageFlag(code: string): string {
+      const flags: { [key: string]: string } = {
+        'pl': '🇵🇱',
+        'en': '🇺🇸',
+        'de': '🇩🇪',
+        'fr': '🇫🇷',
+        'es': '🇪🇸',
+        'it': '🇮🇹',
+        'pt': '🇵🇹',
+        'ru': '🇷🇺',
+        'zh': '🇨🇳',
+        'ja': '🇯🇵',
+        'ko': '🇰🇷'
+      };
+      return flags[code.toLowerCase()] || '🌐';
+    }
+
+    // Function to create all required translation sections
+    async function createAllTranslationSections() {
+      if (!translationsContainer) return;
+      
+      // Clear loading state
+      if (loadingDiv) {
+        loadingDiv.remove();
+      }
+      
+      // Clear existing sections
+      translationsContainer.innerHTML = '';
+      
+      // Create sections for all required languages
+      for (const language of requiredLanguages) {
+        const section = createTranslationSection(language);
+        translationsContainer.appendChild(section);
+      }
+      
+      console.log(`Created translation sections for ${requiredLanguages.length} languages:`, 
+                  requiredLanguages.map(l => l.code));
+    }
+
+    // Function to create a translation section for a specific language
+    function createTranslationSection(language: SimpleLanguage): HTMLElement {
+      const { code, name, native_name } = language;
+      const flag = getLanguageFlag(code);
+      
+      const section = document.createElement('div');
+      section.className = 'translation-section border border-gray-200 dark:border-gray-700 rounded-lg p-6';
+      section.setAttribute('data-lang', code);
+      
+      section.innerHTML = `
+        <div class="flex justify-between items-center mb-4">
+          <h4 class="text-md font-medium text-gray-900 dark:text-white flex items-center">
+            <span class="text-2xl mr-2">${flag}</span>
+            <span>${native_name} (${name}) *</span>
+            <span class="ml-2 text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400 px-2 py-1 rounded">Required</span>
+          </h4>
+          <div class="text-xs text-gray-500 dark:text-gray-400">
+            Language: ${code.toUpperCase()}
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Title -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Title * <span class="text-xs text-gray-500">(${native_name})</span>
+            </label>
+            <input 
+              name="title-${code}" 
+              type="text" 
+              required 
+              data-lang="${code}"
+              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+              placeholder="Enter post title in ${native_name}..."
+            />
+          </div>
+
+          <!-- Excerpt -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Excerpt <span class="text-xs text-gray-500">(${native_name})</span>
+            </label>
+            <textarea 
+              name="excerpt-${code}"
+              rows="3"
+              data-lang="${code}"
+              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+              placeholder="Brief description of the post in ${native_name}..."
+            ></textarea>
+          </div>
+
+          <!-- Content -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Content * <span class="text-xs text-gray-500">(${native_name})</span>
+            </label>
+            <div class="relative">
+              <textarea 
+                name="content-${code}"
+                rows="20"
+                required
+                data-lang="${code}"
+                class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors resize-y min-h-[500px]"
+                placeholder="Write your post content here in ${native_name}... (Markdown supported)"
+              ></textarea>
+              <div class="absolute bottom-3 right-3 text-xs text-gray-400 dark:text-gray-500 bg-white dark:bg-slate-900 px-2 py-1 rounded">
+                Markdown supported
+              </div>
+            </div>
+          </div>
+
+          <!-- Meta fields -->
+          <details class="border border-gray-200 dark:border-gray-700 rounded-lg">
+            <summary class="px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 font-medium">
+              SEO Settings for ${native_name} (Optional)
+            </summary>
+            <div class="px-4 pb-4 space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Meta Title <span class="text-xs text-gray-500">(${native_name})</span>
+                </label>
+                <input 
+                  name="meta_title-${code}"
+                  type="text" 
+                  data-lang="${code}"
+                  class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                  placeholder="SEO title in ${native_name} (leave empty to use post title)"
+                />
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Meta Description <span class="text-xs text-gray-500">(${native_name})</span>
+                </label>
+                <textarea 
+                  name="meta_description-${code}"
+                  rows="2"
+                  data-lang="${code}"
+                  class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                  placeholder="SEO description in ${native_name} (leave empty to use excerpt)"
+                ></textarea>
+              </div>
+            </div>
+          </details>
+        </div>
+      `;
+      
+      return section;
+    }
+
+    // Function to collect all translations from form - now validates required languages
     function collectTranslations(): Array<{
       language_code: string;
       title: string;
@@ -385,137 +488,50 @@ const metadata = {
         meta_title: string;
         meta_description: string;
       }> = [];
-      const translationSections = document.querySelectorAll('.translation-section');
       
-      translationSections.forEach(section => {
-        const lang = section.getAttribute('data-lang');
-        if (!lang) return;
-        
-        const titleInput = section.querySelector(`input[name="title-${lang}"]`) as HTMLInputElement;
-        const excerptInput = section.querySelector(`textarea[name="excerpt-${lang}"]`) as HTMLTextAreaElement;
-        const contentInput = section.querySelector(`textarea[name="content-${lang}"]`) as HTMLTextAreaElement;
-        const metaTitleInput = section.querySelector(`input[name="meta_title-${lang}"]`) as HTMLInputElement;
-        const metaDescInput = section.querySelector(`textarea[name="meta_description-${lang}"]`) as HTMLTextAreaElement;
-        
-        if (titleInput?.value.trim() && contentInput?.value.trim()) {
-          translations.push({
-            language_code: lang,
-            title: titleInput.value.trim(),
-            content: contentInput.value.trim(),
-            excerpt: excerptInput?.value.trim() || '',
-            meta_title: metaTitleInput?.value.trim() || '',
-            meta_description: metaDescInput?.value.trim() || ''
-          });
+      const missingLanguages: string[] = [];
+      
+      // Validate that we have translations for all required languages
+      for (const requiredLang of requiredLanguages) {
+        const section = document.querySelector(`[data-lang="${requiredLang.code}"]`);
+        if (!section) {
+          missingLanguages.push(requiredLang.native_name);
+          continue;
         }
-      });
+        
+        const titleInput = section.querySelector(`input[name="title-${requiredLang.code}"]`) as HTMLInputElement;
+        const excerptInput = section.querySelector(`textarea[name="excerpt-${requiredLang.code}"]`) as HTMLTextAreaElement;
+        const contentInput = section.querySelector(`textarea[name="content-${requiredLang.code}"]`) as HTMLTextAreaElement;
+        const metaTitleInput = section.querySelector(`input[name="meta_title-${requiredLang.code}"]`) as HTMLInputElement;
+        const metaDescInput = section.querySelector(`textarea[name="meta_description-${requiredLang.code}"]`) as HTMLTextAreaElement;
+        
+        // Check if required fields are filled
+        if (!titleInput?.value.trim() || !contentInput?.value.trim()) {
+          missingLanguages.push(`${requiredLang.native_name} (missing title or content)`);
+          continue;
+        }
+        
+        translations.push({
+          language_code: requiredLang.code,
+          title: titleInput.value.trim(),
+          content: contentInput.value.trim(),
+          excerpt: excerptInput?.value.trim() || '',
+          meta_title: metaTitleInput?.value.trim() || '',
+          meta_description: metaDescInput?.value.trim() || ''
+        });
+      }
+      
+      // Show error if any required languages are missing
+      if (missingLanguages.length > 0) {
+        const errorMessage = `Missing translations for: ${missingLanguages.join(', ')}. All active languages require translations.`;
+        showError(errorMessage);
+        return [];
+      }
+      
+      console.log(`Collected ${translations.length} translations for required languages:`, 
+                  translations.map(t => t.language_code));
       
       return translations;
-    }
-
-    // Function to create a new translation section
-    function createTranslationSection(lang: string) {
-      const langName = lang === 'pl' ? '🇵🇱 Polish' : '🇺🇸 English';
-      
-      const section = document.createElement('div');
-      section.className = 'translation-section border border-gray-200 dark:border-gray-700 rounded-lg p-6';
-      section.setAttribute('data-lang', lang);
-      
-      section.innerHTML = `
-        <div class="flex justify-between items-center mb-4">
-          <h4 class="text-md font-medium text-gray-900 dark:text-white">
-            ${langName} Version
-          </h4>
-          <button 
-            type="button" 
-            class="remove-translation-btn text-red-500 hover:text-red-700 text-sm"
-            data-lang="${lang}"
-          >
-            Remove
-          </button>
-        </div>
-
-        <div class="space-y-4">
-          <!-- Title -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Title *
-            </label>
-            <input 
-              name="title-${lang}" 
-              type="text" 
-              required 
-              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
-              placeholder="Enter post title..."
-            />
-          </div>
-
-          <!-- Excerpt -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Excerpt
-            </label>
-            <textarea 
-              name="excerpt-${lang}"
-              rows="3"
-              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
-              placeholder="Brief description of the post..."
-            ></textarea>
-          </div>
-
-          <!-- Content -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Content *
-            </label>
-            <div class="relative">
-              <textarea 
-                name="content-${lang}"
-                rows="20"
-                required
-                class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors resize-y min-h-[500px]"
-                placeholder="Write your post content here... (Markdown supported)"
-              ></textarea>
-              <div class="absolute bottom-3 right-3 text-xs text-gray-400 dark:text-gray-500 bg-white dark:bg-slate-900 px-2 py-1 rounded">
-                Markdown supported
-              </div>
-            </div>
-          </div>
-
-          <!-- Meta fields -->
-          <details class="border border-gray-200 dark:border-gray-700 rounded-lg">
-            <summary class="px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 font-medium">
-              SEO Settings (Optional)
-            </summary>
-            <div class="px-4 pb-4 space-y-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Meta Title
-                </label>
-                <input 
-                  name="meta_title-${lang}"
-                  type="text" 
-                  class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
-                  placeholder="SEO title (leave empty to use post title)"
-                />
-              </div>
-              
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Meta Description
-                </label>
-                <textarea 
-                  name="meta_description-${lang}"
-                  rows="2"
-                  class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
-                  placeholder="SEO description (leave empty to use excerpt)"
-                ></textarea>
-              </div>
-            </div>
-          </details>
-        </div>
-      `;
-      
-      return section;
     }
 
     // Auto-generate slug from first translation title
@@ -531,77 +547,13 @@ const metadata = {
       }
     }
 
-    // Event listeners for adding translations
-    addPolishBtn?.addEventListener('click', () => {
-      // Check if Polish translation already exists
-      if (document.querySelector('[data-lang="pl"]')) {
-        showError('Polish translation already exists');
-        return;
-      }
-      
-      const section = createTranslationSection('pl');
-      translationsContainer.appendChild(section);
-      
-      // Add event listener for remove button
-      const removeBtn = section.querySelector('.remove-translation-btn');
-      removeBtn?.addEventListener('click', () => {
-        section.remove();
-        updateRemoveButtonsVisibility();
-      });
-      
-      updateRemoveButtonsVisibility();
-    });
-
-    addEnglishBtn?.addEventListener('click', () => {
-      // Check if English translation already exists
-      if (document.querySelector('[data-lang="en"]')) {
-        showError('English translation already exists');
-        return;
-      }
-      
-      const section = createTranslationSection('en');
-      translationsContainer.appendChild(section);
-      
-      // Add event listener for remove button
-      const removeBtn = section.querySelector('.remove-translation-btn');
-      removeBtn?.addEventListener('click', () => {
-        section.remove();
-        updateRemoveButtonsVisibility();
-      });
-      
-      updateRemoveButtonsVisibility();
-    });
-
-    // Function to update visibility of remove buttons
-    function updateRemoveButtonsVisibility() {
-      const translationSections = document.querySelectorAll('.translation-section');
-      const removeButtons = document.querySelectorAll('.remove-translation-btn');
-      
-      // Show remove buttons only if there's more than one translation
-      removeButtons.forEach(btn => {
-        const btnElement = btn as HTMLButtonElement;
-        btnElement.style.display = translationSections.length > 1 ? 'block' : 'none';
-      });
-      
-      // Update add button states
-      if (addPolishBtn) {
-        addPolishBtn.disabled = !!document.querySelector('[data-lang="pl"]');
-      }
-      if (addEnglishBtn) {
-        addEnglishBtn.disabled = !!document.querySelector('[data-lang="en"]');
-      }
-    }
-
-    // Set up auto-slug generation for the first title field
+    // Set up auto-slug generation for title fields
     document.addEventListener('input', (e) => {
       const target = e.target as HTMLInputElement;
       if (target && target.name && target.name.startsWith('title-')) {
         updateSlugFromTranslations();
       }
     });
-
-    // Initialize remove button visibility
-    updateRemoveButtonsVisibility();
 
     // Utility function to generate slug
     function generateSlugFromTitle(title: string): string {
@@ -793,21 +745,32 @@ const metadata = {
         // Show loading state
         if (activeBtn) activeBtn.disabled = true;
         if (activeText) activeText.textContent = 'Saving...';
-        // Validate required fields - sprawdz czy mamy przynajmniej jedna tradlumaczenie
+        // Validate required fields - all active languages must have translations
         const translations = collectTranslations();
         if (translations.length === 0) {
-          throw new Error('At least one translation is required');
+          throw new Error('Translations are required for all active languages');
+        }
+        
+        // Validate that we have all required languages
+        if (translations.length !== requiredLanguages.length) {
+          const missingLangs = requiredLanguages
+            .filter(reqLang => !translations.some(t => t.language_code === reqLang.code))
+            .map(lang => lang.native_name);
+          
+          throw new Error(`Missing translations for: ${missingLangs.join(', ')}`);
         }
         
         // Validate that each translation has title and content
         for (const translation of translations) {
           if (!translation.title.trim() || !translation.content.trim()) {
-            throw new Error(`Title and content are required for ${translation.language_code} translation`);
+            const langName = requiredLanguages.find(l => l.code === translation.language_code)?.native_name || translation.language_code;
+            throw new Error(`Title and content are required for ${langName} translation`);
           }
           
           // Validate title length
           if (translation.title.length > 200) {
-            throw new Error(`Title for ${translation.language_code} cannot be longer than 200 characters`);
+            const langName = requiredLanguages.find(l => l.code === translation.language_code)?.native_name || translation.language_code;
+            throw new Error(`Title for ${langName} cannot be longer than 200 characters`);
           }
         }
         
@@ -845,9 +808,10 @@ const metadata = {
         const categoryInput = document.querySelector('select[name="category"]') as HTMLSelectElement;
         const featuredImageInput = document.querySelector('input[name="featured_image"]') as HTMLInputElement;
         
-        const authorName = authorInput?.value.trim() || user.username || user.full_name || user.email?.split('@')[0] || 'KGR33N';
+        // Use logged-in user's nickname (username) as author, with fallbacks
+        const authorName = authorInput?.value.trim() || user.username || user.full_name || user.email?.split('@')[0] || 'Anonymous';
         
-        // Try new multilingual API structure first
+        // Build post data according to the new multilingual API structure
         const postData = {
           slug: slug,
           author: authorName,
@@ -869,8 +833,8 @@ const metadata = {
         
         console.log('Authorization header will be:', `Bearer ${token.substring(0, 20)}...`);
 
-        // Tworzymy post z wieloma tłumaczeniami
-        let response = await fetch(API_URLS.createPost(), {
+        // Create post using new multilingual API structure
+        const response = await fetch(API_URLS.createPost(), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -882,42 +846,6 @@ const metadata = {
 
         console.log('Response status:', response.status);
         console.log('Response statusText:', response.statusText);
-
-        // If new API structure fails, try fallback to old structure
-        if (!response.ok && response.status === 422) {
-          console.log('⚠️ New API structure failed, trying fallback to old structure...');
-          
-          // Use first translation as main content
-          const firstTranslation = translations[0];
-          const oldPostData = {
-            title: firstTranslation.title,
-            slug: slug,
-            content: firstTranslation.content,
-            excerpt: firstTranslation.excerpt || '',
-            author: authorName,
-            meta_title: firstTranslation.meta_title || '',
-            meta_description: firstTranslation.meta_description || '',
-            language: firstTranslation.language_code,
-            category: categoryInput?.value || 'general',
-            tags: tagsArray,
-            featured_image: featuredImageInput?.value.trim() || undefined
-          };
-          
-          console.log('Trying old API structure:', oldPostData);
-          
-          response = await fetch(API_URLS.createPost(), {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-              'Origin': getFrontendUrl()
-            },
-            body: JSON.stringify(oldPostData)
-          });
-          
-          console.log('Fallback response status:', response.status);
-          console.log('Fallback response statusText:', response.statusText);
-        }
 
         if (!response.ok) {
           const contentType = response.headers.get('content-type');
@@ -961,14 +889,11 @@ const metadata = {
             } else {
               throw new Error(errorData.detail || 'Validation failed');
             }
+          } else if (response.status === 400) {
+            // Handle specific API validation errors (e.g., invalid language codes)
+            throw new Error(errorData.detail || 'Invalid data provided');
           } else if (response.status === 500) {
-            // For 500 errors, provide more context about what might be wrong
-            const errorMessage = errorData.detail || 'Server error occurred';
-            if (errorMessage.includes('translations') || errorMessage.includes('language_code')) {
-              throw new Error(`Server error: The backend might not support the new multilingual API structure yet. Error: ${errorMessage}`);
-            } else {
-              throw new Error(`Server error occurred: ${errorMessage}. Please check if the backend is running and try again.`);
-            }
+            throw new Error(`Server error occurred: ${errorData.detail || 'Unknown server error'}. Please try again.`);
           } else {
             throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
           }
@@ -977,7 +902,7 @@ const metadata = {
         const result = await response.json();
         console.log('Post created successfully:', result);
 
-        // Jeśli chcemy opublikować post (nie jest draft), wywołaj endpoint publikacji
+        // If we want to publish the post (not draft), call the publish endpoint
         if (!isDraft) {
           try {
             console.log('Publishing post...');
@@ -987,17 +912,16 @@ const metadata = {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
                 'Origin': getFrontendUrl()
-              },
-              body: JSON.stringify({})
+              }
             });
             
             if (!publishResponse.ok) {
-              console.warn('Failed to publish post:', publishResponse.status);
               const publishErrorData = await publishResponse.json().catch(() => ({ detail: 'Unknown publish error' }));
               console.error('Publish error:', publishErrorData);
               throw new Error(`Post created but failed to publish: ${publishErrorData.detail}`);
             } else {
-              console.log('Post published successfully');
+              const publishResult = await publishResponse.json();
+              console.log('Post published successfully:', publishResult);
             }
           } catch (publishError) {
             console.error('Error publishing post:', publishError);

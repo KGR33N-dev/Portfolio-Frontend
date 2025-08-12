@@ -1,608 +1,1038 @@
 ---
-import { Icon } from 'astro-icon/components';
-import { useTranslations } from '~/i18n/utils';
-import { languages } from '~/i18n';
-import type { Post } from '~/types/blog';
+import type { Language } from '../../types/language';
+import { blogTranslations } from '../../i18n/pages/blog';
+import { API_URLS } from '../../config/api';
 
-export interface Props {
-  post: Post;
-  lang?: string;
+interface Props {
+  postId: number;
+  lang: Language;
 }
 
-const { post, lang = 'en' } = Astro.props;
-const t = useTranslations(lang as keyof typeof languages);
+const { postId, lang } = Astro.props;
+
+// Access translations
+const t = blogTranslations[lang as unknown as 'en' | 'pl'];
+
+// Get API URLs for client-side use - we need to build templates since functions can't be serialized
+const apiUrls = {
+  getPostComments: API_URLS.getPostComments(postId),
+  createPostComment: API_URLS.createPostComment(postId),
+  // Template URLs for dynamic comment IDs (replace {id} with actual ID)
+  likeCommentTemplate: API_URLS.likeComment(999999).replace('999999', '{id}'),
+  updateCommentTemplate: API_URLS.updatePostComment(999999).replace('999999', '{id}'),
+  deleteCommentTemplate: API_URLS.deletePostComment(999999).replace('999999', '{id}')
+};
 ---
 
-<section class="mt-16 mb-8">
-  <div class="max-w-3xl mx-auto px-4 sm:px-6">
-    <!-- Comments Header -->
-    <div class="border-t border-gray-200 dark:border-gray-700 pt-8">
-      <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-        <Icon name="tabler:message" class="w-6 h-6 mr-2" />
-        {t('comments.title')}
+<script define:vars={{ 
+  postId, 
+  lang,
+  translations: t,
+  apiUrls
+}}>
+  let currentUser = null;
+  let isInitialized = false;
+  
+  // Debounced likes system for better UX and performance
+  class DebouncedLikes {
+    constructor() {
+      this.debounceTimers = new Map();
+      this.pendingStates = new Map(); // Track pending states for each comment
+    }
+
+    async debouncedToggleLike(commentId, action, delay = 500) {
+      console.log(`🎯 DebouncedLikes.debouncedToggleLike: commentId=${commentId}, action=${action}`);
+      
+      // Clear any existing timer for this comment
+      if (this.debounceTimers.has(commentId)) {
+        clearTimeout(this.debounceTimers.get(commentId));
+        console.log(`⏰ Cleared existing timer for comment ${commentId}`);
+      }
+
+      // Get current UI state
+      const likeBtn = document.querySelector(`[data-action="like"][data-id="${commentId}"]`);
+      const dislikeBtn = document.querySelector(`[data-action="dislike"][data-id="${commentId}"]`);
+      
+      console.log(`🔍 Found buttons:`, { likeBtn: !!likeBtn, dislikeBtn: !!dislikeBtn });
+      
+      if (!likeBtn || !dislikeBtn) {
+        console.error(`❌ Buttons not found for comment ${commentId}`);
+        return;
+      }
+
+      const currentState = likeBtn.dataset.currentState;
+      const currentLikes = parseInt(likeBtn.querySelector('.like-count').textContent) || 0;
+      const currentDislikes = parseInt(dislikeBtn.querySelector('.dislike-count').textContent) || 0;
+      
+      console.log(`📊 Current state: ${currentState}, likes: ${currentLikes}, dislikes: ${currentDislikes}`);
+
+      // Calculate optimistic state
+      let newLikeState = null;
+      let newLikes = currentLikes;
+      let newDislikes = currentDislikes;
+
+      if (action === 'like') {
+        if (currentState === 'true') {
+          // User already liked, remove like
+          newLikeState = null;
+          newLikes = Math.max(0, currentLikes - 1);
+          console.log(`👎 Removing like: ${currentLikes} -> ${newLikes}`);
+        } else {
+          // User didn't like or disliked, add like
+          newLikeState = true;
+          newLikes = currentLikes + 1;
+          if (currentState === 'false') {
+            newDislikes = Math.max(0, currentDislikes - 1);
+            console.log(`👍 Adding like, removing dislike: likes ${currentLikes} -> ${newLikes}, dislikes ${currentDislikes} -> ${newDislikes}`);
+          } else {
+            console.log(`👍 Adding like: ${currentLikes} -> ${newLikes}`);
+          }
+        }
+      } else if (action === 'dislike') {
+        if (currentState === 'false') {
+          // User already disliked, remove dislike
+          newLikeState = null;
+          newDislikes = Math.max(0, currentDislikes - 1);
+          console.log(`👍 Removing dislike: ${currentDislikes} -> ${newDislikes}`);
+        } else {
+          // User didn't dislike or liked, add dislike
+          newLikeState = false;
+          newDislikes = currentDislikes + 1;
+          if (currentState === 'true') {
+            newLikes = Math.max(0, currentLikes - 1);
+            console.log(`👎 Adding dislike, removing like: dislikes ${currentDislikes} -> ${newDislikes}, likes ${currentLikes} -> ${newLikes}`);
+          } else {
+            console.log(`👎 Adding dislike: ${currentDislikes} -> ${newDislikes}`);
+          }
+        }
+      }
+
+      console.log(`🔄 New state will be: ${newLikeState}, likes: ${newLikes}, dislikes: ${newDislikes}`);
+
+      // Immediate UI update (optimistic)
+      this.updateUIImmediately(likeBtn, dislikeBtn, newLikeState, newLikes, newDislikes);
+      
+      // Store pending state
+      this.pendingStates.set(commentId, {
+        originalState: currentState,
+        originalLikes: currentLikes,
+        originalDislikes: currentDislikes,
+        newState: newLikeState,
+        likeBtn,
+        dislikeBtn
+      });
+
+      // Set debounced server call
+      const timer = setTimeout(async () => {
+        try {
+          console.log(`📡 Sending to server: comment ${commentId}, state ${newLikeState}`);
+          await this.sendToServer(commentId, newLikeState);
+          this.debounceTimers.delete(commentId);
+          this.pendingStates.delete(commentId);
+          console.log(`✅ ${action} sent to server for comment ${commentId}`);
+        } catch (error) {
+          console.error(`❌ Failed to send ${action} to server:`, error);
+          this.revertUIChange(commentId);
+        }
+      }, delay);
+
+      this.debounceTimers.set(commentId, timer);
+      console.log(`⏱️ Timer set for comment ${commentId} with ${delay}ms delay`);
+    }
+
+    updateUIImmediately(likeBtn, dislikeBtn, likeState, likesCount, dislikesCount) {
+      const likeCountEl = likeBtn.querySelector('.like-count');
+      const dislikeCountEl = dislikeBtn.querySelector('.dislike-count');
+      const likeSvg = likeBtn.querySelector('svg');
+      const dislikeSvg = dislikeBtn.querySelector('svg');
+
+      // Update counts
+      likeCountEl.textContent = likesCount;
+      dislikeCountEl.textContent = dislikesCount;
+
+      // Update button states
+      likeBtn.dataset.currentState = likeState;
+      dislikeBtn.dataset.currentState = likeState;
+
+      // Update like button appearance
+      if (likeState === true) {
+        likeBtn.className = 'like-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 text-sm font-semibold border-2 text-blue-600 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700';
+        likeSvg.setAttribute('fill', 'currentColor');
+      } else {
+        likeBtn.className = 'like-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 text-sm font-semibold border-2 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600';
+        likeSvg.setAttribute('fill', 'none');
+      }
+
+      // Update dislike button appearance
+      if (likeState === false) {
+        dislikeBtn.className = 'dislike-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 text-sm font-semibold border-2 text-red-600 bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700';
+        dislikeSvg.setAttribute('fill', 'currentColor');
+      } else {
+        dislikeBtn.className = 'dislike-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 text-sm font-semibold border-2 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600';
+        dislikeSvg.setAttribute('fill', 'none');
+      }
+    }
+
+    async sendToServer(commentId, likeState) {
+      const token = localStorage.getItem('access_token');
+      
+      if (!token) {
+        throw new Error('No authentication token');
+      }
+
+      const url = apiUrls.likeCommentTemplate.replace('{id}', commentId);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          is_like: likeState === null ? null : (likeState === true)
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to update like/dislike');
+      }
+
+      return await response.json();
+    }
+
+    revertUIChange(commentId) {
+      const pending = this.pendingStates.get(commentId);
+      if (!pending) return;
+
+      const { originalState, originalLikes, originalDislikes, likeBtn, dislikeBtn } = pending;
+      
+      // Revert to original state
+      this.updateUIImmediately(
+        likeBtn, 
+        dislikeBtn, 
+        originalState === 'null' ? null : (originalState === 'true'), 
+        originalLikes, 
+        originalDislikes
+      );
+
+      // Clean up
+      this.pendingStates.delete(commentId);
+      
+      // Show error message
+      const errorText = translations && translations['comments.error'] 
+        ? translations['comments.error']
+        : 'Error updating like/dislike';
+      alert(errorText);
+    }
+
+    // Clean up method for component unmount
+    cleanup() {
+      this.debounceTimers.forEach(timer => clearTimeout(timer));
+      this.debounceTimers.clear();
+      this.pendingStates.clear();
+    }
+  }
+
+  // Initialize debounced likes system
+  const debouncedLikes = new DebouncedLikes();
+
+  // Initialize when DOM is loaded
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing comments...');
+    console.log('postId:', postId);
+    console.log('lang:', lang);
+    console.log('translations:', translations);
+    
+    initComments();
+  });
+  
+  // Handle Astro page navigation
+  document.addEventListener('astro:page-load', () => {
+    console.log('Astro page load, resetting and initializing...');
+    // Clean up previous debounced operations
+    if (typeof debouncedLikes !== 'undefined') {
+      debouncedLikes.cleanup();
+    }
+    isInitialized = false;
+    initComments();
+  });
+
+  // Clean up on page unload
+  window.addEventListener('beforeunload', () => {
+    if (typeof debouncedLikes !== 'undefined') {
+      debouncedLikes.cleanup();
+    }
+  });
+
+  // Comments functionality
+  function initComments() {
+    // Prevent multiple initializations
+    if (isInitialized) {
+      console.log('Comments already initialized, skipping...');
+      return;
+    }
+    
+    // Validate postId
+    if (!postId || postId === 'undefined') {
+      console.error('Invalid postId:', postId);
+      return;
+    }
+    
+    isInitialized = true;
+    console.log('Comments system initialized for post:', postId);
+    
+    // Check authentication
+    checkAuth();
+    
+    // Basic form submission handler
+    const form = document.getElementById('comment-form');
+    if (form) {
+      form.addEventListener('submit', handleSubmitComment);
+    }
+
+    // Load existing comments
+    loadComments();
+
+    // Add event listeners for interactive elements - use delegation on comments container
+    const commentsContainer = document.getElementById('comments-list');
+    if (commentsContainer) {
+      commentsContainer.addEventListener('click', handleCommentActions);
+      console.log('✅ Event listener added to comments container');
+    } else {
+      console.error('❌ Comments container not found for event delegation');
+    }
+  }
+
+  async function checkAuth() {
+    // Get token from localStorage (client-side only)
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('access_token');
+      
+      if (!token) {
+        currentUser = null;
+        updateAuthUI();
+        return;
+      }
+
+      // Verify token with API (secure)
+      try {
+        const response = await fetch('http://localhost:8000/api/auth/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const userData = await response.json();
+          console.log('✅ User authenticated via API:', userData.email);
+          currentUser = userData;
+        } else {
+          console.error('❌ Token validation failed:', response.status);
+          localStorage.removeItem('access_token');
+          currentUser = null;
+        }
+      } catch (error) {
+        console.error('❌ Error verifying token:', error);
+        currentUser = null;
+      }
+      
+      updateAuthUI();
+    }
+  }
+
+  function updateAuthUI() {
+    const form = document.getElementById('comment-form');
+    const loginMessage = document.getElementById('login-required');
+    const userAvatarLetter = document.getElementById('user-avatar-letter');
+    
+    if (form && loginMessage) {
+      if (currentUser) {
+        form.style.display = 'block';
+        loginMessage.style.display = 'none';
+        
+        // Update user avatar letter
+        if (userAvatarLetter) {
+          const letter = currentUser.username ? 
+            currentUser.username.charAt(0).toUpperCase() : 
+            currentUser.email.charAt(0).toUpperCase();
+          userAvatarLetter.textContent = letter;
+        }
+      } else {
+        form.style.display = 'none';
+        loginMessage.style.display = 'block';
+      }
+    }
+  }
+
+  async function handleSubmitComment(e) {
+    e.preventDefault();
+    
+    // Check authentication before submitting
+    if (!currentUser) {
+      const loginRequiredText = translations && translations['comments.loginRequired'] 
+        ? translations['comments.loginRequired'] 
+        : 'Please login to comment';
+      alert(loginRequiredText);
+      return;
+    }
+    
+    const formData = new FormData(e.target);
+    const content = formData.get('content');
+
+    if (!content) {
+      const requiredText = translations && translations['comments.required'] 
+        ? translations['comments.required']
+        : 'Comment content is required';
+      alert(requiredText);
+      return;
+    }
+
+    // Disable submit button during request
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    const postingText = translations && translations['comments.posting'] 
+      ? translations['comments.posting']
+      : 'Posting...';
+    submitBtn.disabled = true;
+    submitBtn.textContent = postingText;
+
+    try {
+      const token = localStorage.getItem('access_token');
+      
+      if (!token) {
+        const loginRequiredText = translations && translations['comments.loginRequired'] 
+          ? translations['comments.loginRequired'] 
+          : 'Please login to comment';
+        alert(loginRequiredText);
+        return;
+      }
+      
+      // Use correct API endpoint from apiUrls
+      const url = apiUrls.createPostComment;
+      console.log('Creating comment at URL:', url);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          content: content,
+          parent_id: null // For now, no replies
+        })
+      });
+
+      if (response.ok) {
+        // Clear form and reload comments
+        e.target.reset();
+        loadComments();
+        const successText = translations && translations['comments.success'] 
+          ? translations['comments.success']
+          : 'Comment added successfully';
+        showSuccess(successText);
+        
+        // Check for rank upgrade after successful comment
+        await checkRankUpgrade();
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to post comment');
+      }
+    } catch (error) {
+      console.error('Error posting comment:', error);
+      const errorText = translations && translations['comments.error'] 
+        ? translations['comments.error']
+        : 'Error adding comment';
+      alert(errorText);
+    } finally {
+      // Re-enable submit button
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
+  }
+
+  async function loadComments() {
+    try {
+      console.log('Loading comments for post:', postId);
+      // Use correct API endpoint from apiUrls with include_replies parameter
+      const url = `${apiUrls.getPostComments}?include_replies=true`;
+      console.log('API URL:', url);
+      
+      // Prepare headers - include Authorization if user is logged in
+      const headers = {};
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        console.log('Loading comments with authentication for user like/dislike status');
+      }
+      
+      const response = await fetch(url, { headers });
+      if (response.ok) {
+        const comments = await response.json();
+        console.log('Comments loaded successfully:', comments);
+        displayComments(comments);
+      } else {
+        console.error('API response not ok:', response.status, response.statusText);
+        throw new Error('Failed to load comments');
+      }
+    } catch (error) {
+      console.error('Error loading comments:', error);
+      // Only display error in container, don't show popup
+      const container = document.getElementById('comments-list');
+      if (container) {
+        const errorMessage = translations && translations['comments.error'] 
+          ? translations['comments.error'] 
+          : 'Error loading comments. Please try again.';
+        container.innerHTML = `<p class="text-red-500">${errorMessage}</p>`;
+      }
+    }
+  }
+
+  function displayComments(comments) {
+    const container = document.getElementById('comments-list');
+    if (!container) {
+      console.error('Comments container not found');
+      return;
+    }
+
+    if (comments.length === 0) {
+      const noCommentsText = translations && translations['comments.noComments'] 
+        ? translations['comments.noComments'] 
+        : 'No comments yet';
+      container.innerHTML = `<p class="text-gray-500 italic text-center py-8">${noCommentsText}</p>`;
+      return;
+    }
+
+    console.log('All comments with nested replies:', comments);
+
+    const renderComment = (comment, isReply = false) => {
+      // Replies są już zagnieżdżone w comment.replies
+      const commentReplies = comment.replies || [];
+      const hasReplies = commentReplies.length > 0;
+      
+      console.log(`Rendering comment ${comment.id} (isReply: ${isReply}), has ${commentReplies.length} replies:`, commentReplies);
+      console.log(`Comment ${comment.id} author: ${comment.author_name}, role: ${comment.author_role || 'user'}, rank: ${comment.author_rank || 'newbie'}`);
+      
+      return `
+        <div class="comment-wrapper ${isReply ? 'ml-12' : ''}" data-comment-id="${comment.id}">
+          <!-- Comment Card -->
+          <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-sm border ${comment.author_role === 'admin' || comment.author_role === 'superadmin' ? 'border-red-200 dark:border-red-700 bg-red-50/30 dark:bg-red-900/10' : comment.author_role === 'moderator' ? 'border-green-200 dark:border-green-700 bg-green-50/30 dark:bg-green-900/10' : 'border-gray-100 dark:border-gray-700'} p-4 mb-3 hover:shadow-md transition-shadow">
+            ${comment.author_role === 'admin' || comment.author_role === 'superadmin' ? '<div class="absolute top-2 right-2"><svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9.504 1.132a1 1 0 01.992 0l1.75 1a1 1 0 11-.992 1.736L10 3.152l-1.254.716a1 1 0 11-.992-1.736l1.75-1zM5.618 4.504a1 1 0 01-.372 1.364L5.016 6l.23.132a1 1 0 11-.992 1.736L3 7.723V8a1 1 0 01-2 0V6a.996.996 0 01.52-.878l1.734-.99a1 1 0 011.364.372zm8.764 0a1 1 0 011.364-.372l1.733.99A1.002 1.002 0 0118 6v2a1 1 0 11-2 0v-.277l-1.254.145a1 1 0 11-.992-1.736L14.984 6l-.23-.132a1 1 0 01-.372-1.364zm-7 4a1 1 0 011.364-.372L10 8.848l1.254-.716a1 1 0 11.992 1.736L11 10.477V12a1 1 0 11-2 0V10.477L7.746 9.868a1 1 0 01-.364-1.364zm2.286 6.708a1 1 0 01.372-1.364L11 13.152l1.254.716a1 1 0 11-.992 1.736L10 14.888l-1.254.716a1 1 0 01-1.364-.372l.746-1.292z" clip-rule="evenodd"></path></svg></div>' : comment.author_role === 'moderator' ? '<div class="absolute top-2 right-2"><svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg></div>' : ''}
+            <!-- User Info Header -->
+            <div class="flex items-start space-x-3 mb-3">
+              <!-- Avatar -->
+              <div class="flex-shrink-0">
+                <div class="w-8 h-8 ${comment.author_role === 'admin' || comment.author_role === 'superadmin' ? 'bg-gradient-to-br from-red-500 to-orange-600' : comment.author_role === 'moderator' ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-blue-500 to-purple-600'} rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                  ${comment.author_name.charAt(0).toUpperCase()}
+                </div>
+              </div>
+              
+              <!-- User Details -->
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center space-x-2">
+                  <h4 class="font-semibold text-gray-900 dark:text-gray-100 text-sm">
+                    ${comment.author_name}
+                  </h4>
+                  ${comment.author_role && comment.author_role !== 'user' ? `<span class="px-2 py-1 rounded-full text-xs font-semibold" style="background-color: ${comment.author_role_color || '#dc3545'}20; color: ${comment.author_role_color || '#dc3545'}; border: 1px solid ${comment.author_role_color || '#dc3545'}40;">${comment.author_display_role || comment.author_role}</span>` : ''}
+                  ${comment.author_rank && comment.author_rank !== 'newbie' ? `<span class="px-2 py-1 bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 text-xs rounded-full font-medium">${comment.author_rank_icon || '🏆'} ${comment.author_display_rank || comment.author_rank}</span>` : ''}
+                  ${isReply ? '<span class="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs rounded-full">Reply</span>' : ''}
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                  ${formatDate(comment.created_at)}
+                </p>
+              </div>
+            </div>
+
+            <!-- Comment Content -->
+            <div class="mb-3 ml-11">
+              <p class="text-gray-800 dark:text-gray-200 text-sm leading-relaxed whitespace-pre-wrap">
+                ${comment.content}
+              </p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center justify-between ml-11">
+              <div class="flex items-center space-x-2">
+                <!-- Like Button - BIGGER and MORE VISIBLE -->
+                <button 
+                  class="like-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 text-sm font-semibold border-2 ${comment.user_like_status === true ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700' : 'text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600'}" 
+                  data-action="like" 
+                  data-id="${comment.id}"
+                  data-current-state="${comment.user_like_status}"
+                >
+                  <svg class="w-5 h-5" fill="${comment.user_like_status === true ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L9 7m5 3v4M9 7H5a2 2 0 00-2 2v6a2 2 0 002 2h2.5"></path>
+                  </svg>
+                  <span class="like-count font-bold">${comment.likes_count || 0}</span>
+                </button>
+
+                <!-- Dislike Button - BIGGER and MORE VISIBLE -->
+                <button 
+                  class="dislike-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 text-sm font-semibold border-2 ${comment.user_like_status === false ? 'text-red-600 bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700' : 'text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600'}" 
+                  data-action="dislike" 
+                  data-id="${comment.id}"
+                  data-current-state="${comment.user_like_status}"
+                >
+                  <svg class="w-5 h-5 rotate-180" fill="${comment.user_like_status === false ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L9 7m5 3v4M9 7H5a2 2 0 00-2 2v6a2 2 0 002 2h2.5"></path>
+                  </svg>
+                  <span class="dislike-count font-bold">${comment.dislikes_count || 0}</span>
+                </button>
+
+                ${!isReply ? `
+                  <!-- Reply Button -->
+                  <button 
+                    class="reply-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 text-sm font-medium text-gray-600 dark:text-gray-400 border-2 border-gray-200 dark:border-gray-600" 
+                    data-action="reply" 
+                    data-id="${comment.id}"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
+                    </svg>
+                    <span>${translations && translations['comments.reply'] ? translations['comments.reply'] : 'Reply'}</span>
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+
+          <!-- Replies Container - ALWAYS SHOW REPLIES -->
+          ${hasReplies && !isReply ? `
+            <div class="replies-container ml-8 mt-3" data-parent-id="${comment.id}">
+              <div class="border-l-4 border-blue-200 dark:border-blue-600 pl-6 space-y-3">
+                ${commentReplies.map(reply => renderComment(reply, true)).join('')}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    };
+
+    // Renderuj tylko główne komentarze (parent_id === null)
+    const mainComments = comments.filter(comment => !comment.parent_id);
+    container.innerHTML = mainComments.map(comment => renderComment(comment)).join('');
+  }
+
+  function handleCommentActions(e) {
+    // Skip events from reply forms
+    if (e.target.closest('.reply-form')) {
+      console.log('🚫 Skipping event from reply form');
+      return;
+    }
+    
+    console.log('🖱️ Click detected on:', e.target);
+    
+    // Find the button element (might be clicked on SVG or span inside)
+    let button = e.target;
+    if (!button.dataset.action) {
+      button = button.closest('button[data-action]');
+    }
+    
+    if (!button || !button.dataset.action || !button.dataset.id) {
+      console.log('❌ No valid button found:', button);
+      return;
+    }
+
+    // Only prevent default for comment action buttons
+    e.preventDefault();
+    e.stopPropagation();
+
+    const action = button.dataset.action;
+    const commentId = button.dataset.id;
+    
+    console.log(`🎯 Action: ${action}, Comment ID: ${commentId}`);
+
+    switch (action) {
+      case 'like':
+      case 'dislike':
+        console.log(`💝 Handling ${action} for comment ${commentId}`);
+        handleLikeDislike(commentId, action);
+        break;
+      case 'reply':
+        console.log(`💬 Handling reply for comment ${commentId}`);
+        handleReply(commentId);
+        break;
+      default:
+        console.log('❌ Unknown action:', action);
+    }
+  }
+
+  async function handleLikeDislike(commentId, action) {
+    try {
+      console.log(`🚀 handleLikeDislike called: commentId=${commentId}, action=${action}`);
+      
+      // Check authentication before like/dislike
+      if (!currentUser) {
+        console.log('❌ User not authenticated');
+        const loginRequiredText = translations && translations['comments.loginRequired'] 
+          ? translations['comments.loginRequired']
+          : 'Please login to like/dislike';
+        alert(loginRequiredText);
+        return;
+      }
+
+      const token = localStorage.getItem('access_token');
+      
+      if (!token) {
+        console.log('❌ No access token found');
+        const loginRequiredText = translations && translations['comments.loginRequired'] 
+          ? translations['comments.loginRequired'] 
+          : 'Please login to like comments';
+        alert(loginRequiredText);
+        return;
+      }
+
+      console.log(`✅ User authenticated, calling debounced system`);
+      // Use debounced system for better UX and performance
+      console.log(`🎯 Debounced ${action} triggered for comment ${commentId}`);
+      await debouncedLikes.debouncedToggleLike(commentId, action);
+      
+    } catch (error) {
+      console.error('❌ Error in handleLikeDislike:', error);
+      const errorText = translations && translations['comments.error'] 
+        ? translations['comments.error']
+        : 'Error updating like/dislike';
+      alert(errorText);
+    }
+  }
+
+  function handleReply(commentId) {
+    console.log('Reply to comment:', commentId);
+    
+    // Check authentication
+    if (!currentUser) {
+      const loginRequiredText = translations && translations['comments.loginRequired'] 
+        ? translations['comments.loginRequired'] 
+        : 'Please login to reply';
+      alert(loginRequiredText);
+      return;
+    }
+    
+    // Find the comment element
+    const commentElement = document.querySelector(`[data-comment-id="${commentId}"]`);
+    if (!commentElement) {
+      console.error('Comment element not found for ID:', commentId);
+      return;
+    }
+    
+    // Check if reply form already exists
+    const existingReplyForm = commentElement.querySelector('.reply-form');
+    if (existingReplyForm) {
+      existingReplyForm.remove(); // Remove existing form
+      return;
+    }
+    
+    // Create reply form
+    const replyForm = document.createElement('div');
+    replyForm.className = 'reply-form mt-4 bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700';
+    replyForm.innerHTML = `
+      <div class="flex items-start space-x-3">
+        <!-- User Avatar -->
+        <div class="flex-shrink-0">
+          <div class="w-7 h-7 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
+            ${currentUser.username ? currentUser.username.charAt(0).toUpperCase() : currentUser.email.charAt(0).toUpperCase()}
+          </div>
+        </div>
+        
+        <!-- Reply Form Content -->
+        <div class="flex-1">
+          <form class="reply-form-content">
+            <div class="mb-3">
+              <textarea 
+                name="reply-content" 
+                rows="3" 
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100 text-sm resize-none placeholder-gray-500 dark:placeholder-gray-400"
+                placeholder="${translations && translations['comments.writeReply'] ? translations['comments.writeReply'] : 'Write your reply...'}"
+                required
+              ></textarea>
+            </div>
+            <div class="flex items-center justify-between">
+              <div class="flex space-x-2">
+                <button 
+                  type="submit" 
+                  class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                  </svg>
+                  <span>${translations && translations['comments.submitReply'] ? translations['comments.submitReply'] : 'Reply'}</span>
+                </button>
+                <button 
+                  type="button" 
+                  class="cancel-reply bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                >
+                  ${translations && translations['comments.cancel'] ? translations['comments.cancel'] : 'Cancel'}
+                </button>
+              </div>
+              <div class="text-xs text-gray-500 dark:text-gray-400">
+                ${translations && translations['comments.replyTo'] ? translations['comments.replyTo'] : 'Replying to'} <strong>${commentElement.querySelector('h4').textContent}</strong>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+    
+    // Add reply form to comment
+    commentElement.appendChild(replyForm);
+    
+    // Add event listeners
+    const form = replyForm.querySelector('.reply-form-content');
+    const cancelBtn = replyForm.querySelector('.cancel-reply');
+    
+    form.addEventListener('submit', (e) => handleSubmitReply(e, commentId));
+    cancelBtn.addEventListener('click', () => replyForm.remove());
+    
+    // Focus on textarea
+    const textarea = replyForm.querySelector('textarea');
+    textarea.focus();
+  }
+
+  async function handleSubmitReply(e, parentCommentId) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const content = formData.get('reply-content');
+    
+    if (!content || !content.trim()) {
+      const requiredText = translations && translations['comments.required'] 
+        ? translations['comments.required']
+        : 'Reply content is required';
+      alert(requiredText);
+      return;
+    }
+
+    // Disable submit button during request
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    const postingText = translations && translations['comments.posting'] 
+      ? translations['comments.posting']
+      : 'Posting...';
+    submitBtn.disabled = true;
+    submitBtn.textContent = postingText;
+
+    try {
+      const token = localStorage.getItem('access_token');
+      
+      if (!token) {
+        const loginRequiredText = translations && translations['comments.loginRequired'] 
+          ? translations['comments.loginRequired'] 
+          : 'Please login to reply';
+        alert(loginRequiredText);
+        return;
+      }
+      
+      // Use the same createPostComment endpoint but with parent_id
+      const url = apiUrls.createPostComment;
+      console.log('Creating reply at URL:', url, 'for parent:', parentCommentId);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          content: content.trim(),
+          parent_id: parseInt(parentCommentId) // ID komentarza na który odpowiadamy
+        })
+      });
+
+      if (response.ok) {
+        // Remove reply form and reload comments
+        const replyForm = e.target.closest('.reply-form');
+        replyForm.remove();
+        loadComments(); // Reload to show new reply
+        const successText = translations && translations['comments.replySuccess'] 
+          ? translations['comments.replySuccess']
+          : 'Reply added successfully';
+        showSuccess(successText);
+        
+        // Check for rank upgrade after successful reply
+        await checkRankUpgrade();
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to post reply');
+      }
+    } catch (error) {
+      console.error('Error posting reply:', error);
+      const errorText = translations && translations['comments.error'] 
+        ? translations['comments.error']
+        : 'Error adding reply';
+      alert(errorText);
+    } finally {
+      // Re-enable submit button
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
+  }
+
+  async function checkRankUpgrade() {
+    try {
+      if (!currentUser) return;
+      
+      const token = localStorage.getItem('access_token');
+      if (!token) return;
+      
+      console.log('🎯 Checking rank upgrade for user...');
+      
+      const response = await fetch('http://localhost:8000/api/roles/check-rank-upgrade/me', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('🎉 Rank upgrade check result:', result);
+        
+        if (result.upgraded) {
+          // Show upgrade notification
+          const upgradeMessage = lang === 'pl' 
+            ? `🎉 Gratulacje! Awansowałeś na ${result.new_rank_display || result.new_rank}!`
+            : `🎉 Congratulations! You've been promoted to ${result.new_rank_display || result.new_rank}!`;
+          
+          showSuccess(upgradeMessage);
+          
+          // Update current user info
+          currentUser.rank = result.new_rank;
+          currentUser.display_rank = result.new_rank_display;
+          currentUser.rank_icon = result.new_rank_icon;
+          
+          console.log('✅ User rank updated in currentUser object');
+        }
+        
+        return result;
+      } else {
+        console.log('❌ Rank upgrade check failed:', response.status);
+      }
+    } catch (error) {
+      console.error('❌ Error checking rank upgrade:', error);
+    }
+  }
+
+  function formatDate(dateString) {
+    const date = new Date(dateString);
+    const locale = lang === 'pl' ? 'pl-PL' : 'en-US';
+    
+    return date.toLocaleDateString(locale, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  function showSuccess(message) {
+    // Simple alert for now - can be improved with better UI
+    alert(message);
+  }
+</script>
+
+<section class="comments-section mt-16 bg-gray-50 dark:bg-gray-900 rounded-2xl p-8 border-t-4 border-blue-500">
+  <div class="max-w-4xl mx-auto">
+    <div class="flex items-center space-x-3 mb-8">
+      <div class="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+        <svg class="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+        </svg>
+      </div>
+      <h3 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+        {t['comments.title']}
       </h3>
     </div>
 
-    <!-- Comments Container - This will be populated by JavaScript -->
-    <div id="comments-container" data-post-id={post.id} data-lang={lang}>
-      <!-- Loading State -->
-      <div id="comments-loading" class="flex items-center justify-center py-8">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span class="ml-3 text-gray-600 dark:text-gray-400">{t('comments.loading')}</span>
-      </div>
-
-      <!-- Comments List - Will be populated by JavaScript -->
-      <div id="comments-list" class="hidden space-y-6">
-        <!-- Comments will be inserted here -->
-      </div>
-
-      <!-- No Comments State -->
-      <div id="no-comments" class="hidden text-center py-8">
-        <Icon name="tabler:message-off" class="w-12 h-12 mx-auto text-gray-400 mb-4" />
-        <p class="text-gray-600 dark:text-gray-400 text-lg mb-2">{t('comments.noComments')}</p>
-        <p class="text-gray-500 dark:text-gray-500">{t('comments.beFirst')}</p>
-      </div>
-
-      <!-- Error State -->
-      <div id="comments-error" class="hidden text-center py-8">
-        <Icon name="tabler:alert-triangle" class="w-12 h-12 mx-auto text-red-400 mb-4" />
-        <p class="text-red-600 dark:text-red-400 text-lg mb-4" id="error-message"></p>
-        <button 
-          id="retry-comments" 
-          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          <Icon name="tabler:refresh" class="w-4 h-4 mr-2" />
-          {t('blog.retry')}
-        </button>
-      </div>
-    </div>
-
-    <!-- Add Comment Section -->
-    <div id="add-comment-section" class="mt-8 border-t border-gray-200 dark:border-gray-700 pt-8">
-      <!-- Not Logged In State -->
-      <div id="not-logged-in" class="text-center py-6 bg-gray-50 dark:bg-gray-800 rounded-lg">
-        <Icon name="tabler:lock" class="w-12 h-12 mx-auto text-gray-400 mb-4" />
-        <p class="text-gray-600 dark:text-gray-400 text-lg mb-4">{t('comments.loginRequired')}</p>
+  <!-- Login Required Message -->
+  <div id="login-required" class="mb-8 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
+    <div class="flex items-center">
+      <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+      </svg>
+      <div>
+        <h4 class="text-lg font-medium text-yellow-800 dark:text-yellow-200">
+          {lang.toString() === 'pl' ? 'Wymagane logowanie' : 'Login Required'}
+        </h4>
+        <p class="text-yellow-700 dark:text-yellow-300 mt-1">
+          {lang.toString() === 'pl' 
+            ? 'Musisz być zalogowany, aby dodać komentarz.' 
+            : 'You must be logged in to add a comment.'
+          }
+        </p>
         <a 
           href={`/${lang}/login`}
-          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          class="inline-block mt-3 bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
         >
-          <Icon name="tabler:login" class="w-4 h-4 mr-2" />
-          {t('auth.loginButton')}
+          {lang.toString() === 'pl' ? 'Zaloguj się' : 'Login'}
         </a>
       </div>
+    </div>
+  </div>
 
-      <!-- Logged In - Comment Form -->
-      <div id="comment-form-container" class="hidden">
-        <!-- User Info Display -->
-        <div id="user-info" class="flex items-center justify-between mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-          <div class="flex items-center">
-            <Icon name="tabler:user" class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" />
-            <span id="user-display-name" class="text-blue-800 dark:text-blue-200 font-medium"></span>
-          </div>
-          <button 
-            id="logout-btn"
-            class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
-          >
-            {t('auth.logout')}
-          </button>
+  <!-- Comment Form (hidden by default, shown when authenticated) -->
+  <form id="comment-form" class="mb-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6" style="display: none;">
+    <div class="flex items-start space-x-4">
+      <!-- User Avatar -->
+      <div class="flex-shrink-0 pt-1">
+        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+          <!-- Will be filled by JavaScript -->
+          <span id="user-avatar-letter">U</span>
+        </div>
+      </div>
+      
+      <!-- Form Content -->
+      <div class="flex-1">
+        <div class="mb-4">
+          <textarea
+            id="content"
+            name="content"
+            rows="4"
+            required
+            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 resize-none text-sm"
+            placeholder={t['comments.writeComment']}
+          ></textarea>
         </div>
 
-        <!-- Reply indicator (hidden by default) -->
-        <div id="reply-indicator" class="hidden bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
-          <div class="flex items-center justify-between">
-            <span class="text-blue-800 dark:text-blue-200 text-sm">
-              <Icon name="tabler:arrow-down-right" class="w-4 h-4 inline mr-1" />
-              <span id="reply-text"></span>
-            </span>
-            <button type="button" id="cancel-reply" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200">
-              <Icon name="tabler:x" class="w-4 h-4" />
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <button
+              type="submit"
+              class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 text-sm"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+              </svg>
+              <span>{t['comments.submitComment']}</span>
             </button>
+            
+            <!-- Character count (optional) -->
+            <span class="text-xs text-gray-500 dark:text-gray-400 hidden" id="char-count">
+              0 / 1000
+            </span>
           </div>
-        </div>
-
-        <!-- Simple Comment Form -->
-        <form id="comment-form" class="space-y-4">
-          <div>
-            <label for="comment-content" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('comments.writeComment')}
-            </label>
-            <textarea
-              id="comment-content"
-              name="content"
-              rows="4"
-              required
-              placeholder={t('comments.writeComment')}
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white resize-none"
-            ></textarea>
-            <div class="text-red-500 text-sm mt-1 hidden" id="content-error"></div>
-          </div>
-
-          <div class="flex items-center justify-between">
-            <p class="text-xs text-gray-500 dark:text-gray-400">
-              {t('comments.moderationNote')}
-            </p>
-            <div class="flex space-x-3">
-              <button
-                type="button"
-                id="cancel-reply-btn"
-                class="hidden px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 dark:hover:bg-gray-500"
-              >
-                {t('comments.cancel')}
-              </button>
-              <button
-                type="submit"
-                id="submit-comment"
-                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span id="submit-text">{t('comments.submitComment')}</span>
-                <Icon name="tabler:send" class="w-4 h-4 ml-2" />
-              </button>
-            </div>
-          </div>
-        </form>
-
-        <!-- Success Message -->
-        <div id="comment-success" class="hidden mt-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-          <div class="flex items-center">
-            <Icon name="tabler:check" class="w-5 h-5 text-green-600 dark:text-green-400 mr-2" />
-            <span class="text-green-800 dark:text-green-200">{t('comments.success')}</span>
+          
+          <div class="text-xs text-gray-500 dark:text-gray-400">
+            {lang.toString() === 'pl' ? 'Bądź uprzejmy i konstruktywny' : 'Be kind and constructive'}
           </div>
         </div>
       </div>
     </div>
+  </form>
+
+  <!-- Comments List -->
+  <div id="comments-list" class="space-y-4">
+    <!-- Comments will be loaded here -->
+    <div class="text-center py-8">
+      <div class="inline-flex items-center space-x-2 text-gray-500 dark:text-gray-400">
+        <svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+        </svg>
+        <span class="text-sm">{t['comments.loading']}</span>
+      </div>
+    </div>
+  </div>
   </div>
 </section>
-
-<!-- Comment Template (hidden) -->
-<template id="comment-template">
-  <div class="comment bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-    <div class="flex items-start space-x-4">
-      <div class="flex-shrink-0">
-        <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-          <Icon name="tabler:user" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
-        </div>
-      </div>
-      <div class="flex-1 min-w-0">
-        <div class="flex items-center justify-between mb-2">
-          <div class="flex items-center space-x-2">
-            <h4 class="comment-author text-sm font-semibold text-gray-900 dark:text-white"></h4>
-            <span class="comment-date text-xs text-gray-500 dark:text-gray-400"></span>
-          </div>
-          <button class="reply-btn text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 flex items-center">
-            <Icon name="tabler:arrow-back-up" class="w-4 h-4 mr-1" />
-            <span class="reply-text">{t('comments.reply')}</span>
-          </button>
-        </div>
-        <div class="comment-content prose prose-sm dark:prose-invert max-w-none"></div>
-        <div class="comment-replies mt-4 space-y-4 border-l-2 border-gray-200 dark:border-gray-700 pl-6 hidden">
-          <!-- Replies will be inserted here -->
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
-<script is:inline>
-  // Simplified Comments functionality with authentication
-  function initComments() {
-    let postId = null;
-    let lang = 'en';
-    let parentId = null;
-    const apiBaseUrl = 'http://localhost:8000';
-    let isSubmitting = false;
-    let currentUser = null;
-    
-    function init() {
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', setup);
-      } else {
-        setup();
-      }
-    }
-
-    async function setup() {
-      const container = document.getElementById('comments-container');
-      if (!container) return;
-
-      postId = container.dataset.postId;
-      lang = container.dataset.lang || 'en';
-
-      await checkAuthenticationStatus();
-      setupEventListeners();
-      loadComments();
-    }
-
-    async function checkAuthenticationStatus() {
-      // Check if user is logged in using AdminAuth
-      if (typeof window !== 'undefined' && window.AdminAuth) {
-        // First check if we have stored credentials
-        const storedUser = window.AdminAuth.getCurrentUser();
-        const token = window.AdminAuth.getToken();
-        
-        if (storedUser && token) {
-          try {
-            // Verify the session is still valid on the server
-            const validUser = await window.AdminAuth.checkSession();
-            if (validUser) {
-              currentUser = validUser;
-              showAuthenticatedState();
-              return;
-            }
-          } catch (error) {
-            console.warn('Session validation failed:', error);
-            // Session invalid, clear stored data
-            window.AdminAuth.logout();
-          }
-        }
-        
-        // If we get here, user is not authenticated
-        currentUser = null;
-        showUnauthenticatedState();
-      } else {
-        showUnauthenticatedState();
-      }
-    }
-
-    function showAuthenticatedState() {
-      const notLoggedIn = document.getElementById('not-logged-in');
-      const formContainer = document.getElementById('comment-form-container');
-      const userDisplayName = document.getElementById('user-display-name');
-      
-      if (notLoggedIn) notLoggedIn.classList.add('hidden');
-      if (formContainer) formContainer.classList.remove('hidden');
-      
-      if (userDisplayName && currentUser) {
-        const displayName = currentUser.full_name || currentUser.username || currentUser.email;
-        userDisplayName.textContent = displayName;
-      }
-    }
-
-    function showUnauthenticatedState() {
-      const notLoggedIn = document.getElementById('not-logged-in');
-      const formContainer = document.getElementById('comment-form-container');
-      
-      if (notLoggedIn) notLoggedIn.classList.remove('hidden');
-      if (formContainer) formContainer.classList.add('hidden');
-    }
-
-    function setupEventListeners() {
-      // Form submission
-      const form = document.getElementById('comment-form');
-      if (form) {
-        form.addEventListener('submit', handleSubmit);
-      }
-
-      // Logout button
-      const logoutBtn = document.getElementById('logout-btn');
-      if (logoutBtn) {
-        logoutBtn.addEventListener('click', logout);
-      }
-
-      // Cancel reply
-      const cancelReply = document.getElementById('cancel-reply');
-      const cancelReplyBtn = document.getElementById('cancel-reply-btn');
-      if (cancelReply) {
-        cancelReply.addEventListener('click', cancelReplyAction);
-      }
-      if (cancelReplyBtn) {
-        cancelReplyBtn.addEventListener('click', cancelReplyAction);
-      }
-
-      const retryBtn = document.getElementById('retry-comments');
-      if (retryBtn) {
-        retryBtn.addEventListener('click', loadComments);
-      }
-    }
-
-    function logout() {
-      if (window.AdminAuth) {
-        window.AdminAuth.logout();
-      }
-    }
-
-    async function loadComments() {
-      if (!postId) return;
-
-      showLoading();
-
-      try {
-        const url = `${apiBaseUrl}/api/blog/${postId}/comments?approved=true&per_page=100`;
-        const response = await fetch(url);
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        renderComments(data.items || []);
-      } catch (error) {
-        console.error('Error loading comments:', error);
-        showError(error.message);
-      }
-    }
-
-    function renderComments(comments) {
-      const container = document.getElementById('comments-list');
-      const noComments = document.getElementById('no-comments');
-      const loading = document.getElementById('comments-loading');
-      const errorDiv = document.getElementById('comments-error');
-
-      if (loading) loading.classList.add('hidden');
-      if (errorDiv) errorDiv.classList.add('hidden');
-
-      if (comments.length === 0) {
-        if (container) container.classList.add('hidden');
-        if (noComments) noComments.classList.remove('hidden');
-        return;
-      }
-
-      const rootComments = comments.filter(c => !c.parentId);
-      const replyMap = new Map();
-      
-      comments.filter(c => c.parentId).forEach(reply => {
-        if (!replyMap.has(reply.parentId)) {
-          replyMap.set(reply.parentId, []);
-        }
-        replyMap.get(reply.parentId).push(reply);
-      });
-
-      if (container) {
-        container.innerHTML = '';
-        rootComments.forEach(comment => {
-          const commentElement = createCommentElement(comment, replyMap.get(comment.id) || []);
-          container.appendChild(commentElement);
-        });
-        
-        container.classList.remove('hidden');
-        if (noComments) noComments.classList.add('hidden');
-      }
-    }
-
-    function createCommentElement(comment, replies = []) {
-      const template = document.getElementById('comment-template');
-      if (!template || !template.content) return document.createElement('div');
-
-      const clone = template.content.cloneNode(true);
-      const commentDiv = clone.querySelector('.comment');
-      
-      const author = clone.querySelector('.comment-author');
-      const date = clone.querySelector('.comment-date');
-      const content = clone.querySelector('.comment-content');
-      const replyBtn = clone.querySelector('.reply-btn');
-      const repliesContainer = clone.querySelector('.comment-replies');
-
-      if (author) author.textContent = comment.author || comment.user?.full_name || comment.user?.username || 'Anonymous';
-      if (date) date.textContent = formatDate(comment.createdAt || comment.created_at);
-      if (content) {
-        // Handle both plain text and potential HTML content
-        if (comment.content.includes('<') && comment.content.includes('>')) {
-          content.innerHTML = sanitizeHtml(comment.content);
-        } else {
-          content.textContent = comment.content;
-        }
-      }
-
-      // Setup reply button (only show if user is authenticated)
-      if (replyBtn && currentUser) {
-        replyBtn.addEventListener('click', () => startReply(comment.id, comment.author || comment.user?.full_name || comment.user?.username || 'Anonymous'));
-      } else if (replyBtn) {
-        replyBtn.style.display = 'none';
-      }
-
-      if (replies.length > 0 && repliesContainer) {
-        replies.forEach(reply => {
-          const replyElement = createCommentElement(reply);
-          repliesContainer.appendChild(replyElement);
-        });
-        repliesContainer.classList.remove('hidden');
-      }
-
-      return commentDiv;
-    }
-
-    async function handleSubmit(e) {
-      e.preventDefault();
-      
-      if (isSubmitting || !currentUser) return;
-
-      const form = e.target;
-      const formData = new FormData(form);
-      
-      // Simple validation
-      const content = formData.get('content')?.trim();
-      if (!content) {
-        showValidationError('content', getTranslation('comments.required'));
-        return;
-      }
-
-      isSubmitting = true;
-      setSubmitButtonState(true);
-
-      try {
-        const commentData = {
-          content: content,
-          parentId: parentId
-        };
-
-        const token = window.AdminAuth?.getToken();
-        const response = await fetch(`${apiBaseUrl}/api/blog/${postId}/comments`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(commentData)
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        showSuccess();
-        form.reset();
-        cancelReplyAction();
-        
-        setTimeout(() => loadComments(), 1000);
-
-      } catch (error) {
-        console.error('Error submitting comment:', error);
-        showSubmissionError(error.message);
-      } finally {
-        isSubmitting = false;
-        setSubmitButtonState(false);
-      }
-    }
-
-    function showValidationError(field, message) {
-      const errorElement = document.getElementById(`${field}-error`);
-      if (errorElement) {
-        errorElement.textContent = message;
-        errorElement.classList.remove('hidden');
-        
-        // Clear error after a few seconds
-        setTimeout(() => {
-          errorElement.classList.add('hidden');
-        }, 5000);
-      }
-    }
-
-    function startReply(commentId, authorName) {
-      parentId = commentId;
-      
-      const indicator = document.getElementById('reply-indicator');
-      const replyText = document.getElementById('reply-text');
-      const cancelBtn = document.getElementById('cancel-reply-btn');
-      
-      if (indicator && replyText) {
-        replyText.textContent = `${getTranslation('comments.replyTo')} ${authorName}`;
-        indicator.classList.remove('hidden');
-        if (cancelBtn) cancelBtn.classList.remove('hidden');
-      }
-
-      const form = document.getElementById('comment-form');
-      if (form) {
-        form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        const textarea = document.getElementById('comment-content');
-        if (textarea) {
-          setTimeout(() => textarea.focus(), 300);
-        }
-      }
-    }
-
-    function cancelReplyAction() {
-      parentId = null;
-      
-      const indicator = document.getElementById('reply-indicator');
-      const cancelBtn = document.getElementById('cancel-reply-btn');
-      
-      if (indicator) indicator.classList.add('hidden');
-      if (cancelBtn) cancelBtn.classList.add('hidden');
-    }
-
-    function setSubmitButtonState(isSubmittingState) {
-      const submitBtn = document.getElementById('submit-comment');
-      const submitText = document.getElementById('submit-text');
-      
-      if (submitBtn && submitText) {
-        submitBtn.disabled = isSubmittingState;
-        submitText.textContent = isSubmittingState 
-          ? getTranslation('comments.posting')
-          : getTranslation('comments.submitComment');
-      }
-    }
-
-    function showSuccess() {
-      const successDiv = document.getElementById('comment-success');
-      if (successDiv) {
-        successDiv.classList.remove('hidden');
-        setTimeout(() => {
-          successDiv.classList.add('hidden');
-        }, 5000);
-      }
-    }
-
-    function showSubmissionError(message) {
-      alert(getTranslation('comments.error') + '\n\n' + message);
-    }
-
-    function showLoading() {
-      const loading = document.getElementById('comments-loading');
-      const list = document.getElementById('comments-list');
-      const noComments = document.getElementById('no-comments');
-      const errorDiv = document.getElementById('comments-error');
-      
-      if (loading) loading.classList.remove('hidden');
-      if (list) list.classList.add('hidden');
-      if (noComments) noComments.classList.add('hidden');
-      if (errorDiv) errorDiv.classList.add('hidden');
-    }
-
-    function showError(message) {
-      const loading = document.getElementById('comments-loading');
-      const errorDiv = document.getElementById('comments-error');
-      const errorMessage = document.getElementById('error-message');
-      
-      if (loading) loading.classList.add('hidden');
-      if (errorDiv) {
-        errorDiv.classList.remove('hidden');
-        if (errorMessage) {
-          errorMessage.textContent = message;
-        }
-      }
-    }
-
-    function formatDate(dateString) {
-      const date = new Date(dateString);
-      const locale = lang === 'pl' ? 'pl-PL' : 'en-US';
-      
-      return date.toLocaleDateString(locale, {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    }
-
-    function getTranslation(key) {
-      const translations = {
-        en: {
-          'comments.required': 'This field is required',
-          'comments.posting': 'Posting comment...',
-          'comments.submitComment': 'Submit Comment',
-          'comments.replyTo': 'Reply to',
-          'comments.error': 'Error adding comment. Please try again.'
-        },
-        pl: {
-          'comments.required': 'To pole jest wymagane',
-          'comments.posting': 'Wysyłanie komentarza...',
-          'comments.submitComment': 'Wyślij Komentarz',
-          'comments.replyTo': 'Odpowiedz na',
-          'comments.error': 'Błąd podczas dodawania komentarza. Spróbuj ponownie.'
-        }
-      };
-
-      return translations[lang]?.[key] || translations.en[key] || key;
-    }
-
-    function sanitizeHtml(html) {
-      // Basic HTML sanitization - remove dangerous elements
-      const div = document.createElement('div');
-      div.innerHTML = html;
-      
-      // Remove script tags and other dangerous elements
-      const scripts = div.querySelectorAll('script, iframe, object, embed');
-      scripts.forEach(script => script.remove());
-      
-      return div.innerHTML;
-    }
-
-    // Initialize
-    init();
-  }
-
-  // Start comments when script loads
-  initComments();
-</script>

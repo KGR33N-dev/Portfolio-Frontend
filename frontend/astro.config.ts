@@ -8,7 +8,6 @@ import tailwind from '@astrojs/tailwind';
 import mdx from '@astrojs/mdx';
 import react from '@astrojs/react';
 import partytown from '@astrojs/partytown';
-import node from '@astrojs/node';
 import icon from 'astro-icon';
 import compress from 'astro-compress';
 import type { AstroIntegration } from 'astro';
@@ -24,21 +23,14 @@ const whenExternalScripts = (items: (() => AstroIntegration) | (() => AstroInteg
   hasExternalScripts ? (Array.isArray(items) ? items.map((item) => item()) : [items()]) : [];
 
 export default defineConfig({
-  output: 'server',
-  adapter: node({
-    mode: 'standalone'
-  }),
+  output: 'static',
   trailingSlash: 'never',
-  
-  devToolbar: {
-    enabled: false
-  },
   
   i18n: {
     defaultLocale: 'en',
     locales: ['en', 'pl'],
     routing: {
-      prefixDefaultLocale: false
+      prefixDefaultLocale: true
     }
   },
 
@@ -104,6 +96,10 @@ export default defineConfig({
       alias: {
         '~': path.resolve(__dirname, './src'),
       },
+    },
+    server: {
+      port: 4321,
+      hmr: false, // Wyłączamy HMR - strona nie będzie się automatycznie odświeżać
     },
   },
 });

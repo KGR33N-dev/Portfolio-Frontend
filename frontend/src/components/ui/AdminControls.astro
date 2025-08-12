@@ -47,8 +47,10 @@
 </div>
 
 <script>
+  import { AdminAuth } from '../../utils/adminAuth';
+  
   // Only show admin controls on blog pages
-  function initAdminControls() {
+  async function initAdminControls() {
     const currentPath = window.location.pathname;
     const isBlogPage = currentPath.includes('/blog') || currentPath.includes('/pl/blog') || currentPath.includes('/en/blog');
     
@@ -61,49 +63,52 @@
       return;
     }
 
-    // Check authentication status AND admin privileges
-    const token = localStorage.getItem('admin_token');
-    const userStr = localStorage.getItem('admin_user');
-    let user: { is_admin?: boolean } | null = null;
-    
-    try {
-      user = userStr ? JSON.parse(userStr) : null;
-    } catch {
-      console.warn('Failed to parse admin user data');
+    // Quick check for token
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      showLoginButton();
+      return;
     }
 
-    const isAuthenticated = !!(token && user);
-    const isAdmin = !!(user && user.is_admin);
+    // Verify admin status securely via API
+    const isAdmin = await AdminAuth.isAdminSecure();
+    
+    console.log('AdminControls: Admin status verified:', isAdmin);
 
-    // Get elements
+    if (!isAdmin) {
+      showLoginButton();
+      return;
+    }
+
+    showAdminControls();
+  }
+
+  function showLoginButton() {
+    const loginBtn = document.getElementById('admin-login-btn');
+    const authenticatedControls = document.getElementById('admin-authenticated');
+    
+    if (loginBtn) {
+      loginBtn.style.display = 'inline-flex';
+      const currentLang = window.location.pathname.split('/')[1] || 'en';
+      (loginBtn as HTMLAnchorElement).href = `/${currentLang}/login`;
+    }
+    if (authenticatedControls) {
+      authenticatedControls.style.display = 'none';
+    }
+  }
+
+  function showAdminControls() {
     const loginBtn = document.getElementById('admin-login-btn');
     const authenticatedControls = document.getElementById('admin-authenticated');
     const logoutBtn = document.getElementById('admin-logout-btn');
 
-    if (isAuthenticated && isAdmin) {
-      // Show admin controls for authenticated admins
-      if (loginBtn) loginBtn.style.display = 'none';
-      if (authenticatedControls) authenticatedControls.style.display = 'flex';
-    } else if (isAuthenticated && !isAdmin) {
-      // User is logged in but not admin - hide all admin controls
-      if (loginBtn) loginBtn.style.display = 'none';
-      if (authenticatedControls) authenticatedControls.style.display = 'none';
-    } else {
-      // Not logged in - show admin login button
-      if (loginBtn) {
-        loginBtn.style.display = 'inline-flex';
-        // Update login link to point to general login page
-        const currentLang = window.location.pathname.split('/')[1] || 'en';
-        (loginBtn as HTMLAnchorElement).href = `/${currentLang}/login`;
-      }
-      if (authenticatedControls) authenticatedControls.style.display = 'none';
-    }
+    if (loginBtn) loginBtn.style.display = 'none';
+    if (authenticatedControls) authenticatedControls.style.display = 'flex';
 
     // Setup logout functionality
     if (logoutBtn) {
       logoutBtn.addEventListener('click', () => {
-        localStorage.removeItem('admin_token');
-        localStorage.removeItem('admin_user');
+        AdminAuth.logout();
         window.location.reload();
       });
     }
