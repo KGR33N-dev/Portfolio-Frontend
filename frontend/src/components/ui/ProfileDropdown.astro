@@ -118,51 +118,71 @@ const t = useTranslations(lang as keyof typeof languages);
     const loginBtn = document.getElementById('profile-login-btn') as HTMLAnchorElement;
     const profileDropdown = document.getElementById('profile-dropdown');
     
-    console.log('🔍 ProfileDropdown Debug:');
-    console.log('Login button found:', !!loginBtn);
-    console.log('Profile dropdown found:', !!profileDropdown);
+    if (import.meta.env.DEV) {
+      console.log('🔍 ProfileDropdown Debug:');
+      console.log('Login button found:', !!loginBtn);
+      console.log('Profile dropdown found:', !!profileDropdown);
+    }
 
     // Set login URL with current language
     if (loginBtn) {
       const currentLang = window.location.pathname.split('/')[1] || 'en';
       loginBtn.href = `/${currentLang}/login`;
-      console.log('Login URL set to:', loginBtn.href);
+      if (import.meta.env.DEV) {
+        console.log('Login URL set to:', loginBtn.href);
+      }
     }
 
     // Quick check for token
     const token = localStorage.getItem('access_token');
-    console.log('Token exists:', !!token);
+    if (import.meta.env.DEV) {
+      console.log('Token exists:', !!token);
+    }
     
     if (!token) {
       // No token - show login button, hide profile dropdown
-      console.log('No token - showing login button');
+      if (import.meta.env.DEV) {
+        console.log('No token - showing login button');
+      }
       if (loginBtn) {
         loginBtn.style.display = 'inline-flex';
-        console.log('Login button shown');
+        if (import.meta.env.DEV) {
+          console.log('Login button shown');
+        }
       }
       if (profileDropdown) {
         profileDropdown.style.display = 'none';
-        console.log('Profile dropdown hidden');
+        if (import.meta.env.DEV) {
+          console.log('Profile dropdown hidden');
+        }
       }
       return;
     }
 
-    console.log('Token found - verifying with API...');
+    if (import.meta.env.DEV) {
+      console.log('Token found - verifying with API...');
+    }
 
     // Verify authentication securely via API
     const user = await AdminAuth.verifyUser();
     
-    console.log('User verification result:', user);
+    if (import.meta.env.DEV) {
+      console.log('User verification result:', user);
+    }
     
     if (!user) {
       // Invalid token - show login button, hide profile dropdown
-      console.log('Invalid token - showing login button');
+      if (import.meta.env.DEV) {
+        console.log('Invalid token - showing login button');
+      }
       if (loginBtn) loginBtn.style.display = 'inline-flex';
       if (profileDropdown) profileDropdown.style.display = 'none';
       return;
     }
 
-    console.log('User authenticated - showing profile dropdown for:', user.email, 'Admin:', user.is_admin);
+    if (import.meta.env.DEV) {
+      console.log('User authenticated - showing profile dropdown for:', user.email, 'Admin:', user.is_admin);
+    }
 
     // Valid user - hide login button, show profile dropdown
     if (loginBtn) loginBtn.style.display = 'none';
@@ -227,32 +247,82 @@ const t = useTranslations(lang as keyof typeof languages);
       logoutBtn.parentNode?.replaceChild(newLogoutBtn, logoutBtn);
       
       newLogoutBtn.addEventListener('click', () => {
-        console.log('Logout clicked');
+        if (import.meta.env.DEV) {
+          console.log('Logout clicked');
+        }
         AdminAuth.logout();
         window.location.reload();
       });
     }
   }
 
-  // Initialize on page load
-  document.addEventListener('DOMContentLoaded', initProfileDropdown);
-  
-  // Listen for navigation changes (for SPA routing)
-  document.addEventListener('astro:page-load', initProfileDropdown);
-  
-  // Listen for storage changes (if user logs in/out in another tab)
-  window.addEventListener('storage', (e) => {
-    if (e.key === 'access_token') {
-      initProfileDropdown();
+  // Global cleanup and initialization tracker
+  let isProfileDropdownInitialized = false;
+  let storageListener: ((e: StorageEvent) => void) | null = null;
+
+  function cleanupProfileDropdown() {
+    if (storageListener) {
+      window.removeEventListener('storage', storageListener);
+      storageListener = null;
     }
-  });
-  
-  // Also initialize if this script runs after DOMContentLoaded
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initProfileDropdown);
-  } else {
-    initProfileDropdown();
   }
+
+  function initProfileDropdownOnce() {
+    // For language switches (full page reloads), always re-check authentication
+    if (import.meta.env.DEV) {
+      console.log('Initializing ProfileDropdown - checking if already initialized:', isProfileDropdownInitialized);
+    }
+
+    // Cleanup any existing listeners first
+    cleanupProfileDropdown();
+    
+    if (import.meta.env.DEV) {
+      console.log('Initializing ProfileDropdown and checking authentication');
+    }
+
+    isProfileDropdownInitialized = true;
+    
+    // Initialize the dropdown (this will check authentication)
+    initProfileDropdown();
+    
+    // Setup storage listener (only once)
+    storageListener = (e) => {
+      if (e.key === 'access_token') {
+        if (import.meta.env.DEV) {
+          console.log('Access token changed in storage, reinitializing ProfileDropdown');
+        }
+        initProfileDropdown();
+      }
+    };
+    window.addEventListener('storage', storageListener);
+  }
+
+  // Single initialization strategy - always re-check on page load for language switches
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      // Reset state for fresh page load (like language switches)
+      isProfileDropdownInitialized = false;
+      initProfileDropdownOnce();
+    }, { once: true });
+  } else {
+    // Page already loaded, initialize immediately
+    isProfileDropdownInitialized = false;
+    initProfileDropdownOnce();
+  }
+  
+  // For Astro SPA navigation, only reinitialize if not already initialized
+  document.addEventListener('astro:page-load', () => {
+    if (import.meta.env.DEV) {
+      console.log('Astro page load detected, checking ProfileDropdown status');
+    }
+    
+    // Reset initialization state and force re-check for language switches
+    isProfileDropdownInitialized = false;
+    initProfileDropdownOnce();
+  });
+
+  // Cleanup on page unload
+  window.addEventListener('beforeunload', cleanupProfileDropdown);
 </script>
 
 <style>

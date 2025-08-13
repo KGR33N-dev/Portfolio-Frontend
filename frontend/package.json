@@ -23,6 +23,7 @@
     "fix:prettier": "prettier -w ."
   },
   "dependencies": {
+    "@astrojs/cloudflare": "^12.6.3",
     "@astrojs/node": "^9.3.0",
     "@astrojs/react": "^4.3.0",
     "@astrojs/rss": "^4.0.11",

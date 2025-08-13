@@ -285,32 +285,74 @@ const metadata = {
   }
 }} type="module">
   
+  // Flag to prevent multiple initializations
+  let isLanguageManagementInitialized = false;
+  let isCurrentlyInitializing = false;
+  
+  // Global data loading flags - need to be reset on navigation
+  let isLoadingLanguages = false;
+  let isLoadingStats = false;
+  let areListenersAttached = false;
+  
   async function initLanguageManagement() {
+    console.log('🎯 Languages: initLanguageManagement called, current URL:', window.location.pathname);
+    console.log('🎯 Languages: initialized:', isLanguageManagementInitialized, 'initializing:', isCurrentlyInitializing);
+    
+    // Always reset for fresh start if we're on languages page
+    if (window.location.pathname.includes('/admin/languages')) {
+      console.log('🔄 Languages: Force reset flags for languages page');
+      isLanguageManagementInitialized = false;
+      isCurrentlyInitializing = false;
+      isLoadingLanguages = false;
+      isLoadingStats = false;
+      areListenersAttached = false;
+    }
+    
+    // Prevent multiple initializations
+    if (isLanguageManagementInitialized || isCurrentlyInitializing) {
+      console.log('✋ Language management already initialized or initializing, skipping...');
+      return;
+    }
+    
+    isCurrentlyInitializing = true;
+    
     // Import required modules
     const { LanguageAPI, LanguageUtils } = await import('/src/utils/languageAPI.ts');
     const { AdminAuth } = await import('/src/utils/adminAuth.js');
     
-    // Check authentication first
-    if (!AdminAuth.isAuthenticated()) {
+    // Check authentication first - use secure API-based verification
+    console.log('🔐 Checking authentication...');
+    const isAuthenticated = await AdminAuth.isAuthenticatedSecure();
+    if (!isAuthenticated) {
+      console.log('❌ User not authenticated, redirecting to login');
       const currentLang = window.location.pathname.split('/')[1];
+      isCurrentlyInitializing = false; // Reset flag before redirect
       window.location.href = `/${currentLang}/login`;
       return;
     }
 
     // Check if user is admin
     try {
+      console.log('🔐 Checking admin status...');
       const user = await AdminAuth.checkSession();
+      console.log('👤 User data:', user);
+      
       if (!user?.is_admin) {
+        console.log('❌ User is not admin, showing access denied');
         const accessDeniedDiv = document.getElementById('access-denied');
         const managementContent = document.getElementById('language-management');
         
         if (accessDeniedDiv) accessDeniedDiv.classList.remove('hidden');
         if (managementContent) managementContent.style.display = 'none';
+        isCurrentlyInitializing = false; // Reset flag
         return;
       }
+      
+      console.log('✅ User is authenticated admin, proceeding...');
     } catch (error) {
-      console.error('Authentication check failed:', error);
+      console.error('❌ Authentication check failed:', error);
       const currentLang = window.location.pathname.split('/')[1];
+      isCurrentlyInitializing = false; // Reset flag before redirect
       window.location.href = `/${currentLang}/login`;
       return;
     }
@@ -335,12 +377,16 @@ const metadata = {
     await loadLanguages();
     await loadStats();
 
-    // Event listeners
-    addLanguageBtn?.addEventListener('click', () => openModal('create'));
-    closeModalBtn?.addEventListener('click', closeModal);
-    cancelBtn?.addEventListener('click', closeModal);
-    showActiveOnlyCheckbox?.addEventListener('change', loadLanguages);
-    languageForm?.addEventListener('submit', handleFormSubmit);
+    // Event listeners - only add once
+    if (!areListenersAttached) {
+      addLanguageBtn?.addEventListener('click', () => openModal('create'));
+      closeModalBtn?.addEventListener('click', closeModal);
+      cancelBtn?.addEventListener('click', closeModal);
+      showActiveOnlyCheckbox?.addEventListener('change', loadLanguages);
+      languageForm?.addEventListener('submit', handleFormSubmit);
+      areListenersAttached = true;
+      console.log('📎 Event listeners attached');
+    }
 
     // Close modal on outside click
     modal?.addEventListener('click', (e) => {
@@ -374,7 +420,15 @@ const metadata = {
     }
 
     async function loadLanguages() {
+      if (isLoadingLanguages) {
+        console.log('⏳ Languages already loading, skipping...');
+        return;
+      }
+      
       if (!tableContainer) return;
+
+      isLoadingLanguages = true;
+      console.log('📋 Loading languages...');
 
       // Show loading
       tableContainer.innerHTML = `
@@ -488,10 +542,21 @@ const metadata = {
             <p class="text-red-600 dark:text-red-400">${translations.errorLoadingLanguages}</p>
           </div>
         `;
+      } finally {
+        isLoadingLanguages = false;
+        console.log('✅ Languages loading completed');
       }
     }
 
     async function loadStats() {
+      if (isLoadingStats) {
+        console.log('⏳ Stats already loading, skipping...');
+        return;
+      }
+      
+      isLoadingStats = true;
+      console.log('📊 Loading language stats...');
+
       try {
         // Load basic stats first
         const languages = await LanguageAPI.getLanguages(false); // Get all languages
@@ -516,6 +581,9 @@ const metadata = {
         }
       } catch (error) {
         console.error('Error loading language stats:', error);
+      } finally {
+        isLoadingStats = false;
+        console.log('✅ Language stats loading completed');
       }
     }
 
@@ -773,9 +841,27 @@ const metadata = {
         operationsInProgress.delete(operationKey);
       }
     };
+  
+    // Mark initialization as complete
+    isLanguageManagementInitialized = true;
+    isCurrentlyInitializing = false;
+    console.log('✅ Language management initialization completed');
   }
 
   // Initialize on page load
-  document.addEventListener('DOMContentLoaded', initLanguageManagement);
-  document.addEventListener('astro:page-load', initLanguageManagement);
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('🎯 Languages DOMContentLoaded event fired');
+    initLanguageManagement();
+  });
+  document.addEventListener('astro:page-load', () => {
+    console.log('🔄 Languages: Astro page load detected, resetting state...');
+    // Reset initialization state for Astro navigation
+    isLanguageManagementInitialized = false;
+    isCurrentlyInitializing = false;
+    // Reset data loading flags to allow fresh data loading
+    isLoadingLanguages = false;
+    isLoadingStats = false;
+    areListenersAttached = false;
+    initLanguageManagement();
+  });
 </script>

@@ -1,8 +1,11 @@
 ---
+// Prerender this page as static
+export const prerender = true;
+
 import Layout from '~/layouts/PageLayout.astro';
 import { useTranslations } from '~/i18n/utils';
 import { languages } from '~/i18n';
-import { API_URLS, BlogAPI } from '~/config/api';
+import { API_URLS } from '~/config/api';
 import Grid from '~/components/blog/Grid.astro';
 import Pagination from '~/components/blog/Pagination.astro';
 import { convertApiPostToPost } from '~/types/blog';

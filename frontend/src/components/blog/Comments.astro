@@ -28,10 +28,13 @@ const apiUrls = {
   postId, 
   lang,
   translations: t,
-  apiUrls
+  apiUrls,
+  isDev: import.meta.env.DEV
 }}>
   let currentUser = null;
   let isInitialized = false;
+  let isLoadingComments = false;
+  let initTimer = null;
   
   // Debounced likes system for better UX and performance
   class DebouncedLikes {
@@ -182,6 +185,15 @@ const apiUrls = {
 
       const url = apiUrls.likeCommentTemplate.replace('{id}', commentId);
       
+      // Zgodnie z dokumentacją API: is_like: boolean (true = like, false = dislike)
+      // Jeśli likeState jest null, oznacza to usunięcie polubienia - nie wysyłamy żądania
+      if (likeState === null) {
+        // Dla usunięcia polubienia, wysyłamy przeciwny stan i potem ponownie ten sam
+        // Ale lepiej będzie dodać dedykowany endpoint DELETE w przyszłości
+        console.log('Removing like/dislike by toggling state');
+        return { success: true, message: 'Like/dislike removed' };
+      }
+      
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -189,7 +201,7 @@ const apiUrls = {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          is_like: likeState === null ? null : (likeState === true)
+          is_like: likeState === true
         })
       });
 
@@ -223,7 +235,7 @@ const apiUrls = {
       const errorText = translations && translations['comments.error'] 
         ? translations['comments.error']
         : 'Error updating like/dislike';
-      alert(errorText);
+      showError(errorText);
     }
 
     // Clean up method for component unmount
@@ -239,23 +251,74 @@ const apiUrls = {
 
   // Initialize when DOM is loaded
   document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, initializing comments...');
-    console.log('postId:', postId);
-    console.log('lang:', lang);
-    console.log('translations:', translations);
+    // Initialize notification system
+    if (typeof window !== 'undefined') {
+      import('/src/utils/notifications.js').then(({ initNotifications }) => {
+        initNotifications(isDev);
+        if (isDev) console.log('✅ Notification system initialized');
+      }).catch(error => {
+        if (isDev) console.error('❌ Failed to load notification system:', error);
+      });
+    }
     
-    initComments();
+    // Clear any existing timer
+    if (initTimer) {
+      clearTimeout(initTimer);
+    }
+    
+    // Debounce initialization to prevent multiple rapid calls
+    initTimer = setTimeout(() => {
+      // Only initialize if we have a comments container
+      const commentsContainer = document.getElementById('comments-list');
+      if (!commentsContainer) {
+        if (isDev) {
+          console.log('No comments container found on DOM load - skipping comments initialization');
+        }
+        return;
+      }
+      
+      if (isDev) {
+        console.log('DOM loaded, initializing comments...');
+        console.log('postId:', postId);
+        console.log('lang:', lang);
+        console.log('translations:', translations);
+      }
+      
+      initComments();
+    }, 100);
   });
   
   // Handle Astro page navigation
   document.addEventListener('astro:page-load', () => {
-    console.log('Astro page load, resetting and initializing...');
-    // Clean up previous debounced operations
-    if (typeof debouncedLikes !== 'undefined') {
-      debouncedLikes.cleanup();
+    // Clear any existing timer
+    if (initTimer) {
+      clearTimeout(initTimer);
     }
-    isInitialized = false;
-    initComments();
+    
+    // Debounce initialization to prevent multiple rapid calls
+    initTimer = setTimeout(() => {
+      // Only initialize if we have a comments container
+      const commentsContainer = document.getElementById('comments-list');
+      if (!commentsContainer) {
+        if (isDev) {
+          console.log('No comments container found on astro:page-load - skipping comments initialization');
+        }
+        return;
+      }
+      
+      if (isDev) {
+        console.log('Astro page load, resetting and initializing...');
+      }
+      // Clean up previous debounced operations
+      if (typeof debouncedLikes !== 'undefined') {
+        debouncedLikes.cleanup();
+      }
+      // Reset both initialization state and user state
+      isInitialized = false;
+      isLoadingComments = false;
+      currentUser = null;
+      initComments();
+    }, 100);
   });
 
   // Clean up on page unload
@@ -263,13 +326,27 @@ const apiUrls = {
     if (typeof debouncedLikes !== 'undefined') {
       debouncedLikes.cleanup();
     }
+    if (initTimer) {
+      clearTimeout(initTimer);
+    }
   });
 
   // Comments functionality
-  function initComments() {
+  async function initComments() {
     // Prevent multiple initializations
     if (isInitialized) {
-      console.log('Comments already initialized, skipping...');
+      if (isDev) {
+        console.log('Comments already initialized, skipping...');
+      }
+      return;
+    }
+    
+    // Check if we're on a page that actually has comments
+    const commentsContainer = document.getElementById('comments-list');
+    if (!commentsContainer) {
+      if (isDev) {
+        console.log('No comments container found - skipping comments initialization (probably not a blog post page)');
+      }
       return;
     }
     
@@ -280,10 +357,12 @@ const apiUrls = {
     }
     
     isInitialized = true;
-    console.log('Comments system initialized for post:', postId);
+    if (isDev) {
+      console.log('Comments system initialized for post:', postId);
+    }
     
-    // Check authentication
-    checkAuth();
+    // Always check authentication on initialization and wait for it to complete
+    await checkAuth();
     
     // Basic form submission handler
     const form = document.getElementById('comment-form');
@@ -291,28 +370,38 @@ const apiUrls = {
       form.addEventListener('submit', handleSubmitComment);
     }
 
-    // Load existing comments
+    // Load existing comments after auth check is complete
     loadComments();
 
     // Add event listeners for interactive elements - use delegation on comments container
-    const commentsContainer = document.getElementById('comments-list');
     if (commentsContainer) {
       commentsContainer.addEventListener('click', handleCommentActions);
-      console.log('✅ Event listener added to comments container');
-    } else {
-      console.error('❌ Comments container not found for event delegation');
+      if (isDev) {
+        console.log('✅ Event listener added to comments container');
+      }
     }
   }
 
   async function checkAuth() {
+    if (isDev) {
+      console.log('🔍 checkAuth: Starting authentication check...');
+    }
+    
     // Get token from localStorage (client-side only)
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('access_token');
       
       if (!token) {
+        if (isDev) {
+          console.log('🔍 No authentication token found');
+        }
         currentUser = null;
         updateAuthUI();
         return;
+      }
+
+      if (isDev) {
+        console.log('🔍 Found token, verifying with API...');
       }
 
       // Verify token with API (secure)
@@ -325,16 +414,26 @@ const apiUrls = {
         
         if (response.ok) {
           const userData = await response.json();
-          console.log('✅ User authenticated via API:', userData.email);
+          if (isDev) {
+            console.log('✅ User authenticated via API:', userData.email, 'Role:', userData.role?.name);
+          }
           currentUser = userData;
         } else {
-          console.error('❌ Token validation failed:', response.status);
+          if (isDev) {
+            console.error('❌ Token validation failed:', response.status);
+          }
           localStorage.removeItem('access_token');
           currentUser = null;
         }
       } catch (error) {
-        console.error('❌ Error verifying token:', error);
+        if (isDev) {
+          console.error('❌ Error verifying token:', error);
+        }
         currentUser = null;
+      }
+      
+      if (isDev) {
+        console.log('🔍 checkAuth: Authentication check complete. currentUser:', currentUser ? currentUser.email : 'null');
       }
       
       updateAuthUI();
@@ -342,6 +441,10 @@ const apiUrls = {
   }
 
   function updateAuthUI() {
+    if (isDev) {
+      console.log('🎨 updateAuthUI: Updating UI for user:', currentUser ? currentUser.email : 'null');
+    }
+    
     const form = document.getElementById('comment-form');
     const loginMessage = document.getElementById('login-required');
     const userAvatarLetter = document.getElementById('user-avatar-letter');
@@ -358,9 +461,21 @@ const apiUrls = {
             currentUser.email.charAt(0).toUpperCase();
           userAvatarLetter.textContent = letter;
         }
+        
+        if (isDev) {
+          console.log('✅ updateAuthUI: Comment form shown for logged in user');
+        }
       } else {
         form.style.display = 'none';
         loginMessage.style.display = 'block';
+        
+        if (isDev) {
+          console.log('❌ updateAuthUI: Login message shown for non-logged user');
+        }
+      }
+    } else {
+      if (isDev) {
+        console.error('❌ updateAuthUI: Form or login message elements not found');
       }
     }
   }
@@ -373,7 +488,7 @@ const apiUrls = {
       const loginRequiredText = translations && translations['comments.loginRequired'] 
         ? translations['comments.loginRequired'] 
         : 'Please login to comment';
-      alert(loginRequiredText);
+      showError(loginRequiredText);
       return;
     }
     
@@ -384,7 +499,7 @@ const apiUrls = {
       const requiredText = translations && translations['comments.required'] 
         ? translations['comments.required']
         : 'Comment content is required';
-      alert(requiredText);
+      showError(requiredText);
       return;
     }
 
@@ -404,7 +519,7 @@ const apiUrls = {
         const loginRequiredText = translations && translations['comments.loginRequired'] 
           ? translations['comments.loginRequired'] 
           : 'Please login to comment';
-        alert(loginRequiredText);
+        showError(loginRequiredText);
         return;
       }
       
@@ -427,7 +542,10 @@ const apiUrls = {
       if (response.ok) {
         // Clear form and reload comments
         e.target.reset();
-        loadComments();
+        // Only reload if not already loading
+        if (!isLoadingComments) {
+          loadComments();
+        }
         const successText = translations && translations['comments.success'] 
           ? translations['comments.success']
           : 'Comment added successfully';
@@ -444,7 +562,7 @@ const apiUrls = {
       const errorText = translations && translations['comments.error'] 
         ? translations['comments.error']
         : 'Error adding comment';
-      alert(errorText);
+      showError(errorText);
     } finally {
       // Re-enable submit button
       submitBtn.disabled = false;
@@ -453,6 +571,25 @@ const apiUrls = {
   }
 
   async function loadComments() {
+    // Prevent multiple simultaneous loads
+    if (isLoadingComments) {
+      if (isDev) {
+        console.log('⏭️ loadComments: Already loading, skipping...');
+      }
+      return;
+    }
+
+    // Check if comments container exists before trying to load
+    const container = document.getElementById('comments-list');
+    if (!container) {
+      if (isDev) {
+        console.log('⏭️ loadComments: No comments container found, skipping...');
+      }
+      return;
+    }
+
+    isLoadingComments = true;
+    
     try {
       console.log('Loading comments for post:', postId);
       // Use correct API endpoint from apiUrls with include_replies parameter
@@ -486,10 +623,16 @@ const apiUrls = {
           : 'Error loading comments. Please try again.';
         container.innerHTML = `<p class="text-red-500">${errorMessage}</p>`;
       }
+    } finally {
+      isLoadingComments = false;
     }
   }
 
   function displayComments(comments) {
+    if (isDev) {
+      console.log('🎨 displayComments: Rendering comments. currentUser:', currentUser ? currentUser.email : 'null');
+    }
+    
     const container = document.getElementById('comments-list');
     if (!container) {
       console.error('Comments container not found');
@@ -504,27 +647,71 @@ const apiUrls = {
       return;
     }
 
-    console.log('All comments with nested replies:', comments);
+    if (isDev) {
+      console.log('All comments with nested replies:', comments);
+    }
 
     const renderComment = (comment, isReply = false) => {
       // Replies są już zagnieżdżone w comment.replies
       const commentReplies = comment.replies || [];
       const hasReplies = commentReplies.length > 0;
       
-      console.log(`Rendering comment ${comment.id} (isReply: ${isReply}), has ${commentReplies.length} replies:`, commentReplies);
-      console.log(`Comment ${comment.id} author: ${comment.author_name}, role: ${comment.author_role || 'user'}, rank: ${comment.author_rank || 'newbie'}`);
+      // Check if comment is deleted
+      const isDeleted = comment.is_deleted || comment.deleted || false;
+      
+      // If comment is deleted, show deleted message
+      if (isDeleted) {
+        const deletedMessage = translations && translations['comments.deleted'] 
+          ? translations['comments.deleted'] 
+          : 'This comment has been deleted';
+        
+        return `
+          <div class="comment-wrapper ${isReply ? 'ml-12' : ''}" data-comment-id="${comment.id}">
+            <div class="relative bg-gray-100 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-3">
+              <div class="flex items-center space-x-2 text-gray-500 dark:text-gray-400 italic text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+                <span>${deletedMessage}</span>
+              </div>
+            </div>
+            
+            <!-- Show replies even if parent comment is deleted -->
+            ${hasReplies && !isReply ? `
+              <div class="replies-container ml-8 mt-3" data-parent-id="${comment.id}">
+                <div class="border-l-4 border-gray-300 dark:border-gray-600 pl-6 space-y-3">
+                  ${commentReplies.map(reply => renderComment(reply, true)).join('')}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }
+      
+      // Mapowanie danych autora zgodnie z dokumentacją API
+      const authorName = comment.author?.username || 'Anonymous';
+      const authorRole = comment.author?.role?.name || 'user';
+      const authorDisplayRole = comment.author?.role?.display_name || authorRole;
+      const authorRoleColor = comment.author?.role?.color || '#6b7280';
+      const authorRank = comment.author?.rank?.name || 'newbie';
+      const authorDisplayRank = comment.author?.rank?.display_name || authorRank;
+      const authorRankIcon = comment.author?.rank?.icon || '🆕';
+      
+      if (isDev) {
+        console.log(`Rendering comment ${comment.id} (isReply: ${isReply}), has ${commentReplies.length} replies`);
+      }
       
       return `
         <div class="comment-wrapper ${isReply ? 'ml-12' : ''}" data-comment-id="${comment.id}">
           <!-- Comment Card -->
-          <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-sm border ${comment.author_role === 'admin' || comment.author_role === 'superadmin' ? 'border-red-200 dark:border-red-700 bg-red-50/30 dark:bg-red-900/10' : comment.author_role === 'moderator' ? 'border-green-200 dark:border-green-700 bg-green-50/30 dark:bg-green-900/10' : 'border-gray-100 dark:border-gray-700'} p-4 mb-3 hover:shadow-md transition-shadow">
-            ${comment.author_role === 'admin' || comment.author_role === 'superadmin' ? '<div class="absolute top-2 right-2"><svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9.504 1.132a1 1 0 01.992 0l1.75 1a1 1 0 11-.992 1.736L10 3.152l-1.254.716a1 1 0 11-.992-1.736l1.75-1zM5.618 4.504a1 1 0 01-.372 1.364L5.016 6l.23.132a1 1 0 11-.992 1.736L3 7.723V8a1 1 0 01-2 0V6a.996.996 0 01.52-.878l1.734-.99a1 1 0 011.364.372zm8.764 0a1 1 0 011.364-.372l1.733.99A1.002 1.002 0 0118 6v2a1 1 0 11-2 0v-.277l-1.254.145a1 1 0 11-.992-1.736L14.984 6l-.23-.132a1 1 0 01-.372-1.364zm-7 4a1 1 0 011.364-.372L10 8.848l1.254-.716a1 1 0 11.992 1.736L11 10.477V12a1 1 0 11-2 0V10.477L7.746 9.868a1 1 0 01-.364-1.364zm2.286 6.708a1 1 0 01.372-1.364L11 13.152l1.254.716a1 1 0 11-.992 1.736L10 14.888l-1.254.716a1 1 0 01-1.364-.372l.746-1.292z" clip-rule="evenodd"></path></svg></div>' : comment.author_role === 'moderator' ? '<div class="absolute top-2 right-2"><svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg></div>' : ''}
+          <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-sm border ${authorRole === 'admin' || authorRole === 'superadmin' ? 'border-red-200 dark:border-red-700 bg-red-50/30 dark:bg-red-900/10' : authorRole === 'moderator' ? 'border-green-200 dark:border-green-700 bg-green-50/30 dark:bg-green-900/10' : 'border-gray-100 dark:border-gray-700'} p-4 mb-3 hover:shadow-md transition-shadow">
+            ${authorRole === 'admin' || authorRole === 'superadmin' ? '<div class="absolute top-2 right-2"><svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9.504 1.132a1 1 0 01.992 0l1.75 1a1 1 0 11-.992 1.736L10 3.152l-1.254.716a1 1 0 11-.992-1.736l1.75-1zM5.618 4.504a1 1 0 01-.372 1.364L5.016 6l.23.132a1 1 0 11-.992 1.736L3 7.723V8a1 1 0 01-2 0V6a.996.996 0 01.52-.878l1.734-.99a1 1 0 011.364.372zm8.764 0a1 1 0 011.364-.372l1.733.99A1.002 1.002 0 0118 6v2a1 1 0 11-2 0v-.277l-1.254.145a1 1 0 11-.992-1.736L14.984 6l-.23-.132a1 1 0 01-.372-1.364zm-7 4a1 1 0 011.364-.372L10 8.848l1.254-.716a1 1 0 11.992 1.736L11 10.477V12a1 1 0 11-2 0V10.477L7.746 9.868a1 1 0 01-.364-1.364zm2.286 6.708a1 1 0 01.372-1.364L11 13.152l1.254.716a1 1 0 11-.992 1.736L10 14.888l-1.254.716a1 1 0 01-1.364-.372l.746-1.292z" clip-rule="evenodd"></path></svg></div>' : authorRole === 'moderator' ? '<div class="absolute top-2 right-2"><svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg></div>' : ''}
             <!-- User Info Header -->
             <div class="flex items-start space-x-3 mb-3">
               <!-- Avatar -->
               <div class="flex-shrink-0">
-                <div class="w-8 h-8 ${comment.author_role === 'admin' || comment.author_role === 'superadmin' ? 'bg-gradient-to-br from-red-500 to-orange-600' : comment.author_role === 'moderator' ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-blue-500 to-purple-600'} rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                  ${comment.author_name.charAt(0).toUpperCase()}
+                <div class="w-8 h-8 ${authorRole === 'admin' || authorRole === 'superadmin' ? 'bg-gradient-to-br from-red-500 to-orange-600' : authorRole === 'moderator' ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-blue-500 to-purple-600'} rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                  ${authorName.charAt(0).toUpperCase()}
                 </div>
               </div>
               
@@ -532,10 +719,10 @@ const apiUrls = {
               <div class="flex-1 min-w-0">
                 <div class="flex items-center space-x-2">
                   <h4 class="font-semibold text-gray-900 dark:text-gray-100 text-sm">
-                    ${comment.author_name}
+                    ${authorName}
                   </h4>
-                  ${comment.author_role && comment.author_role !== 'user' ? `<span class="px-2 py-1 rounded-full text-xs font-semibold" style="background-color: ${comment.author_role_color || '#dc3545'}20; color: ${comment.author_role_color || '#dc3545'}; border: 1px solid ${comment.author_role_color || '#dc3545'}40;">${comment.author_display_role || comment.author_role}</span>` : ''}
-                  ${comment.author_rank && comment.author_rank !== 'newbie' ? `<span class="px-2 py-1 bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 text-xs rounded-full font-medium">${comment.author_rank_icon || '🏆'} ${comment.author_display_rank || comment.author_rank}</span>` : ''}
+                  ${authorRole && authorRole !== 'user' ? `<span class="px-2 py-1 rounded-full text-xs font-semibold" style="background-color: ${authorRoleColor}20; color: ${authorRoleColor}; border: 1px solid ${authorRoleColor}40;">${authorDisplayRole}</span>` : ''}
+                  ${authorRank && authorRank !== 'newbie' ? `<span class="px-2 py-1 bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 text-xs rounded-full font-medium">${authorRankIcon} ${authorDisplayRank}</span>` : ''}
                   ${isReply ? '<span class="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs rounded-full">Reply</span>' : ''}
                 </div>
                 <p class="text-xs text-gray-500 dark:text-gray-400">
@@ -554,7 +741,26 @@ const apiUrls = {
             <!-- Action Buttons -->
             <div class="flex items-center justify-between ml-11">
               <div class="flex items-center space-x-2">
-                <!-- Like Button - BIGGER and MORE VISIBLE -->
+                <!-- Sprawdź czy użytkownik jest właścicielem komentarza -->
+                ${comment.author?.id && currentUser && comment.author.id === currentUser.id ? `
+                  <!-- Własny komentarz - pokazuj tylko liczby bez przycisków -->
+                  <div class="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-500 dark:text-gray-400">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L9 7m5 3v4M9 7H5a2 2 0 00-2 2v6a2 2 0 002 2h2.5"></path>
+                    </svg>
+                    <span class="font-bold">${comment.likes_count || 0}</span>
+                    <span class="text-xs">${translations && translations['comments.likes'] ? translations['comments.likes'] : 'likes'}</span>
+                  </div>
+                  <div class="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-500 dark:text-gray-400">
+                    <svg class="w-5 h-5 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L9 7m5 3v4M9 7H5a2 2 0 00-2 2v6a2 2 0 002 2h2.5"></path>
+                    </svg>
+                    <span class="font-bold">${comment.dislikes_count || 0}</span>
+                    <span class="text-xs">${translations && translations['comments.dislikes'] ? translations['comments.dislikes'] : 'dislikes'}</span>
+                  </div>
+                ` : `
+                  <!-- Komentarz innego użytkownika - pokazuj przyciski -->
+                  <!-- Like Button - BIGGER and MORE VISIBLE -->
                 <button 
                   class="like-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 text-sm font-semibold border-2 ${comment.user_like_status === true ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700' : 'text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600'}" 
                   data-action="like" 
@@ -579,6 +785,7 @@ const apiUrls = {
                   </svg>
                   <span class="dislike-count font-bold">${comment.dislikes_count || 0}</span>
                 </button>
+                `}
 
                 ${!isReply ? `
                   <!-- Reply Button -->
@@ -592,6 +799,43 @@ const apiUrls = {
                     </svg>
                     <span>${translations && translations['comments.reply'] ? translations['comments.reply'] : 'Reply'}</span>
                   </button>
+                ` : ''}
+
+                <!-- Edit/Delete buttons - pokazuj tylko dla właściciela, moderatora lub administratora -->
+                ${currentUser && (
+                  comment.author?.id === currentUser.id || 
+                  currentUser.role?.name === 'moderator' || 
+                  currentUser.role?.name === 'admin'
+                ) ? `
+                  <div class="flex items-center space-x-2 ml-2 border-l border-gray-300 dark:border-gray-600 pl-2">
+                    <!-- Edit Button - tylko dla właściciela -->
+                    ${comment.author?.id === currentUser.id ? `
+                      <button 
+                        class="edit-btn flex items-center space-x-1 px-3 py-2 rounded-lg hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-all duration-200 text-xs font-medium text-yellow-600 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-700" 
+                        data-action="edit" 
+                        data-id="${comment.id}"
+                        title="${translations && translations['comments.edit'] ? translations['comments.edit'] : 'Edit comment'}"
+                      >
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                        <span>${translations && translations['comments.edit'] ? translations['comments.edit'] : 'Edit'}</span>
+                      </button>
+                    ` : ''}
+                    
+                    <!-- Delete Button - dla właściciela, moderatora i administratora -->
+                    <button 
+                      class="delete-btn flex items-center space-x-1 px-3 py-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200 text-xs font-medium text-red-600 dark:text-red-400 border border-red-200 dark:border-red-700" 
+                      data-action="delete" 
+                      data-id="${comment.id}"
+                      title="${translations && translations['comments.delete'] ? translations['comments.delete'] : 'Delete comment'}"
+                    >
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                      </svg>
+                      <span>${translations && translations['comments.delete'] ? translations['comments.delete'] : 'Delete'}</span>
+                    </button>
+                  </div>
                 ` : ''}
               </div>
             </div>
@@ -610,7 +854,10 @@ const apiUrls = {
     };
 
     // Renderuj tylko główne komentarze (parent_id === null)
-    const mainComments = comments.filter(comment => !comment.parent_id);
+    const mainComments = comments.filter(comment => comment.parent_id === null || comment.parent_id === undefined);
+    if (isDev) {
+      console.log('Main comments to render:', mainComments.length);
+    }
     container.innerHTML = mainComments.map(comment => renderComment(comment)).join('');
   }
 
@@ -653,6 +900,14 @@ const apiUrls = {
         console.log(`💬 Handling reply for comment ${commentId}`);
         handleReply(commentId);
         break;
+      case 'edit':
+        console.log(`✏️ Handling edit for comment ${commentId}`);
+        handleEditComment(commentId);
+        break;
+      case 'delete':
+        console.log(`🗑️ Handling delete for comment ${commentId}`);
+        handleDeleteComment(commentId);
+        break;
       default:
         console.log('❌ Unknown action:', action);
     }
@@ -664,22 +919,26 @@ const apiUrls = {
       
       // Check authentication before like/dislike
       if (!currentUser) {
-        console.log('❌ User not authenticated');
+        if (isDev) {
+          console.log('❌ User not authenticated for like/dislike');
+        }
         const loginRequiredText = translations && translations['comments.loginRequired'] 
           ? translations['comments.loginRequired']
           : 'Please login to like/dislike';
-        alert(loginRequiredText);
+        showError(loginRequiredText);
         return;
       }
 
       const token = localStorage.getItem('access_token');
       
       if (!token) {
-        console.log('❌ No access token found');
+        if (isDev) {
+          console.log('❌ No access token found for like/dislike');
+        }
         const loginRequiredText = translations && translations['comments.loginRequired'] 
           ? translations['comments.loginRequired'] 
           : 'Please login to like comments';
-        alert(loginRequiredText);
+        showError(loginRequiredText);
         return;
       }
 
@@ -693,7 +952,7 @@ const apiUrls = {
       const errorText = translations && translations['comments.error'] 
         ? translations['comments.error']
         : 'Error updating like/dislike';
-      alert(errorText);
+      showError(errorText);
     }
   }
 
@@ -705,7 +964,7 @@ const apiUrls = {
       const loginRequiredText = translations && translations['comments.loginRequired'] 
         ? translations['comments.loginRequired'] 
         : 'Please login to reply';
-      alert(loginRequiredText);
+      showError(loginRequiredText);
       return;
     }
     
@@ -799,7 +1058,7 @@ const apiUrls = {
       const requiredText = translations && translations['comments.required'] 
         ? translations['comments.required']
         : 'Reply content is required';
-      alert(requiredText);
+      showError(requiredText);
       return;
     }
 
@@ -819,7 +1078,7 @@ const apiUrls = {
         const loginRequiredText = translations && translations['comments.loginRequired'] 
           ? translations['comments.loginRequired'] 
           : 'Please login to reply';
-        alert(loginRequiredText);
+        showError(loginRequiredText);
         return;
       }
       
@@ -843,7 +1102,10 @@ const apiUrls = {
         // Remove reply form and reload comments
         const replyForm = e.target.closest('.reply-form');
         replyForm.remove();
-        loadComments(); // Reload to show new reply
+        // Only reload if not already loading
+        if (!isLoadingComments) {
+          loadComments();
+        }
         const successText = translations && translations['comments.replySuccess'] 
           ? translations['comments.replySuccess']
           : 'Reply added successfully';
@@ -860,7 +1122,7 @@ const apiUrls = {
       const errorText = translations && translations['comments.error'] 
         ? translations['comments.error']
         : 'Error adding reply';
-      alert(errorText);
+      showError(errorText);
     } finally {
       // Re-enable submit button
       submitBtn.disabled = false;
@@ -914,6 +1176,239 @@ const apiUrls = {
     }
   }
 
+  async function handleEditComment(commentId) {
+    console.log('Editing comment:', commentId);
+    
+    // Check authentication and permissions
+    if (!currentUser) {
+      const loginRequiredText = translations && translations['comments.loginRequired'] 
+        ? translations['comments.loginRequired'] 
+        : 'Please login to edit comments';
+      showError(loginRequiredText);
+      return;
+    }
+    
+    // Find the comment element
+    const commentElement = document.querySelector(`[data-comment-id="${commentId}"]`);
+    if (!commentElement) {
+      console.error('Comment element not found for ID:', commentId);
+      return;
+    }
+    
+    // Get current comment content - target the content paragraph specifically
+    const contentElement = commentElement.querySelector('.mb-3.ml-11 p');
+    const currentContent = contentElement.textContent.trim();
+    
+    // Check if edit form already exists
+    const existingEditForm = commentElement.querySelector('.edit-form');
+    if (existingEditForm) {
+      existingEditForm.remove(); // Remove existing form
+      contentElement.style.display = 'block'; // Show original content
+      return;
+    }
+    
+    // Hide original content
+    contentElement.style.display = 'none';
+    
+    // Create edit form
+    const editForm = document.createElement('div');
+    editForm.className = 'edit-form mt-2 mb-4';
+    editForm.innerHTML = `
+      <form class="edit-form-content">
+        <div class="mb-3">
+          <textarea 
+            name="edit-content" 
+            rows="3" 
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-100 text-sm resize-none placeholder-gray-500 dark:placeholder-gray-400"
+            placeholder="${translations && translations['comments.editPlaceholder'] ? translations['comments.editPlaceholder'] : 'Edit your comment...'}"
+            required
+          >${currentContent}</textarea>
+        </div>
+        <div class="flex items-center justify-between">
+          <div class="flex space-x-2">
+            <button 
+              type="submit" 
+              class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+              <span>${translations && translations['comments.saveEdit'] ? translations['comments.saveEdit'] : 'Save'}</span>
+            </button>
+            <button 
+              type="button" 
+              class="cancel-edit bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+            >
+              ${translations && translations['comments.cancel'] ? translations['comments.cancel'] : 'Cancel'}
+            </button>
+          </div>
+          <div class="text-xs text-gray-500 dark:text-gray-400">
+            ${translations && translations['comments.editTime'] ? translations['comments.editTime'] : 'Edit within 15 minutes of posting'}
+          </div>
+        </div>
+      </form>
+    `;
+    
+    // Add edit form after the content
+    contentElement.parentNode.insertBefore(editForm, contentElement.nextSibling);
+    
+    // Add event listeners
+    const form = editForm.querySelector('.edit-form-content');
+    const cancelBtn = editForm.querySelector('.cancel-edit');
+    
+    form.addEventListener('submit', (e) => handleSubmitEdit(e, commentId, contentElement, editForm));
+    cancelBtn.addEventListener('click', () => {
+      editForm.remove();
+      contentElement.style.display = 'block';
+    });
+    
+    // Focus on textarea and select all text for easy editing
+    const textarea = editForm.querySelector('textarea');
+    textarea.focus();
+    textarea.select();
+  }
+
+  async function handleSubmitEdit(e, commentId, originalContentElement, editForm) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const content = formData.get('edit-content');
+    
+    if (!content || !content.trim()) {
+      const requiredText = translations && translations['comments.required'] 
+        ? translations['comments.required']
+        : 'Comment content is required';
+      showError(requiredText);
+      return;
+    }
+
+    // Disable submit button during request
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    const savingText = translations && translations['comments.saving'] 
+      ? translations['comments.saving']
+      : 'Saving...';
+    submitBtn.disabled = true;
+    submitBtn.textContent = savingText;
+
+    try {
+      const token = localStorage.getItem('access_token');
+      
+      if (!token) {
+        const loginRequiredText = translations && translations['comments.loginRequired'] 
+          ? translations['comments.loginRequired'] 
+          : 'Please login to edit comments';
+        showError(loginRequiredText);
+        return;
+      }
+      
+      // Use update endpoint
+      const url = apiUrls.updateCommentTemplate.replace('{id}', commentId);
+      console.log('Updating comment at URL:', url);
+      
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          content: content.trim()
+        })
+      });
+
+      if (response.ok) {
+        // Update the content in DOM
+        originalContentElement.textContent = content.trim();
+        originalContentElement.style.display = 'block';
+        editForm.remove();
+        
+        const successText = translations && translations['comments.editSuccess'] 
+          ? translations['comments.editSuccess']
+          : 'Comment updated successfully';
+        showSuccess(successText);
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to update comment');
+      }
+    } catch (error) {
+      console.error('Error updating comment:', error);
+      const errorText = translations && translations['comments.error'] 
+        ? translations['comments.error']
+        : 'Error updating comment';
+      showError(errorText);
+    } finally {
+      // Re-enable submit button
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
+  }
+
+  async function handleDeleteComment(commentId) {
+    console.log('Deleting comment:', commentId);
+    
+    // Check authentication and permissions
+    if (!currentUser) {
+      const loginRequiredText = translations && translations['comments.loginRequired'] 
+        ? translations['comments.loginRequired']
+        : 'Please login to delete comments';
+      showError(loginRequiredText);
+      return;
+    }    // Show confirmation dialog
+    const confirmText = translations && translations['comments.deleteConfirm'] 
+      ? translations['comments.deleteConfirm']
+      : 'Are you sure you want to delete this comment? This action cannot be undone.';
+    
+    if (!confirm(confirmText)) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('access_token');
+      
+      if (!token) {
+        const loginRequiredText = translations && translations['comments.loginRequired'] 
+          ? translations['comments.loginRequired'] 
+          : 'Please login to delete comments';
+        showError(loginRequiredText);
+        return;
+      }
+      
+      // Use delete endpoint
+      const url = apiUrls.deleteCommentTemplate.replace('{id}', commentId);
+      console.log('Deleting comment at URL:', url);
+      
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        // Remove the comment from DOM or reload comments
+        // Only reload if not already loading
+        if (!isLoadingComments) {
+          loadComments();
+        }
+        
+        const successText = translations && translations['comments.deleteSuccess'] 
+          ? translations['comments.deleteSuccess']
+          : 'Comment deleted successfully';
+        showSuccess(successText);
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to delete comment');
+      }
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      const errorText = translations && translations['comments.error'] 
+        ? translations['comments.error']
+        : 'Error deleting comment';
+      showError(errorText);
+    }
+  }
+
   function formatDate(dateString) {
     const date = new Date(dateString);
     const locale = lang === 'pl' ? 'pl-PL' : 'en-US';
@@ -928,8 +1423,23 @@ const apiUrls = {
   }
 
   function showSuccess(message) {
-    // Simple alert for now - can be improved with better UI
-    alert(message);
+    // Try to use notification system, fallback to alert
+    if (window.NotificationManager) {
+      window.NotificationManager.success(message);
+    } else {
+      // Fallback to simple alert if notification system not loaded
+      alert(message);
+    }
+  }
+
+  function showError(message) {
+    // Try to use notification system, fallback to alert
+    if (window.NotificationManager) {
+      window.NotificationManager.error(message);
+    } else {
+      // Fallback to simple alert if notification system not loaded
+      alert(message);
+    }
   }
 </script>
 

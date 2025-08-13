@@ -153,7 +153,7 @@ export const API_URLS = {
     }
     return url.toString();
   },
-  getAdminPost: (id: number) => `${API_CONFIG.blog}/admin/posts/${id}`,
+  getAdminPost: (id: number) => `${API_CONFIG.blog}/${id}`,
   
   // Language management endpoints
   getLanguages: (activeOnly = true) => {
@@ -175,10 +175,12 @@ export const API_URLS = {
   getLanguageStats: () => `${API_CONFIG.baseUrl}/api/languages/stats/usage`,
 } as const;
 
-// Status dla debugowania
-console.log(`🔧 API Configuration: Using ${isLocalApi() ? 'LOCAL' : 'PRODUCTION'} backend`);
-console.log(`📡 Base URL: ${API_CONFIG.baseUrl}`);
-console.log(`🌐 Frontend URL: ${API_CONFIG.frontendUrl}`);
+// Development debugging status
+if (import.meta.env.DEV) {
+  console.log(`🔧 API Configuration: Using ${isLocalApi() ? 'LOCAL' : 'PRODUCTION'} backend`);
+  console.log(`📡 Base URL: ${API_CONFIG.baseUrl}`);
+  console.log(`🌐 Frontend URL: ${API_CONFIG.frontendUrl}`);
+}
 
 // Utility functions for common API calls
 export const BlogAPI = {

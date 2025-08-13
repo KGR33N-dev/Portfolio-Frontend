@@ -57,6 +57,10 @@ interface ResendVerificationResponse {
 export class AdminAuth {
   private static readonly TOKEN_KEY = 'access_token';
   
+  // User verification cache to prevent duplicate API calls
+  private static verificationCache: { user: User | null; timestamp: number } | null = null;
+  private static readonly CACHE_TTL = 5000; // 5 seconds cache
+  
   static isAuthenticated(): boolean {
     if (typeof window === 'undefined') return false;
     return !!localStorage.getItem(this.TOKEN_KEY);
@@ -71,6 +75,8 @@ export class AdminAuth {
     if (typeof window === 'undefined') return;
     
     localStorage.removeItem(this.TOKEN_KEY);
+    // Clear verification cache on logout
+    this.verificationCache = null;
     
     // Get current language from URL
     const currentLang = window.location.pathname.split('/')[1] || 'en';
@@ -98,29 +104,52 @@ export class AdminAuth {
     
     const data: LoginResponse = await response.json();
     
-    console.log('🔐 Login Success Debug:');
-    console.log('Response data:', data);
-    console.log('Access token:', data.access_token ? 'EXISTS' : 'MISSING');
-    console.log('User data:', data.user);
+    if (import.meta.env.DEV) {
+      console.log('🔐 Login Success Debug:');
+      console.log('Response data:', data);
+      console.log('Access token:', data.access_token ? 'EXISTS' : 'MISSING');
+      console.log('User data:', data.user);
+    }
     
     // Store only token
     localStorage.setItem(this.TOKEN_KEY, data.access_token);
     
-    console.log('🔐 After saving token to localStorage:');
-    console.log('TOKEN_KEY:', this.TOKEN_KEY);
-    console.log('Saved token:', localStorage.getItem(this.TOKEN_KEY) ? 'SUCCESS' : 'FAILED');
+    if (import.meta.env.DEV) {
+      console.log('🔐 After saving token to localStorage:');
+      console.log('TOKEN_KEY:', this.TOKEN_KEY);
+      console.log('Saved token:', localStorage.getItem(this.TOKEN_KEY) ? 'SUCCESS' : 'FAILED');
+    }
     
     return data.user;
   }
 
-  // Verify user from API and return user data
-  static async verifyUser(): Promise<User | null> {
-    if (typeof window === 'undefined') return null;
-    
+  // Verify user with server (API-based authentication) with caching
+  static async verifyUser(skipCache = false): Promise<User | null> {
+    // Check cache first (unless skipping)
+    if (!skipCache && this.verificationCache) {
+      const age = Date.now() - this.verificationCache.timestamp;
+      if (age < this.CACHE_TTL) {
+        if (import.meta.env.DEV) {
+          console.log('🎯 Using cached user verification (age: ' + Math.round(age/1000) + 's)');
+        }
+        return this.verificationCache.user;
+      } else if (import.meta.env.DEV) {
+        console.log('🕐 Cache expired (age: ' + Math.round(age/1000) + 's), fetching fresh data');
+      }
+    } else if (import.meta.env.DEV && skipCache) {
+      console.log('⏭️ Skipping cache as requested');
+    }
+
     const token = this.getToken();
-    if (!token) return null;
+    if (!token) {
+      this.verificationCache = { user: null, timestamp: Date.now() };
+      return null;
+    }
 
     try {
+      if (import.meta.env.DEV) {
+        console.log('🔍 Verifying user with API...');
+      }
       const response = await fetch(API_URLS.me(), {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -130,14 +159,19 @@ export class AdminAuth {
 
       if (response.ok) {
         const userData = await response.json();
+        this.verificationCache = { user: userData, timestamp: Date.now() };
         return userData;
       } else {
-        // Token is invalid, clear storage
-        this.logout();
+        // Token is invalid, clear storage and cache (but don't redirect immediately)
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(this.TOKEN_KEY);
+        }
+        this.verificationCache = { user: null, timestamp: Date.now() };
         return null;
       }
     } catch (error) {
       console.error('Error verifying user:', error);
+      this.verificationCache = { user: null, timestamp: Date.now() };
       return null;
     }
   }
@@ -290,6 +324,11 @@ export class AdminAuth {
     
     const data: ResendVerificationResponse = await response.json();
     return data;
+  }
+
+  // Check session (alias for verifyUser) - used by admin pages
+  static async checkSession(skipCache = false): Promise<User | null> {
+    return this.verifyUser(skipCache);
   }
 
 }

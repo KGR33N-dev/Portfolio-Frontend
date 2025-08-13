@@ -75,18 +75,18 @@ const availableLanguages = Object.entries(languages).filter(([lang]) => lang !==
 <script is:inline>
   // Global function for language switcher
   window.toggleLanguageDropdown = function() {
-    console.log('toggleLanguageDropdown called'); // Debug log
+    // Debug log removed because import.meta.env.DEV doesn't work in inline scripts
     const button = document.getElementById('language-button');
     const dropdown = document.getElementById('language-dropdown');
     const arrow = document.getElementById('language-arrow');
     
     if (!button || !dropdown || !arrow) {
-      console.log('Elements not found:', { button, dropdown, arrow }); // Debug log
+      // Debug log removed
       return;
     }
 
     const isOpen = !dropdown.classList.contains('hidden');
-    console.log('Current state - isOpen:', isOpen); // Debug log
+    // Debug log removed
     
     if (isOpen) {
       dropdown.classList.add('hidden');
@@ -111,10 +111,14 @@ const availableLanguages = Object.entries(languages).filter(([lang]) => lang !==
       button.setAttribute('aria-expanded', 'false');
     }
   };
+</script>
 
+<script define:vars={{ isDev: import.meta.env.DEV }}>
   // Initialize language switcher listeners
   function initLanguageSwitcherListeners() {
-    console.log('Initializing language switcher listeners'); // Debug log
+    if (isDev) {
+      console.log('Initializing language switcher listeners'); // Debug log
+    }
     
     // Close on outside click
     document.addEventListener('click', function(e) {
@@ -139,13 +143,43 @@ const availableLanguages = Object.entries(languages).filter(([lang]) => lang !==
     });
   }
 
-  // Initialize immediately and on page load
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initLanguageSwitcherListeners);
-  } else {
+  // Global initialization tracker  
+  let isLanguageSwitcherInitialized = false;
+
+  function initLanguageSwitcherOnce() {
+    // Prevent multiple initializations
+    if (isLanguageSwitcherInitialized) {
+      if (isDev) {
+        console.log('LanguageSwitcher already initialized, skipping...');
+      }
+      return;
+    }
+
+    if (isDev) {
+      console.log('Initializing LanguageSwitcher for the first time');
+    }
+
+    isLanguageSwitcherInitialized = true;
     initLanguageSwitcherListeners();
   }
+
+  // Initialize immediately and on page load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initLanguageSwitcherOnce, { once: true });
+  } else {
+    initLanguageSwitcherOnce();
+  }
   
-  // Also initialize on Astro page transitions
-  document.addEventListener('astro:page-load', initLanguageSwitcherListeners);
+  // For Astro SPA navigation, only reinitialize if not already initialized
+  document.addEventListener('astro:page-load', () => {
+    if (isDev) {
+      console.log('Astro page load detected, checking LanguageSwitcher status');
+    }
+    
+    if (!isLanguageSwitcherInitialized) {
+      initLanguageSwitcherOnce();
+    } else if (isDev) {
+      console.log('LanguageSwitcher already initialized, skipping astro:page-load reinit');
+    }
+  });
 </script>

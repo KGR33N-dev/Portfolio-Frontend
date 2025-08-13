@@ -1,0 +1,17 @@
+# Cloudflare configuration for deployment
+name = "portfolio-frontend"
+compatibility_date = "2024-08-13"
+
+[env.production]
+vars = { NODE_ENV = "production" }
+# Cloudflare KV binding for sessions (required by @astrojs/cloudflare)
+[[env.production.kv_namespaces]]
+binding = "SESSION"
+id = "your-kv-namespace-id"  # You'll need to create this in Cloudflare dashboard
+
+[env.development]
+vars = { NODE_ENV = "development" }
+# For development, you can use a test KV namespace
+[[env.development.kv_namespaces]]
+binding = "SESSION"
+id = "your-dev-kv-namespace-id"

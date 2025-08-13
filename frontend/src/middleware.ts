@@ -1,8 +1,7 @@
-// Middleware is not needed for static builds
-// Commenting out to enable static builds
-// import { defineMiddleware } from 'astro:middleware';
+import { defineMiddleware } from 'astro:middleware';
 
-// export const onRequest = defineMiddleware((context, next) => {
-//   // For static sites, skip server-side language detection
-//   return next();
-// });
+export const onRequest = defineMiddleware((context, next) => {
+  // For server-side rendering, we can add middleware logic here
+  // For now, just pass through to the next handler
+  return next();
+});

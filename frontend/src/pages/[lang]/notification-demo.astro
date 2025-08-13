@@ -1,0 +1,273 @@
+---
+import Layout from '~/layouts/PageLayout.astro';
+import Headline from '~/components/ui/Headline.astro';
+import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
+import { languages } from '~/i18n';
+
+export function getStaticPaths() {
+  return Object.keys(languages).map(lang => ({
+    params: { lang }
+  }));
+}
+
+const metadata = {
+  title: 'Notification System Demo',
+  description: 'Demo page for testing the notification system',
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+---
+
+<Layout metadata={metadata}>
+  <WidgetWrapper 
+    id="notification-demo" 
+    containerClass="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8"
+  >
+    <!-- Header -->
+    <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 mb-8">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <Headline 
+          title="Notification System Demo"
+          subtitle="Test the new notification system with different types of messages"
+          classes={{
+            container: '',
+            title: 'text-2xl font-bold text-gray-900 dark:text-white',
+            subtitle: 'text-sm text-gray-600 dark:text-gray-400 mt-1'
+          }}
+        />
+      </div>
+    </div>
+
+    <!-- Demo Controls -->
+    <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 p-6 space-y-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Notification Types</h3>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Success Notification -->
+        <button 
+          id="success-btn"
+          class="flex items-center justify-center px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors duration-200"
+        >
+          <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+          </svg>
+          Success
+        </button>
+
+        <!-- Error Notification -->
+        <button 
+          id="error-btn"
+          class="flex items-center justify-center px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors duration-200"
+        >
+          <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+          </svg>
+          Error
+        </button>
+
+        <!-- Warning Notification -->
+        <button 
+          id="warning-btn"
+          class="flex items-center justify-center px-4 py-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-colors duration-200"
+        >
+          <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+          </svg>
+          Warning
+        </button>
+
+        <!-- Info Notification -->
+        <button 
+          id="info-btn"
+          class="flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
+        >
+          <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+          </svg>
+          Info
+        </button>
+      </div>
+
+      <hr class="border-gray-200 dark:border-gray-700">
+
+      <!-- Special Demos -->
+      <div>
+        <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-3">Special Cases</h4>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <button 
+            id="long-message-btn"
+            class="px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors duration-200"
+          >
+            Long Message
+          </button>
+
+          <button 
+            id="no-close-btn"
+            class="px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors duration-200"
+          >
+            No Close Button
+          </button>
+
+          <button 
+            id="permanent-btn"
+            class="px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors duration-200"
+          >
+            Permanent
+          </button>
+        </div>
+      </div>
+
+      <hr class="border-gray-200 dark:border-gray-700">
+
+      <!-- Actions -->
+      <div>
+        <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-3">Actions</h4>
+        <div class="flex space-x-4">
+          <button 
+            id="multiple-btn"
+            class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors duration-200"
+          >
+            Show Multiple
+          </button>
+          
+          <button 
+            id="clear-all-btn"
+            class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors duration-200"
+          >
+            Clear All
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Message Input -->
+    <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Custom Message</h3>
+      <div class="flex space-x-4">
+        <input 
+          type="text" 
+          id="custom-message" 
+          placeholder="Enter custom message..." 
+          class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+          value="Custom notification message"
+        >
+        <button 
+          id="custom-success-btn"
+          class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors duration-200"
+        >
+          Show Success
+        </button>
+      </div>
+    </div>
+  </WidgetWrapper>
+</Layout>
+
+<script type="module">
+  let notificationManager = null;
+
+  // Initialize notification system
+  async function initNotificationDemo() {
+    try {
+      const { initNotifications } = await import('/src/utils/notifications.js');
+      notificationManager = initNotifications(true);
+      console.log('✅ Notification demo initialized');
+    } catch (error) {
+      console.error('❌ Failed to load notification system:', error);
+      alert('Failed to load notification system. Please check the console.');
+    }
+  }
+
+  // Demo messages
+  const demoMessages = {
+    success: 'Operation completed successfully! 🎉',
+    error: 'Something went wrong. Please try again. 💥',
+    warning: 'Please review your settings before continuing. ⚠️',
+    info: 'New feature available! Check it out in the settings. ℹ️',
+    long: 'This is a very long notification message to test how the notification system handles longer text content that might wrap to multiple lines and see how it looks in the notification container.',
+    custom: () => document.getElementById('custom-message')?.value || 'Custom message'
+  };
+
+  // Event listeners
+  function setupEventListeners() {
+    // Basic notifications
+    document.getElementById('success-btn')?.addEventListener('click', () => {
+      notificationManager?.success(demoMessages.success);
+    });
+
+    document.getElementById('error-btn')?.addEventListener('click', () => {
+      notificationManager?.error(demoMessages.error);
+    });
+
+    document.getElementById('warning-btn')?.addEventListener('click', () => {
+      notificationManager?.warning(demoMessages.warning);
+    });
+
+    document.getElementById('info-btn')?.addEventListener('click', () => {
+      notificationManager?.info(demoMessages.info);
+    });
+
+    // Special cases
+    document.getElementById('long-message-btn')?.addEventListener('click', () => {
+      notificationManager?.info(demoMessages.long, { duration: 8000 });
+    });
+
+    document.getElementById('no-close-btn')?.addEventListener('click', () => {
+      notificationManager?.warning('This notification cannot be closed manually', { 
+        closable: false,
+        duration: 3000 
+      });
+    });
+
+    document.getElementById('permanent-btn')?.addEventListener('click', () => {
+      notificationManager?.info('This notification stays until manually closed', { 
+        duration: 0 
+      });
+    });
+
+    // Actions
+    document.getElementById('multiple-btn')?.addEventListener('click', () => {
+      notificationManager?.success('First notification');
+      setTimeout(() => notificationManager?.warning('Second notification'), 500);
+      setTimeout(() => notificationManager?.info('Third notification'), 1000);
+      setTimeout(() => notificationManager?.error('Fourth notification'), 1500);
+    });
+
+    document.getElementById('clear-all-btn')?.addEventListener('click', () => {
+      notificationManager?.closeAll();
+    });
+
+    // Custom message
+    document.getElementById('custom-success-btn')?.addEventListener('click', () => {
+      const message = demoMessages.custom();
+      notificationManager?.success(message);
+    });
+
+    // Enter key for custom message
+    document.getElementById('custom-message')?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        const message = demoMessages.custom();
+        notificationManager?.success(message);
+      }
+    });
+  }
+
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', async () => {
+      await initNotificationDemo();
+      setupEventListeners();
+    });
+  } else {
+    initNotificationDemo().then(() => {
+      setupEventListeners();
+    });
+  }
+
+  // Handle Astro navigation
+  document.addEventListener('astro:page-load', async () => {
+    await initNotificationDemo();
+    setupEventListeners();
+  });
+</script>

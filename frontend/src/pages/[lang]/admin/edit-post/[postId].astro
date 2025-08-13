@@ -242,7 +242,7 @@ const metadata = {
         <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 p-6">
           <div class="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0 sm:space-x-4">
             <!-- Primary Actions -->
-            <div class="flex flex-wrap gap-4">
+            <div class="flex flex-wrap gap-4 items-center">
               <button 
                 type="submit" 
                 id="save-changes-btn"
@@ -255,31 +255,28 @@ const metadata = {
                 <span id="save-text">{t('admin.saveChanges')}</span>
               </button>
 
-              <button 
-                type="submit" 
-                id="publish-btn"
-                data-action="publish"
-                class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center"
-                style="display: none;"
-              >
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                <span id="publish-text">{t('admin.publishPost')}</span>
-              </button>
-
-              <button 
-                type="submit" 
-                id="unpublish-btn"
-                data-action="unpublish"
-                class="px-6 py-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center"
-                style="display: none;"
-              >
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"></path>
-                </svg>
-                <span id="unpublish-text">{t('admin.unpublishPost')}</span>
-              </button>
+              <!-- Dynamic Publish/Unpublish Button -->
+              <div class="flex items-center gap-3">
+                <button 
+                  type="submit" 
+                  id="toggle-publish-btn"
+                  data-action="publish"
+                  class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-all duration-200 flex items-center"
+                >
+                  <svg id="publish-icon" class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  <span id="toggle-publish-text">{t('admin.publishPost')}</span>
+                </button>
+                
+                <!-- Status Indicator -->
+                <div class="flex items-center gap-2">
+                  <span class="text-sm text-gray-600 dark:text-gray-400">{t('admin.postStatus')}:</span>
+                  <span id="publish-status-badge" class="px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">
+                    {t('admin.draft')}
+                  </span>
+                </div>
+              </div>
             </div>
 
             <!-- Secondary Actions -->
@@ -340,6 +337,8 @@ const metadata = {
     actionCannotBeUndone: t('admin.actionCannotBeUndone'),
     published: t('admin.published'),
     draft: t('admin.draft'),
+    publishPost: t('admin.publishPost'),
+    unpublishPost: t('admin.unpublishPost'),
     addTranslation: t('admin.addTranslation'),
     deleteTranslation: t('admin.deleteTranslation'),
     confirmDeleteTranslation: t('admin.confirmDeleteTranslation'),
@@ -374,6 +373,15 @@ const metadata = {
     console.log('🚀 InitEditPost started');
     console.log(' Current URL:', window.location.href);
     console.log('📍 URL pathname:', window.location.pathname);
+    
+    // Initialize notification system
+    try {
+      const { initNotifications } = await import('/src/utils/notifications.js');
+      initNotifications(true); // Always use dev mode in edit-post for now
+      console.log('✅ Edit-post notification system initialized');
+    } catch (error) {
+      console.error('❌ Failed to load notification system:', error);
+    }
     
     // Always extract postId from URL path to avoid cache issues
     const pathParts = window.location.pathname.split('/');
@@ -416,24 +424,32 @@ const metadata = {
       return;
     }
 
-    if (!AdminAuth.isAuthenticated()) {
+    if (!AdminAuth.isAuthenticatedSecure()) {
       const currentLang = window.location.pathname.split('/')[1];
       window.location.href = `/${currentLang}/login`;
       return;
     }
 
-    // Check if user is admin
-    const user = AdminAuth.getCurrentUser();
-    if (!user?.is_admin) {
-      const accessDeniedDiv = document.getElementById('access-denied');
-      const editPostContent = document.getElementById('edit-post');
-      
-      if (accessDeniedDiv) {
-        accessDeniedDiv.classList.remove('hidden');
+    // Check if user is admin - use checkSession for secure verification
+    let user;
+    try {
+      user = await AdminAuth.checkSession();
+      if (!user || !user.is_admin) {
+        const accessDeniedDiv = document.getElementById('access-denied');
+        const editPostContent = document.getElementById('edit-post');
+        
+        if (accessDeniedDiv) {
+          accessDeniedDiv.classList.remove('hidden');
+        }
+        if (editPostContent) {
+          editPostContent.style.display = 'none';
+        }
+        return;
       }
-      if (editPostContent) {
-        editPostContent.style.display = 'none';
-      }
+    } catch (error) {
+      console.error('Authentication check failed:', error);
+      const currentLang = window.location.pathname.split('/')[1];
+      window.location.href = `/${currentLang}/login`;
       return;
     }
 
@@ -566,7 +582,15 @@ const metadata = {
         if (errorDiv) errorDiv.classList.add('hidden');
         
         const formContainer = document.getElementById('edit-form-container');
-        if (formContainer) formContainer.classList.remove('hidden');
+        if (formContainer) {
+          formContainer.classList.remove('hidden');
+          
+          // Ensure action buttons are updated after form is visible
+          setTimeout(() => {
+            console.log('🔄 Post-form-display updateActionButtons call');
+            updateActionButtons();
+          }, 50);
+        }
         
       } else {
         throw new Error(translations.postNotFound);
@@ -663,7 +687,11 @@ const metadata = {
     if (tagsInput) tagsInput.value = Array.isArray(currentPost.tags) ? currentPost.tags.join(', ') : '';
 
     // Update action buttons based on publish status
-    updateActionButtons();
+    // Use setTimeout to ensure DOM is ready
+    setTimeout(() => {
+      console.log('🔄 Delayed updateActionButtons call after DOM initialization');
+      updateActionButtons();
+    }, 100);
 
     // Initialize translations
     createTranslationTabs();
@@ -684,11 +712,26 @@ const metadata = {
   }
 
   function updatePostStatusHeader() {
+    if (!currentPost) {
+      console.warn('updatePostStatusHeader: currentPost is null');
+      return;
+    }
+    
+    console.log('🔄 Updating post status header. Post published:', currentPost.is_published);
+    
     const statusBadge = document.getElementById('post-status-badge');
     const createdDate = document.getElementById('post-created-date');
     const publishedDateContainer = document.getElementById('post-published-date-container');
     const publishedDate = document.getElementById('post-published-date');
     const slugDisplay = document.getElementById('post-slug-display');
+
+    console.log('🔍 Header elements found:', {
+      statusBadge: !!statusBadge,
+      createdDate: !!createdDate,
+      publishedDateContainer: !!publishedDateContainer,
+      publishedDate: !!publishedDate,
+      slugDisplay: !!slugDisplay
+    });
 
     if (statusBadge) {
       if (currentPost.is_published) {
@@ -716,19 +759,8 @@ const metadata = {
     if (slugDisplay) {
       slugDisplay.textContent = currentPost.slug;
     }
-  }
-
-  function updateActionButtons() {
-    const publishBtn = document.getElementById('publish-btn');
-    const unpublishBtn = document.getElementById('unpublish-btn');
-
-    if (currentPost.is_published) {
-      if (publishBtn) publishBtn.style.display = 'none';
-      if (unpublishBtn) unpublishBtn.style.display = 'block';
-    } else {
-      if (publishBtn) publishBtn.style.display = 'block';
-      if (unpublishBtn) unpublishBtn.style.display = 'none';
-    }
+    
+    console.log('✅ Post status header updated successfully');
   }
 
   function createTranslationTabs() {
@@ -921,10 +953,26 @@ const metadata = {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        if (isSubmitting) return;
+        console.log('🎯 Form submitted!');
+        console.log('🎯 Event submitter:', e.submitter);
+        console.log('🎯 Submitter id:', e.submitter?.id);
+        console.log('🎯 Submitter data-action:', e.submitter?.dataset.action);
+        console.log('🎯 All buttons with data-action:', Array.from(document.querySelectorAll('[data-action]')).map(btn => ({id: btn.id, action: btn.dataset.action})));
+        
+        if (isSubmitting) {
+          console.log('❌ Already submitting, ignoring');
+          return;
+        }
         
         const submitBtn = e.submitter;
         const action = submitBtn?.dataset.action;
+        
+        console.log('🎯 Final action to handle:', action);
+        
+        if (!action) {
+          console.log('❌ No action found, cannot proceed');
+          return;
+        }
         
         await handleFormSubmit(action);
       });
@@ -950,13 +998,25 @@ const metadata = {
   }
 
   async function handleFormSubmit(action) {
+    if (isSubmitting) return;
+    
     isSubmitting = true;
     hideMessages();
 
     const activeBtn = document.querySelector(`button[data-action="${action}"]`);
-    const originalText = activeBtn?.textContent;
 
     try {
+      // Determine post ID to use
+      const pathParts = window.location.pathname.split('/');
+      const editPostIndex = pathParts.findIndex(part => part === 'edit-post');
+      const urlPostId = editPostIndex !== -1 ? pathParts[editPostIndex + 1] : null;
+      const actualPostId = urlPostId && !isNaN(parseInt(urlPostId)) ? parseInt(urlPostId) : null;
+      const postIdToUse = (currentPost && currentPost.id) ? currentPost.id : actualPostId;
+      
+      if (!postIdToUse) {
+        throw new Error('Unable to determine post ID');
+      }
+      
       // Collect form data
       const formData = collectFormData();
       if (!formData) {
@@ -964,21 +1024,25 @@ const metadata = {
         return;
       }
 
-      // Show loading state
+      // Show loading state on button
       if (activeBtn) {
         activeBtn.disabled = true;
-        if (action === 'save') {
-          activeBtn.querySelector('span').textContent = translations.savingChanges;
-        } else if (action === 'publish') {
-          activeBtn.querySelector('span').textContent = translations.publishingPost;
-        } else if (action === 'unpublish') {
-          activeBtn.querySelector('span').textContent = translations.unpublishingPost;
+        const buttonText = activeBtn.querySelector('#toggle-publish-text') || activeBtn.querySelector('#save-text') || activeBtn.querySelector('span');
+        
+        if (buttonText) {
+          if (action === 'save') {
+            buttonText.textContent = translations.savingChanges;
+          } else if (action === 'publish') {
+            buttonText.textContent = translations.publishingPost;
+          } else if (action === 'unpublish') {
+            buttonText.textContent = translations.unpublishingPost;
+          }
         }
       }
 
       // Update post
       const updateResponse = await AdminAuth.makeAuthenticatedRequest(
-        API_URLS.updatePost(currentPost.id),
+        API_URLS.updatePost(postIdToUse),
         {
           method: 'PUT',
           body: JSON.stringify(formData),
@@ -992,11 +1056,12 @@ const metadata = {
 
       const updatedPost = await updateResponse.json();
       currentPost = updatedPost;
+      console.log('📝 Post updated. New state:', { id: currentPost.id, is_published: currentPost.is_published });
 
       // Handle publish/unpublish actions
-      if (action === 'publish' && !currentPost.is_published) {
+      if (action === 'publish') {
         const publishResponse = await AdminAuth.makeAuthenticatedRequest(
-          API_URLS.publishPost(currentPost.id),
+          API_URLS.publishPost(postIdToUse),
           { method: 'PUT' }
         );
 
@@ -1005,10 +1070,11 @@ const metadata = {
         }
 
         currentPost = await publishResponse.json();
+        console.log('📤 Post published. New state:', { id: currentPost.id, is_published: currentPost.is_published });
         showSuccess(translations.postPublishedSuccessfully);
-      } else if (action === 'unpublish' && currentPost.is_published) {
+      } else if (action === 'unpublish') {
         const unpublishResponse = await AdminAuth.makeAuthenticatedRequest(
-          API_URLS.unpublishPost(currentPost.id),
+          API_URLS.unpublishPost(postIdToUse),
           { method: 'PUT' }
         );
 
@@ -1017,29 +1083,54 @@ const metadata = {
         }
 
         currentPost = await unpublishResponse.json();
+        console.log('📝 Post unpublished. New state:', { id: currentPost.id, is_published: currentPost.is_published });
         showSuccess(translations.postUnpublishedSuccessfully);
       } else if (action === 'save') {
         showSuccess(translations.postUpdatedSuccessfully);
       }
 
-      // Update UI
+      // Update UI immediately after successful action
+      console.log('🔄 Updating UI after action:', action);
+      console.log('🎯 Current post state before UI update:', { id: currentPost.id, is_published: currentPost.is_published });
       updatePostStatusHeader();
       updateActionButtons();
       hasUnsavedChanges = false;
       updateAutoSaveIndicator();
+      
+      // Add brief visual feedback to show the change
+      const toggleBtn = document.getElementById('toggle-publish-btn');
+      if (toggleBtn) {
+        toggleBtn.style.transform = 'scale(1.05)';
+        setTimeout(() => {
+          toggleBtn.style.transform = '';
+        }, 200);
+      }
 
     } catch (error) {
       console.error('Error handling form submission:', error);
       showError(error.message || translations.errorUpdatingPost);
     } finally {
-      // Reset button state
-      if (activeBtn) {
-        activeBtn.disabled = false;
-        if (activeBtn.querySelector('span')) {
-          activeBtn.querySelector('span').textContent = originalText?.trim() || '';
-        }
-      }
       isSubmitting = false;
+      console.log('🔄 Finally block: isSubmitting set to false, restoring button states');
+      
+      // Restore button states immediately
+      const saveBtn = document.getElementById('save-changes-btn');
+      const toggleBtn = document.getElementById('toggle-publish-btn');
+      const saveText = document.getElementById('save-text');
+      
+      // Re-enable all buttons
+      if (saveBtn) saveBtn.disabled = false;
+      if (toggleBtn) toggleBtn.disabled = false;
+      
+      // Restore original text for save button
+      if (saveText) {
+        saveText.textContent = translations.saveChanges;
+      }
+      
+      // Update action buttons to ensure correct state based on current post status
+      setTimeout(() => {
+        updateActionButtons();
+      }, 50); // Small delay to ensure DOM is ready
     }
   }
 
@@ -1147,11 +1238,20 @@ const metadata = {
     }
 
     try {
+      // Always extract current postId from URL as fallback
+      const pathParts = window.location.pathname.split('/');
+      const editPostIndex = pathParts.findIndex(part => part === 'edit-post');
+      const urlPostId = editPostIndex !== -1 ? pathParts[editPostIndex + 1] : null;
+      const actualPostId = urlPostId && !isNaN(parseInt(urlPostId)) ? parseInt(urlPostId) : null;
+      
+      // Use currentPost.id if available, otherwise use URL-based ID
+      const postIdToUse = (currentPost && currentPost.id) ? currentPost.id : actualPostId;
+      
       // If the translation has an ID, delete it from server
       const translation = postTranslations.find(t => t.language_code === languageCode);
-      if (translation?.id) {
+      if (translation?.id && postIdToUse) {
         const response = await AdminAuth.makeAuthenticatedRequest(
-          API_URLS.deleteTranslation(currentPost.id, languageCode),
+          API_URLS.deleteTranslation(postIdToUse, languageCode),
           { method: 'DELETE' }
         );
 
@@ -1190,6 +1290,19 @@ const metadata = {
     }
 
     try {
+      // Always extract current postId from URL as fallback
+      const pathParts = window.location.pathname.split('/');
+      const editPostIndex = pathParts.findIndex(part => part === 'edit-post');
+      const urlPostId = editPostIndex !== -1 ? pathParts[editPostIndex + 1] : null;
+      const actualPostId = urlPostId && !isNaN(parseInt(urlPostId)) ? parseInt(urlPostId) : null;
+      
+      // Use currentPost.id if available, otherwise use URL-based ID
+      const postIdToUse = (currentPost && currentPost.id) ? currentPost.id : actualPostId;
+      
+      if (!postIdToUse) {
+        throw new Error('Unable to determine post ID for deletion');
+      }
+      
       const deleteBtn = document.getElementById('delete-post-btn');
       if (deleteBtn) {
         deleteBtn.disabled = true;
@@ -1197,7 +1310,7 @@ const metadata = {
       }
 
       const response = await AdminAuth.makeAuthenticatedRequest(
-        API_URLS.deletePost(currentPost.id),
+        API_URLS.deletePost(postIdToUse),
         { method: 'DELETE' }
       );
 
@@ -1328,29 +1441,139 @@ const metadata = {
   }
 
   function showError(message) {
-    const errorDiv = document.getElementById('error-message');
-    const successDiv = document.getElementById('success-message');
-    
-    if (errorDiv) {
-      errorDiv.textContent = message;
-      errorDiv.classList.remove('hidden');
-    }
-    if (successDiv) {
-      successDiv.classList.add('hidden');
+    // Try to use notification system, fallback to inline message
+    if (window.NotificationManager) {
+      window.NotificationManager.error(message);
+    } else {
+      // Fallback to inline error display
+      const errorDiv = document.getElementById('error-message');
+      const successDiv = document.getElementById('success-message');
+      
+      if (errorDiv) {
+        errorDiv.textContent = message;
+        errorDiv.classList.remove('hidden');
+      }
+      if (successDiv) {
+        successDiv.classList.add('hidden');
+      }
     }
   }
 
   function showSuccess(message) {
-    const successDiv = document.getElementById('success-message');
-    const errorDiv = document.getElementById('error-message');
+    // Try to use notification system, fallback to inline message
+    if (window.NotificationManager) {
+      window.NotificationManager.success(message);
+    } else {
+      // Fallback to inline success display
+      const successDiv = document.getElementById('success-message');
+      const errorDiv = document.getElementById('error-message');
+      
+      if (successDiv) {
+        successDiv.textContent = message;
+        successDiv.classList.remove('hidden');
+      }
+      if (errorDiv) {
+        errorDiv.classList.add('hidden');
+      }
+    }
+  }
+
+  function updateActionButtons() {
+    if (!currentPost) {
+      console.warn('updateActionButtons: currentPost is null');
+      return;
+    }
     
-    if (successDiv) {
-      successDiv.textContent = message;
-      successDiv.classList.remove('hidden');
+    console.log('🔄 Updating action buttons. Post published:', currentPost.is_published);
+    
+    const toggleBtn = document.getElementById('toggle-publish-btn');
+    const toggleText = document.getElementById('toggle-publish-text');
+    const publishIcon = document.getElementById('publish-icon');
+    const statusBadge = document.getElementById('publish-status-badge');
+    
+    // Debug logging - show which elements are missing
+    const elementsStatus = {
+      toggleBtn: !!toggleBtn,
+      toggleText: !!toggleText,
+      publishIcon: !!publishIcon,
+      statusBadge: !!statusBadge
+    };
+    
+    console.log('🔍 Button elements found:', elementsStatus);
+    
+    // Show more detailed info about missing elements
+    if (!toggleBtn) console.error('❌ Missing element: toggle-publish-btn');
+    if (!toggleText) console.error('❌ Missing element: toggle-publish-text');
+    if (!publishIcon) console.error('❌ Missing element: publish-icon');
+    if (!statusBadge) console.error('❌ Missing element: publish-status-badge');
+    
+    // Try to update what we can, even if some elements are missing
+    const hasAllElements = toggleBtn && toggleText && publishIcon && statusBadge;
+    
+    if (!hasAllElements) {
+      console.warn('updateActionButtons: Some elements missing, will retry in 200ms...');
+      setTimeout(() => {
+        console.log('🔄 Retrying updateActionButtons...');
+        updateActionButtons();
+      }, 200);
+      
+      // But still try to update what we can find
+      if (!toggleBtn) return; // Can't do anything without the main button
     }
-    if (errorDiv) {
-      errorDiv.classList.add('hidden');
+    
+    // Ensure button is enabled (unless currently submitting)
+    if (!isSubmitting) {
+      toggleBtn.disabled = false;
     }
+    
+    if (currentPost.is_published) {
+      console.log('📤 Setting up UNPUBLISH button');
+      // Post is published - show unpublish button
+      toggleBtn.setAttribute('data-action', 'unpublish');
+      toggleBtn.className = 'px-6 py-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-all duration-200 flex items-center';
+      
+      if (toggleText) {
+        toggleText.textContent = translations.unpublishPost;
+      }
+      
+      // Unpublish icon (X mark)
+      if (publishIcon) {
+        publishIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"></path>';
+      }
+      
+      // Published status badge
+      if (statusBadge) {
+        statusBadge.textContent = translations.published;
+        statusBadge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
+      }
+    } else {
+      console.log('📝 Setting up PUBLISH button');
+      // Post is draft - show publish button
+      toggleBtn.setAttribute('data-action', 'publish');
+      toggleBtn.className = 'px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-all duration-200 flex items-center';
+      
+      if (toggleText) {
+        toggleText.textContent = translations.publishPost;
+      }
+      
+      // Publish icon (checkmark)
+      if (publishIcon) {
+        publishIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
+      }
+      
+      // Draft status badge
+      if (statusBadge) {
+        statusBadge.textContent = translations.draft;
+        statusBadge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
+      }
+    }
+    
+    console.log('✅ Action buttons updated successfully');
+    console.log('🎯 Final button state:', {
+      action: toggleBtn.getAttribute('data-action'),
+      text: toggleText ? toggleText.textContent : 'text element not found',
+      class: toggleBtn.className
+    });
   }
 
   function hideMessages() {
