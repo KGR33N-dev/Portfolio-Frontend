@@ -53,8 +53,8 @@ const t = useTranslations(lang as keyof typeof languages);
         </ol>
       </nav>
 
-      <div class="flex justify-between flex-col sm:flex-row max-w-3xl mx-auto mt-0 mb-2 px-4 sm:px-6 sm:items-center">
-        <p>
+      <div class="flex flex-col sm:flex-row gap-2 sm:gap-4 max-w-3xl mx-auto mt-0 mb-2 px-4 sm:px-6 sm:items-center">
+        <p class="flex flex-wrap items-center gap-x-2 text-sm text-gray-600 dark:text-gray-400">
           <Icon name="tabler:clock" class="w-4 h-4 inline-block -mt-0.5 dark:text-gray-400" />
           <time datetime={String(post.publishDate)} class="inline-block">
             {getFormattedDate(post.publishDate, lang === 'pl' ? 'pl-PL' : 'en-US')}
@@ -82,7 +82,10 @@ const t = useTranslations(lang as keyof typeof languages);
           {
             post.readingTime && (
               <>
-                &nbsp;· <span>{post.readingTime}</span> {t('blog.readTime')}
+                &nbsp;·&nbsp;<span class="inline-flex items-center gap-1">
+                  🕒
+                  <span>{post.readingTime}</span>
+                </span>
               </>
             )
           }

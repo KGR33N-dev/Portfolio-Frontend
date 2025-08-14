@@ -464,7 +464,8 @@ const metadata = {
 
     if (settingsBtn) {
       settingsBtn.onclick = () => {
-        showInfo('Settings will be available soon');
+        const currentLang = window.location.pathname.split('/')[1];
+        window.location.href = `/${currentLang}/account`;
       };
     }
   }
@@ -655,24 +656,15 @@ const metadata = {
   // Initialize when page loads
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-      // Initialize notification system
-      import('/src/utils/notifications.js').then(({ initNotifications }) => {
-        initNotifications(isDev);
-        if (isDev) console.log('✅ Dashboard notification system initialized');
-      }).catch(error => {
-        if (isDev) console.error('❌ Failed to load notification system:', error);
-      });
+      // Static notification system is already available
+      if (isDev) console.log('✅ Dashboard using static notification system');
       
       initDashboardOnce();
     }, { once: true });
   } else {
     // Initialize notification system
-    import('/src/utils/notifications.js').then(({ initNotifications }) => {
-      initNotifications(isDev);
-      if (isDev) console.log('✅ Dashboard notification system initialized');
-    }).catch(error => {
-      if (isDev) console.error('❌ Failed to load notification system:', error);
-    });
+    // Static notification system is already available
+    if (isDev) console.log('✅ Dashboard using static notification system');
     
     initDashboardOnce();
   }
@@ -692,13 +684,8 @@ const metadata = {
       console.log('Astro page load detected, reinitializing Dashboard');
     }
     
-    // Initialize notification system
-    import('/src/utils/notifications.js').then(({ initNotifications }) => {
-      initNotifications(isDev);
-      if (isDev) console.log('✅ Dashboard notification system reinitialized');
-    }).catch(error => {
-      if (isDev) console.error('❌ Failed to load notification system:', error);
-    });
+    // Static notification system is already available
+    if (isDev) console.log('✅ Dashboard using static notification system');
     
     // Always reset and reinitialize on page navigation to prevent stale state
     isDashboardInitialized = false;

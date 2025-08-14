@@ -130,6 +130,9 @@ export const API_URLS = {
   verifyEmail: () => `${API_CONFIG.auth}/verify-email`,
   resendVerification: () => `${API_CONFIG.auth}/resend-verification`,
   me: () => `${API_CONFIG.auth}/me`, // Endpoint to check current user session
+  updateProfile: () => `${API_CONFIG.auth}/update-profile`,
+  updatePassword: () => `${API_CONFIG.auth}/update-password`,
+  deleteAccount: () => `${API_CONFIG.auth}/delete-account`,
   
   // Admin endpoints
   dashboard: () => `${API_CONFIG.admin}/dashboard`,

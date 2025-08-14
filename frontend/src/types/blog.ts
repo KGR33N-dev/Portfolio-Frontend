@@ -169,7 +169,7 @@ function estimateReadingTime(content: string): string {
   const wordsPerMinute = 200;
   const wordCount = content.split(/\s+/).length;
   const minutes = Math.ceil(wordCount / wordsPerMinute);
-  return `${minutes} min read`;
+  return `${minutes} min`;
 }
 
 // Helper function to get current content for a specific language

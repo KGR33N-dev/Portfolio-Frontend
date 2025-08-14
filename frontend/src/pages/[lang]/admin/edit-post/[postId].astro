@@ -293,13 +293,6 @@ const metadata = {
               </button>
             </div>
           </div>
-
-          <!-- Auto-save indicator -->
-          <div id="autosave-indicator" class="mt-4 text-center hidden">
-            <span class="text-sm text-green-600 dark:text-green-400">
-              ✓ {t('admin.autoSaved')} <span id="last-saved-time"></span>
-            </span>
-          </div>
         </div>
       </form>
     </div>
@@ -352,9 +345,6 @@ const metadata = {
     noTranslationsFound: t('admin.noTranslationsFound'),
     titleRequired: t('admin.titleRequired'),
     contentRequired: t('admin.contentRequired'),
-    autoSaved: t('admin.autoSaved'),
-    justNow: t('admin.justNow'),
-    minutesAgo: t('admin.minutesAgo'),
     selectLanguageToAdd: t('admin.selectLanguageToAdd')
   }
 }} type="module">
@@ -364,24 +354,24 @@ const metadata = {
   let currentPost = null;
   let availableLanguages = [];
   let postTranslations = [];
-  let autoSaveTimer = null;
   let hasUnsavedChanges = false;
   let isSubmitting = false;
   let loadedPostId = null; // Track which post is currently loaded
+  let localPublishedState = false; // Local state for publish toggle
 
   async function initEditPost() {
     console.log('🚀 InitEditPost started');
     console.log(' Current URL:', window.location.href);
     console.log('📍 URL pathname:', window.location.pathname);
     
-    // Initialize notification system
-    try {
-      const { initNotifications } = await import('/src/utils/notifications.js');
-      initNotifications(true); // Always use dev mode in edit-post for now
-      console.log('✅ Edit-post notification system initialized');
-    } catch (error) {
-      console.error('❌ Failed to load notification system:', error);
+    // Check if we're actually on an edit-post page
+    if (!window.location.pathname.includes('/edit-post/')) {
+      console.log('🚫 Not on edit-post page, skipping initialization');
+      return;
     }
+    
+    // Notification system is now static - no initialization needed
+    console.log('✅ Edit-post using static notification system');
     
     // Always extract postId from URL path to avoid cache issues
     const pathParts = window.location.pathname.split('/');
@@ -389,6 +379,13 @@ const metadata = {
     const editPostIndex = pathParts.findIndex(part => part === 'edit-post');
     const urlPostId = editPostIndex !== -1 ? pathParts[editPostIndex + 1] : null;
     console.log('🔍 PostId from URL path:', urlPostId);
+    
+    // Early exit if we can't find edit-post in path or no postId follows
+    if (editPostIndex === -1 || !urlPostId) {
+      console.log('🚫 Invalid edit-post URL structure, skipping initialization');
+      showError(`Invalid edit-post URL structure. Expected format: /lang/admin/edit-post/[postId]`);
+      return;
+    }
     
     // Also check Astro variables for comparison
     console.log('🆔 Astro postId (string):', typeof astroPostId !== 'undefined' ? astroPostId : 'undefined');
@@ -407,12 +404,6 @@ const metadata = {
       postTranslations = [];
       hasUnsavedChanges = false;
       isSubmitting = false;
-      
-      // Clear any existing auto-save timer
-      if (autoSaveTimer) {
-        clearInterval(autoSaveTimer);
-        autoSaveTimer = null;
-      }
     }
     
     loadedPostId = actualPostId;
@@ -455,6 +446,13 @@ const metadata = {
 
     // Validate final postId
     if (!actualPostId || isNaN(actualPostId)) {
+      console.error('🚫 Invalid or missing postId:', {
+        actualPostId,
+        urlPostId,
+        isNaN: isNaN(actualPostId),
+        url: window.location.href,
+        pathname: window.location.pathname
+      });
       showError(`Invalid post ID: ${actualPostId}. URL: ${window.location.href}`);
       return;
     }
@@ -469,7 +467,6 @@ const metadata = {
     if (currentPost) {
       initializeForm();
       setupEventListeners();
-      startAutoSave();
     }
   }
 
@@ -564,11 +561,13 @@ const metadata = {
       if (data) {
         currentPost = data;
         postTranslations = data.translations || [];
+        localPublishedState = data.is_published; // Initialize local state
         
         console.log('📝 Post loaded successfully:');
         console.log('- ID:', currentPost.id);
         console.log('- Slug:', currentPost.slug);
         console.log('- Published:', currentPost.is_published);
+        console.log('- Local published state:', localPublishedState);
         console.log('- Translations count:', postTranslations.length);
         console.log('- Available languages:', postTranslations.map(t => t.language_code));
         
@@ -717,7 +716,7 @@ const metadata = {
       return;
     }
     
-    console.log('🔄 Updating post status header. Post published:', currentPost.is_published);
+    console.log('🔄 Updating post status header. Local published state:', localPublishedState);
     
     const statusBadge = document.getElementById('post-status-badge');
     const createdDate = document.getElementById('post-created-date');
@@ -734,7 +733,7 @@ const metadata = {
     });
 
     if (statusBadge) {
-      if (currentPost.is_published) {
+      if (localPublishedState) {
         statusBadge.textContent = translations.published;
         statusBadge.className = 'px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
       } else {
@@ -947,36 +946,51 @@ const metadata = {
     const form = document.getElementById('edit-post-form');
     const addTranslationBtn = document.getElementById('add-translation-btn');
     const deletePostBtn = document.getElementById('delete-post-btn');
+    const publishToggle = document.getElementById('toggle-publish-btn');
 
-    // Form submission
+    // Form submission - tylko save action
     if (form && !form.dataset.listenerAdded) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        console.log('🎯 Form submitted!');
-        console.log('🎯 Event submitter:', e.submitter);
-        console.log('🎯 Submitter id:', e.submitter?.id);
-        console.log('🎯 Submitter data-action:', e.submitter?.dataset.action);
-        console.log('🎯 All buttons with data-action:', Array.from(document.querySelectorAll('[data-action]')).map(btn => ({id: btn.id, action: btn.dataset.action})));
+        console.log('🎯 Form submitted for save action');
         
         if (isSubmitting) {
           console.log('❌ Already submitting, ignoring');
           return;
         }
         
-        const submitBtn = e.submitter;
-        const action = submitBtn?.dataset.action;
-        
-        console.log('🎯 Final action to handle:', action);
-        
-        if (!action) {
-          console.log('❌ No action found, cannot proceed');
-          return;
-        }
-        
-        await handleFormSubmit(action);
+        await handleFormSubmit('save');
       });
       form.dataset.listenerAdded = 'true';
+    }
+
+    // Publish toggle - tylko zmienia lokalny stan
+    if (publishToggle && !publishToggle.dataset.listenerAdded) {
+      publishToggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Toggle local state
+        localPublishedState = !localPublishedState;
+        hasUnsavedChanges = true;
+        
+        console.log('🔄 Publish state toggled to:', localPublishedState);
+        
+        // Update UI immediately
+        updatePostStatusHeader();
+        updateActionButtons();
+        
+        // Show visual feedback
+        const toggleBtn = document.getElementById('toggle-publish-btn');
+        if (toggleBtn) {
+          toggleBtn.style.transform = 'scale(1.05)';
+          setTimeout(() => {
+            toggleBtn.style.transform = '';
+          }, 150);
+        }
+      });
+      publishToggle.dataset.listenerAdded = 'true';
     }
 
     // Add translation
@@ -997,13 +1011,19 @@ const metadata = {
     });
   }
 
-  async function handleFormSubmit(action) {
+  async function handleFormSubmit(_action) {
     if (isSubmitting) return;
+    
+    // Safety check - make sure we're on edit-post page and have currentPost
+    if (!window.location.pathname.includes('/edit-post/') || !currentPost) {
+      console.warn('handleFormSubmit called but not on edit-post page or no currentPost');
+      return;
+    }
     
     isSubmitting = true;
     hideMessages();
 
-    const activeBtn = document.querySelector(`button[data-action="${action}"]`);
+    const saveBtn = document.getElementById('save-changes-btn');
 
     try {
       // Determine post ID to use
@@ -1024,23 +1044,26 @@ const metadata = {
         return;
       }
 
-      // Show loading state on button
-      if (activeBtn) {
-        activeBtn.disabled = true;
-        const buttonText = activeBtn.querySelector('#toggle-publish-text') || activeBtn.querySelector('#save-text') || activeBtn.querySelector('span');
-        
-        if (buttonText) {
-          if (action === 'save') {
-            buttonText.textContent = translations.savingChanges;
-          } else if (action === 'publish') {
-            buttonText.textContent = translations.publishingPost;
-          } else if (action === 'unpublish') {
-            buttonText.textContent = translations.unpublishingPost;
-          }
+      // Add local published state to form data
+      formData.is_published = localPublishedState;
+
+      // Show loading state on save button
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        const saveText = saveBtn.querySelector('#save-text');
+        if (saveText) {
+          saveText.textContent = translations.savingChanges;
         }
       }
 
-      // Update post
+      console.log('💾 Saving post with data:', {
+        postId: postIdToUse,
+        is_published: formData.is_published,
+        changed_from: currentPost.is_published,
+        to: localPublishedState
+      });
+
+      // Update post with all changes including publish state
       const updateResponse = await AdminAuth.makeAuthenticatedRequest(
         API_URLS.updatePost(postIdToUse),
         {
@@ -1056,81 +1079,46 @@ const metadata = {
 
       const updatedPost = await updateResponse.json();
       currentPost = updatedPost;
-      console.log('📝 Post updated. New state:', { id: currentPost.id, is_published: currentPost.is_published });
+      
+      // Update local state to match server
+      localPublishedState = updatedPost.is_published;
+      
+      console.log('� Post updated successfully. New state:', { 
+        id: currentPost.id, 
+        is_published: currentPost.is_published,
+        local_state: localPublishedState
+      });
 
-      // Handle publish/unpublish actions
-      if (action === 'publish') {
-        const publishResponse = await AdminAuth.makeAuthenticatedRequest(
-          API_URLS.publishPost(postIdToUse),
-          { method: 'PUT' }
-        );
-
-        if (!publishResponse.ok) {
-          throw new Error(translations.errorPublishingPost);
+      // Show appropriate success message based on what changed
+      if (currentPost.is_published !== (currentPost.is_published === updatedPost.is_published)) {
+        if (updatedPost.is_published) {
+          showSuccess(translations.postPublishedSuccessfully);
+        } else {
+          showSuccess(translations.postUnpublishedSuccessfully);
         }
-
-        currentPost = await publishResponse.json();
-        console.log('📤 Post published. New state:', { id: currentPost.id, is_published: currentPost.is_published });
-        showSuccess(translations.postPublishedSuccessfully);
-      } else if (action === 'unpublish') {
-        const unpublishResponse = await AdminAuth.makeAuthenticatedRequest(
-          API_URLS.unpublishPost(postIdToUse),
-          { method: 'PUT' }
-        );
-
-        if (!unpublishResponse.ok) {
-          throw new Error(translations.errorUnpublishingPost);
-        }
-
-        currentPost = await unpublishResponse.json();
-        console.log('📝 Post unpublished. New state:', { id: currentPost.id, is_published: currentPost.is_published });
-        showSuccess(translations.postUnpublishedSuccessfully);
-      } else if (action === 'save') {
+      } else {
         showSuccess(translations.postUpdatedSuccessfully);
       }
 
-      // Update UI immediately after successful action
-      console.log('🔄 Updating UI after action:', action);
-      console.log('🎯 Current post state before UI update:', { id: currentPost.id, is_published: currentPost.is_published });
+      // Update UI
       updatePostStatusHeader();
       updateActionButtons();
       hasUnsavedChanges = false;
-      updateAutoSaveIndicator();
-      
-      // Add brief visual feedback to show the change
-      const toggleBtn = document.getElementById('toggle-publish-btn');
-      if (toggleBtn) {
-        toggleBtn.style.transform = 'scale(1.05)';
-        setTimeout(() => {
-          toggleBtn.style.transform = '';
-        }, 200);
-      }
 
     } catch (error) {
       console.error('Error handling form submission:', error);
       showError(error.message || translations.errorUpdatingPost);
     } finally {
       isSubmitting = false;
-      console.log('🔄 Finally block: isSubmitting set to false, restoring button states');
       
-      // Restore button states immediately
-      const saveBtn = document.getElementById('save-changes-btn');
-      const toggleBtn = document.getElementById('toggle-publish-btn');
-      const saveText = document.getElementById('save-text');
-      
-      // Re-enable all buttons
-      if (saveBtn) saveBtn.disabled = false;
-      if (toggleBtn) toggleBtn.disabled = false;
-      
-      // Restore original text for save button
-      if (saveText) {
-        saveText.textContent = translations.saveChanges;
+      // Restore save button
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        const saveText = saveBtn.querySelector('#save-text');
+        if (saveText) {
+          saveText.textContent = translations.saveChanges;
+        }
       }
-      
-      // Update action buttons to ensure correct state based on current post status
-      setTimeout(() => {
-        updateActionButtons();
-      }, 50); // Small delay to ensure DOM is ready
     }
   }
 
@@ -1186,7 +1174,8 @@ const metadata = {
       category: formData.get('category')?.toString() || 'general',
       featured_image: formData.get('featured_image')?.toString().trim() || null,
       tags: tagsArray,
-      translations: translations
+      translations: translations,
+      is_published: localPublishedState // Include local published state
     };
   }
 
@@ -1343,53 +1332,6 @@ const metadata = {
     }
   }
 
-  function startAutoSave() {
-    // Clear existing timer
-    if (autoSaveTimer) {
-      clearInterval(autoSaveTimer);
-    }
-
-    // Auto-save every 30 seconds if there are unsaved changes
-    autoSaveTimer = setInterval(async () => {
-      if (hasUnsavedChanges && !isSubmitting) {
-        try {
-          const formData = collectFormData();
-          if (formData) {
-            const response = await AdminAuth.makeAuthenticatedRequest(
-              API_URLS.updatePost(currentPost.id),
-              {
-                method: 'PUT',
-                body: JSON.stringify(formData),
-              }
-            );
-
-            if (response.ok) {
-              hasUnsavedChanges = false;
-              updateAutoSaveIndicator();
-            }
-          }
-        } catch (error) {
-          console.error('Auto-save failed:', error);
-        }
-      }
-    }, 30000); // 30 seconds
-  }
-
-  function updateAutoSaveIndicator() {
-    const indicator = document.getElementById('autosave-indicator');
-    const timeSpan = document.getElementById('last-saved-time');
-    
-    if (indicator && timeSpan) {
-      indicator.classList.remove('hidden');
-      timeSpan.textContent = translations.justNow;
-      
-      // Hide after 3 seconds
-      setTimeout(() => {
-        indicator.classList.add('hidden');
-      }, 3000);
-    }
-  }
-
   // Utility functions
   function getLanguageFlag(code) {
     const flags = {
@@ -1484,7 +1426,7 @@ const metadata = {
       return;
     }
     
-    console.log('🔄 Updating action buttons. Post published:', currentPost.is_published);
+    console.log('🔄 Updating action buttons. Local published state:', localPublishedState);
     
     const toggleBtn = document.getElementById('toggle-publish-btn');
     const toggleText = document.getElementById('toggle-publish-text');
@@ -1526,51 +1468,71 @@ const metadata = {
       toggleBtn.disabled = false;
     }
     
-    if (currentPost.is_published) {
-      console.log('📤 Setting up UNPUBLISH button');
-      // Post is published - show unpublish button
-      toggleBtn.setAttribute('data-action', 'unpublish');
-      toggleBtn.className = 'px-6 py-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-all duration-200 flex items-center';
-      
-      if (toggleText) {
-        toggleText.textContent = translations.unpublishPost;
-      }
-      
-      // Unpublish icon (X mark)
-      if (publishIcon) {
-        publishIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"></path>';
-      }
-      
-      // Published status badge
-      if (statusBadge) {
-        statusBadge.textContent = translations.published;
-        statusBadge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
-      }
-    } else {
-      console.log('📝 Setting up PUBLISH button');
-      // Post is draft - show publish button
-      toggleBtn.setAttribute('data-action', 'publish');
+    // Remove data-action since this is now just a toggle, not a submit action
+    toggleBtn.removeAttribute('data-action');
+    
+    if (localPublishedState) {
+      console.log('📤 Setting up PUBLISHED toggle state');
+      // Currently published - show as "published" state
       toggleBtn.className = 'px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-all duration-200 flex items-center';
       
       if (toggleText) {
-        toggleText.textContent = translations.publishPost;
+        toggleText.textContent = translations.published;
       }
       
-      // Publish icon (checkmark)
+      // Published icon (checkmark)
       if (publishIcon) {
         publishIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
       }
+    } else {
+      console.log('📝 Setting up DRAFT toggle state');
+      // Currently draft - show as "draft" state
+      toggleBtn.className = 'px-6 py-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-all duration-200 flex items-center';
       
-      // Draft status badge
-      if (statusBadge) {
-        statusBadge.textContent = translations.draft;
-        statusBadge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
+      if (toggleText) {
+        toggleText.textContent = translations.draft;
+      }
+      
+      // Draft icon (edit)
+      if (publishIcon) {
+        publishIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>';
       }
     }
     
+    // Show status indicator based on whether there are unsaved changes
+    const hasUnsavedPublishChanges = localPublishedState !== currentPost.is_published;
+    if (statusBadge) {
+      if (hasUnsavedPublishChanges) {
+        // State has changed, needs saving
+        if (localPublishedState) {
+          statusBadge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
+          statusBadge.innerHTML = `${translations.published} <span class="text-xs opacity-75">(save to change)</span>`;
+        } else {
+          statusBadge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
+          statusBadge.innerHTML = `${translations.draft} <span class="text-xs opacity-75">(save to change)</span>`;
+        }
+      } else {
+        // State matches server
+        if (localPublishedState) {
+          statusBadge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
+          statusBadge.innerHTML = `${translations.published} <span class="text-xs opacity-75">(current)</span>`;
+        } else {
+          statusBadge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
+          statusBadge.innerHTML = `${translations.draft} <span class="text-xs opacity-75">(current)</span>`;
+        }
+      }
+    }
+    
+    // Also show indicator on toggle button text
+    if (hasUnsavedPublishChanges && toggleText) {
+      toggleText.innerHTML += ' <span class="text-xs opacity-75">*</span>';
+    }
+    
     console.log('✅ Action buttons updated successfully');
-    console.log('🎯 Final button state:', {
-      action: toggleBtn.getAttribute('data-action'),
+    console.log('🎯 Final toggle state:', {
+      localState: localPublishedState,
+      serverState: currentPost.is_published,
+      hasUnsavedChanges: hasUnsavedPublishChanges,
       text: toggleText ? toggleText.textContent : 'text element not found',
       class: toggleBtn.className
     });
@@ -1585,8 +1547,19 @@ const metadata = {
   }
 
   // Initialize on page load
-  document.addEventListener('DOMContentLoaded', initEditPost);
-  document.addEventListener('astro:page-load', initEditPost);
+  document.addEventListener('DOMContentLoaded', () => {
+    // Only initialize if we're on an edit-post page and have the required form element
+    if (window.location.pathname.includes('/edit-post/') && document.getElementById('edit-post-form')) {
+      initEditPost();
+    }
+  });
+  
+  document.addEventListener('astro:page-load', () => {
+    // Only initialize if we're on an edit-post page and have the required form element  
+    if (window.location.pathname.includes('/edit-post/') && document.getElementById('edit-post-form')) {
+      initEditPost();
+    }
+  });
 
   // Cleanup on page unload
   window.addEventListener('beforeunload', (e) => {

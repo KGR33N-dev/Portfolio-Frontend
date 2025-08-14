@@ -331,6 +331,80 @@ export class AdminAuth {
     return this.verifyUser(skipCache);
   }
 
+  // Update user profile
+  static async updateProfile(userData: { username?: string; full_name?: string }): Promise<User> {
+    const token = this.getToken();
+    if (!token) throw new Error('Not authenticated');
+
+    const response = await fetch(API_URLS.updateProfile(), {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(userData)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Failed to update profile');
+    }
+
+    const updatedUser = await response.json();
+    
+    // Clear cache to force refresh
+    this.verificationCache = null;
+    
+    return updatedUser;
+  }
+
+  // Update password
+  static async updatePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const token = this.getToken();
+    if (!token) throw new Error('Not authenticated');
+
+    const response = await fetch(API_URLS.updatePassword(), {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Failed to update password');
+    }
+  }
+
+  // Delete account
+  static async deleteAccount(password: string): Promise<void> {
+    const token = this.getToken();
+    if (!token) throw new Error('Not authenticated');
+
+    const response = await fetch(API_URLS.deleteAccount(), {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ password })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Failed to delete account');
+    }
+
+    // Clear all local data
+    localStorage.removeItem(this.TOKEN_KEY);
+    this.verificationCache = null;
+  }
+
 }
 
 // Export AdminAuth to window for global access (needed for dashboard and other scripts)

@@ -249,17 +249,59 @@ const apiUrls = {
   // Initialize debounced likes system
   const debouncedLikes = new DebouncedLikes();
 
+  // Global function to reset comments system (called after language change)
+  window.resetCommentsSystem = function() {
+    if (isDev) {
+      console.log('🔄 Resetting comments system after language change...');
+    }
+    
+    // Clean up previous debounced operations
+    if (typeof debouncedLikes !== 'undefined') {
+      debouncedLikes.cleanup();
+    }
+    
+    // Reset initialization states
+    isInitialized = false;
+    isLoadingComments = false;
+    currentUser = null;
+    
+    // Clear any existing timer
+    if (initTimer) {
+      clearTimeout(initTimer);
+    }
+    
+    // Remove existing event listeners to prevent duplicates
+    const commentsContainer = document.getElementById('comments-list');
+    if (commentsContainer) {
+      // Clone node to remove all event listeners
+      const newContainer = commentsContainer.cloneNode(true);
+      commentsContainer.parentNode.replaceChild(newContainer, commentsContainer);
+    }
+    
+    const form = document.getElementById('comment-form');
+    if (form) {
+      // Clone form to remove event listeners
+      const newForm = form.cloneNode(true);
+      form.parentNode.replaceChild(newForm, form);
+    }
+    
+    // Reinitialize after cleanup - no need for notification system initialization
+    setTimeout(() => {
+      const container = document.getElementById('comments-list');
+      if (container) {
+        if (isDev) {
+          console.log('🚀 Reinitializing comments system...');
+        }
+        
+        initComments();
+      }
+    }, 100);
+  };
+
   // Initialize when DOM is loaded
   document.addEventListener('DOMContentLoaded', function() {
-    // Initialize notification system
-    if (typeof window !== 'undefined') {
-      import('/src/utils/notifications.js').then(({ initNotifications }) => {
-        initNotifications(isDev);
-        if (isDev) console.log('✅ Notification system initialized');
-      }).catch(error => {
-        if (isDev) console.error('❌ Failed to load notification system:', error);
-      });
-    }
+    // Static notification system is already available - no initialization needed
+    if (isDev) console.log('✅ Using static notification system');
     
     // Clear any existing timer
     if (initTimer) {
@@ -290,35 +332,42 @@ const apiUrls = {
   
   // Handle Astro page navigation
   document.addEventListener('astro:page-load', () => {
-    // Clear any existing timer
-    if (initTimer) {
-      clearTimeout(initTimer);
-    }
-    
-    // Debounce initialization to prevent multiple rapid calls
-    initTimer = setTimeout(() => {
-      // Only initialize if we have a comments container
-      const commentsContainer = document.getElementById('comments-list');
-      if (!commentsContainer) {
-        if (isDev) {
-          console.log('No comments container found on astro:page-load - skipping comments initialization');
-        }
-        return;
+    // Use the global reset function to properly clean up and reinitialize
+    if (typeof window.resetCommentsSystem === 'function') {
+      if (isDev) {
+        console.log('Astro page load, using resetCommentsSystem...');
+      }
+      window.resetCommentsSystem();
+    } else {
+      // Fallback to old method if reset function not available
+      if (isDev) {
+        console.log('Astro page load, using fallback initialization...');
+      }
+      // Clear any existing timer
+      if (initTimer) {
+        clearTimeout(initTimer);
       }
       
-      if (isDev) {
-        console.log('Astro page load, resetting and initializing...');
-      }
-      // Clean up previous debounced operations
-      if (typeof debouncedLikes !== 'undefined') {
-        debouncedLikes.cleanup();
-      }
-      // Reset both initialization state and user state
-      isInitialized = false;
-      isLoadingComments = false;
-      currentUser = null;
-      initComments();
-    }, 100);
+      initTimer = setTimeout(() => {
+        const commentsContainer = document.getElementById('comments-list');
+        if (!commentsContainer) {
+          if (isDev) {
+            console.log('No comments container found on astro:page-load - skipping comments initialization');
+          }
+          return;
+        }
+        
+        // Clean up previous debounced operations
+        if (typeof debouncedLikes !== 'undefined') {
+          debouncedLikes.cleanup();
+        }
+        // Reset both initialization state and user state
+        isInitialized = false;
+        isLoadingComments = false;
+        currentUser = null;
+        initComments();
+      }, 100);
+    }
   });
 
   // Clean up on page unload
@@ -801,15 +850,11 @@ const apiUrls = {
                   </button>
                 ` : ''}
 
-                <!-- Edit/Delete buttons - pokazuj tylko dla właściciela, moderatora lub administratora -->
-                ${currentUser && (
-                  comment.author?.id === currentUser.id || 
-                  currentUser.role?.name === 'moderator' || 
-                  currentUser.role?.name === 'admin'
-                ) ? `
+                <!-- Edit/Delete buttons - używaj can_edit i can_delete z backendu -->
+                ${currentUser && (comment.can_edit || comment.can_delete) ? `
                   <div class="flex items-center space-x-2 ml-2 border-l border-gray-300 dark:border-gray-600 pl-2">
-                    <!-- Edit Button - tylko dla właściciela -->
-                    ${comment.author?.id === currentUser.id ? `
+                    <!-- Edit Button - pokazuj tylko gdy backend pozwala (can_edit) -->
+                    ${comment.can_edit ? `
                       <button 
                         class="edit-btn flex items-center space-x-1 px-3 py-2 rounded-lg hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-all duration-200 text-xs font-medium text-yellow-600 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-700" 
                         data-action="edit" 
@@ -823,18 +868,20 @@ const apiUrls = {
                       </button>
                     ` : ''}
                     
-                    <!-- Delete Button - dla właściciela, moderatora i administratora -->
-                    <button 
-                      class="delete-btn flex items-center space-x-1 px-3 py-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200 text-xs font-medium text-red-600 dark:text-red-400 border border-red-200 dark:border-red-700" 
-                      data-action="delete" 
-                      data-id="${comment.id}"
-                      title="${translations && translations['comments.delete'] ? translations['comments.delete'] : 'Delete comment'}"
-                    >
-                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                      </svg>
-                      <span>${translations && translations['comments.delete'] ? translations['comments.delete'] : 'Delete'}</span>
-                    </button>
+                    <!-- Delete Button - pokazuj tylko gdy backend pozwala (can_delete) -->
+                    ${comment.can_delete ? `
+                      <button 
+                        class="delete-btn flex items-center space-x-1 px-3 py-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200 text-xs font-medium text-red-600 dark:text-red-400 border border-red-200 dark:border-red-700" 
+                        data-action="delete" 
+                        data-id="${comment.id}"
+                        title="${translations && translations['comments.delete'] ? translations['comments.delete'] : 'Delete comment'}"
+                      >
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                        <span>${translations && translations['comments.delete'] ? translations['comments.delete'] : 'Delete'}</span>
+                      </button>
+                    ` : ''}
                   </div>
                 ` : ''}
               </div>
@@ -922,9 +969,9 @@ const apiUrls = {
         if (isDev) {
           console.log('❌ User not authenticated for like/dislike');
         }
-        const loginRequiredText = translations && translations['comments.loginRequired'] 
-          ? translations['comments.loginRequired']
-          : 'Please login to like/dislike';
+        const loginRequiredText = translations && translations['comments.loginRequiredToLike'] 
+          ? translations['comments.loginRequiredToLike']
+          : (action === 'like' ? 'Please login to like comments' : 'Please login to dislike comments');
         showError(loginRequiredText);
         return;
       }
@@ -935,9 +982,9 @@ const apiUrls = {
         if (isDev) {
           console.log('❌ No access token found for like/dislike');
         }
-        const loginRequiredText = translations && translations['comments.loginRequired'] 
-          ? translations['comments.loginRequired'] 
-          : 'Please login to like comments';
+        const loginRequiredText = translations && translations['comments.loginRequiredToLike'] 
+          ? translations['comments.loginRequiredToLike'] 
+          : (action === 'like' ? 'Please login to like comments' : 'Please login to dislike comments');
         showError(loginRequiredText);
         return;
       }
@@ -1423,21 +1470,27 @@ const apiUrls = {
   }
 
   function showSuccess(message) {
-    // Try to use notification system, fallback to alert
-    if (window.NotificationManager) {
+    // Use static notification system - always available
+    if (window.StaticNotifications) {
+      window.StaticNotifications.success(message);
+    } else if (window.NotificationManager) {
+      // Legacy fallback
       window.NotificationManager.success(message);
     } else {
-      // Fallback to simple alert if notification system not loaded
+      // Final fallback to alert
       alert(message);
     }
   }
 
   function showError(message) {
-    // Try to use notification system, fallback to alert
-    if (window.NotificationManager) {
+    // Use static notification system - always available
+    if (window.StaticNotifications) {
+      window.StaticNotifications.error(message);
+    } else if (window.NotificationManager) {
+      // Legacy fallback
       window.NotificationManager.error(message);
     } else {
-      // Fallback to simple alert if notification system not loaded
+      // Final fallback to alert
       alert(message);
     }
   }

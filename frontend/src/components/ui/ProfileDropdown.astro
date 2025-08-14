@@ -213,15 +213,21 @@ const t = useTranslations(lang as keyof typeof languages);
       }
     }
 
-    // Setup account settings link
-    if (accountSettingsLink) {
-      const currentLang = window.location.pathname.split('/')[1] || 'en';
-      accountSettingsLink.href = `/${currentLang}/account/settings`;
-    }
-
     // Handle dropdown toggle
     const dropdownToggle = document.getElementById('profile-toggle-btn');
     const dropdownMenu = document.getElementById('profile-dropdown-menu');
+
+    // Setup account settings link (after dropdown elements are defined)
+    if (accountSettingsLink && dropdownMenu) {
+      const currentLang = window.location.pathname.split('/')[1] || 'en';
+      accountSettingsLink.href = `/${currentLang}/account`;
+      
+      // Clean navigation - close dropdown and navigate
+      accountSettingsLink.addEventListener('click', () => {
+        // Close dropdown before navigation
+        dropdownMenu.classList.add('hidden');
+      });
+    }
     
     if (dropdownToggle && dropdownMenu) {
       // Remove existing listeners

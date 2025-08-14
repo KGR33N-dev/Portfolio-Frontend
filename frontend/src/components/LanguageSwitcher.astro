@@ -60,6 +60,7 @@ const availableLanguages = Object.entries(languages).filter(([lang]) => lang !==
             class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors"
             role="menuitem"
             data-language={lang}
+            onclick="window.handleLanguageChange(this, event)"
           >
             <span class="flex items-center">
               <span class="font-medium">{lang.toUpperCase()}</span>
@@ -96,6 +97,71 @@ const availableLanguages = Object.entries(languages).filter(([lang]) => lang !==
       dropdown.classList.remove('hidden');
       arrow.style.transform = 'rotate(180deg)';
       button.setAttribute('aria-expanded', 'true');
+    }
+  };
+
+  // Function to handle language change and show notification
+  window.handleLanguageChange = function(element, event) {
+    event.preventDefault(); // Prevent immediate navigation
+    
+    const targetUrl = element.getAttribute('href');
+    
+    // Set flag that language is being changed
+    localStorage.setItem('languageChanged', 'true');
+    
+    // Close the dropdown
+    window.closeLanguageDropdown();
+    
+    // Navigate immediately - no notification here
+    window.location.href = targetUrl;
+  };
+
+  // Function to reinitialize notifications after language change
+  window.reinitializeNotifications = function() {
+    // No need for initialization with static system - just show language change message
+    console.log('✅ Language change detected - using static notification system');
+    
+    // Check if language was just changed (not just page refresh)
+    const languageChanged = localStorage.getItem('languageChanged');
+    
+    if (languageChanged === 'true') {
+      // Clear the flag immediately
+      localStorage.removeItem('languageChanged');
+      
+      // Show notification after language change - detect current language from URL
+      setTimeout(() => {
+        const currentPath = window.location.pathname;
+        const isPolishPage = currentPath.startsWith('/pl');
+        
+        const message = isPolishPage 
+          ? 'Język zmieniony pomyślnie!' 
+          : 'Language changed successfully!';
+        
+        // Use static notification system
+        if (window.StaticNotifications) {
+          window.StaticNotifications.success(message, 3000);
+        } else if (window.NotificationManager) {
+          window.NotificationManager.success(message);
+        }
+      }, 300); // Short delay to ensure the page is fully loaded
+    }
+  };
+
+  // Function to reinitialize comments system after language change
+  window.reinitializeCommentsSystem = function() {
+    // Check if we're on a page with comments
+    const commentsContainer = document.getElementById('comments-list');
+    if (!commentsContainer) {
+      console.log('No comments container found, skipping comments reinit');
+      return;
+    }
+
+    // Reset comments system state (if available globally)
+    if (typeof window.resetCommentsSystem === 'function') {
+      window.resetCommentsSystem();
+      console.log('✅ Comments system reset after language change');
+    } else {
+      console.log('Comments reset function not available');
     }
   };
 
@@ -174,6 +240,16 @@ const availableLanguages = Object.entries(languages).filter(([lang]) => lang !==
   document.addEventListener('astro:page-load', () => {
     if (isDev) {
       console.log('Astro page load detected, checking LanguageSwitcher status');
+    }
+    
+    // Reinitialize notifications after language change/navigation
+    if (typeof window.reinitializeNotifications === 'function') {
+      window.reinitializeNotifications();
+    }
+    
+    // Reinitialize comments system after language change/navigation
+    if (typeof window.reinitializeCommentsSystem === 'function') {
+      window.reinitializeCommentsSystem();
     }
     
     if (!isLanguageSwitcherInitialized) {
