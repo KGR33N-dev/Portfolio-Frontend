@@ -1,7 +1,9 @@
 ---
+export const prerender = true;
 import Layout from '~/layouts/PageLayout.astro';
 import Headline from '~/components/ui/Headline.astro';
 import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
+import StaticNotificationSystem from '~/components/common/StaticNotificationSystem.astro';
 import { useTranslations } from '~/i18n/utils';
 import { languages } from '~/i18n';
 
@@ -25,6 +27,9 @@ const metadata = {
 ---
 
 <Layout metadata={metadata}>
+  <!-- Static Notification System -->
+  <StaticNotificationSystem />
+  
   <WidgetWrapper id="account-page" containerClass="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
     <!-- Header with navigation -->
     <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 mb-8">
@@ -47,621 +52,777 @@ const metadata = {
       </div>
     </div>
 
-    <!-- Messages -->
-    <div id="error-message" class="hidden bg-red-100 dark:bg-red-900/20 border border-red-400 text-red-700 dark:text-red-400 px-4 py-3 rounded mb-6"></div>
-    <div id="success-message" class="hidden bg-green-100 dark:bg-green-900/20 border border-green-400 text-green-700 dark:text-green-400 px-4 py-3 rounded mb-6"></div>
+    <!-- Loading State -->
+    <div id="loading-state" class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 p-8 text-center">
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+      <p class="text-gray-600 dark:text-gray-400">{t('account.loadingAccountInfo')}</p>
+    </div>
 
     <!-- Main Content -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-    
-      <!-- User Info Card -->
-      <div class="lg:col-span-1">
-        <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-6">{t('account.personalInfo')}</h3>
+    <div id="main-content" class="hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      
+        <!-- User Info Card -->
+        <div class="lg:col-span-1">
+          <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-6">{t('account.personalInfo')}</h3>
+            
+            <div class="space-y-4">
+              <!-- Email Section -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('auth.email')}</label>
+                <div id="user-email-info" class="py-2 px-3 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"></div>
+              </div>
+              
+              <!-- Username Section -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('auth.username')}</label>
+                <div id="user-username-info" class="py-2 px-3 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"></div>
+              </div>
+              
+              <!-- Full Name Section -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('auth.fullName')}</label>
+                <div id="user-fullname-info" class="py-2 px-3 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"></div>
+              </div>
+              
+              <!-- Role Section -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('account.role')}</label>
+                <div id="user-role-info" class="py-2 px-3 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"></div>
+              </div>
+              
+              <!-- Rank -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('account.rank')}</label>
+                <div id="user-rank-info" class="py-2 px-3 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"></div>
+              </div>
+              
+              <!-- Member Since -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('account.memberSince')}</label>
+                <div id="user-created-info" class="py-2 px-3 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Account Management Forms -->
+        <div class="lg:col-span-2 space-y-6">
           
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('auth.email')}</label>
-              <div id="user-email" class="py-2 px-3 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200">admin@example.com</div>
+          <!-- Change Username Form -->
+          <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">{t('account.changeUsername')}</h3>
             </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('auth.username')}</label>
-              <div id="user-username" class="py-2 px-3 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200">admin</div>
-            </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('auth.fullName')}</label>
-              <div id="user-fullname" class="py-2 px-3 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200">Administrator</div>
-            </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('account.role')}</label>
-              <div id="user-role" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300">Administrator</div>
+            <div class="p-6">
+              <form id="username-form">
+                <div class="space-y-4">
+                  <div>
+                    <label for="new-username" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('auth.username')}</label>
+                    <input 
+                      type="text" 
+                      id="new-username" 
+                      name="username"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                      placeholder={t('account.newUsernamePlaceholder')}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label for="username-current-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('account.currentPassword')}</label>
+                    <input 
+                      type="password" 
+                      id="username-current-password" 
+                      name="currentPassword"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                      placeholder={t('account.currentPasswordPlaceholder')}
+                      required
+                    />
+                  </div>
+                </div>
+                <div class="flex gap-3 mt-6">
+                  <button 
+                    type="submit" 
+                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
+                  >
+                    {t('account.updateUsername')}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
-        </div>
-      </div>
 
-      <!-- Account Management Forms -->
-      <div class="lg:col-span-2 space-y-6">
-        
-        <!-- Change Username Form -->
-        <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700">
-          <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{t('account.changeUsername')}</h3>
-          </div>
-          <div class="p-6">
-            <form id="username-form">
-              <div class="space-y-4">
-                <div>
-                  <label for="new-username" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('auth.username')}</label>
-                  <input 
-                    type="text" 
-                    id="new-username" 
-                    name="username"
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                    placeholder={t('account.newUsernamePlaceholder')}
-                    value="admin"
-                    pattern="[a-zA-Z0-9_-]+"
-                    minlength="3"
-                    maxlength="50"
-                    required
-                  />
-                  <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">3-50 znaków: litery, cyfry, _ i -</p>
-                </div>
-                <div>
-                  <label for="username-current-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Obecne hasło</label>
-                  <input 
-                    type="password" 
-                    id="username-current-password" 
-                    name="current_password"
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                    placeholder="Wpisz obecne hasło"
-                    required
-                  />
-                </div>
-              </div>
-              <div class="mt-6">
-                <button 
-                  type="submit" 
-                  class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
-                >
-                  {t('account.updateUsername')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <!-- Change Password Form -->
-        <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700">
-          <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{t('account.changePassword')}</h3>
-          </div>
-          <div class="p-6">
-            <form id="password-form">
-              <div class="space-y-4">
-                <div>
-                  <label for="current-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('account.currentPassword')}</label>
-                  <input 
-                    type="password" 
-                    id="current-password" 
-                    name="currentPassword"
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                    placeholder={t('account.currentPasswordPlaceholder')}
-                    required
-                  />
-                </div>
-                <div>
-                  <label for="new-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('account.newPassword')}</label>
-                  <input 
-                    type="password" 
-                    id="new-password" 
-                    name="newPassword"
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                    placeholder={t('account.newPasswordPlaceholder')}
-                    minlength="8"
-                    required
-                  />
-                  <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Minimum 8 znaków</p>
-                </div>
-                <div>
-                  <label for="confirm-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('account.confirmNewPassword')}</label>
-                  <input 
-                    type="password" 
-                    id="confirm-password" 
-                    name="confirmPassword"
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                    placeholder={t('account.confirmPasswordPlaceholder')}
-                    required
-                  />
-                </div>
-              </div>
-              <div class="mt-6">
-                <button 
-                  type="submit" 
-                  class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
-                >
-                  {t('account.updatePassword')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <!-- Change Email Form -->
-        <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700">
-          <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Zmień adres email</h3>
-          </div>
-          <div class="p-6">
-            <form id="email-form">
-              <div class="space-y-4">
-                <div>
-                  <label for="new-email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nowy adres email</label>
-                  <input 
-                    type="email" 
-                    id="new-email" 
-                    name="email"
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                    placeholder="nowy@email.com"
-                    required
-                  />
-                </div>
-                <div>
-                  <label for="email-current-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Obecne hasło</label>
-                  <input 
-                    type="password" 
-                    id="email-current-password" 
-                    name="current_password"
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                    placeholder="Wpisz obecne hasło"
-                    required
-                  />
-                </div>
-              </div>
-              <div class="mt-6">
-                <button 
-                  type="submit" 
-                  class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
-                >
-                  Zaktualizuj email
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <!-- Delete Account Form -->
-        <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700">
-          <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-medium text-red-600 dark:text-red-400">{t('account.deleteAccount')}</h3>
-          </div>
-          <div class="p-6">
-            <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-md p-4 mb-4">
-              <p class="text-sm text-red-800 dark:text-red-300">
-                {t('account.confirmDelete')}
-              </p>
+          <!-- Change Password Form -->
+          <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">{t('account.changePassword')}</h3>
             </div>
-            <form id="delete-form">
-              <div class="space-y-4">
-                <div>
-                  <label for="delete-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('auth.password')}</label>
-                  <input 
-                    type="password" 
-                    id="delete-password" 
-                    name="password"
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 dark:bg-gray-700 dark:text-white"
-                    placeholder={t('account.currentPasswordPlaceholder')}
-                    required
-                  />
+            <div class="p-6">
+              <form id="password-form">
+                <div class="space-y-4">
+                  <div>
+                    <label for="current-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('account.currentPassword')}</label>
+                    <input 
+                      type="password" 
+                      id="current-password" 
+                      name="currentPassword"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                      placeholder={t('account.currentPasswordPlaceholder')}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label for="new-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('account.newPassword')}</label>
+                    <input 
+                      type="password" 
+                      id="new-password" 
+                      name="newPassword"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                      placeholder={t('account.newPasswordPlaceholder')}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label for="confirm-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('account.confirmNewPassword')}</label>
+                    <input 
+                      type="password" 
+                      id="confirm-password" 
+                      name="confirmPassword"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                      placeholder={t('account.confirmPasswordPlaceholder')}
+                      required
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label for="delete-confirmation" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Wpisz "DELETE_MY_ACCOUNT" aby potwierdzić</label>
-                  <input 
-                    type="text" 
-                    id="delete-confirmation" 
-                    name="confirmation"
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 dark:bg-gray-700 dark:text-white"
-                    placeholder="DELETE_MY_ACCOUNT"
-                    required
-                  />
+                <div class="flex gap-3 mt-6">
+                  <button 
+                    type="submit" 
+                    class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-colors duration-200"
+                  >
+                    {t('account.updatePassword')}
+                  </button>
                 </div>
-              </div>
-              <div class="mt-6">
-                <button 
-                  type="submit" 
-                  class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors duration-200"
-                  disabled
-                  id="delete-submit"
-                >
-                  {t('account.deleteAccount')}
-                </button>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
+
+          <!-- Delete Account Form -->
+          <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 class="text-lg font-medium text-red-600 dark:text-red-400">{t('account.deleteAccount')}</h3>
+            </div>
+            <div class="p-6">
+              <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-md p-4 mb-4">
+                <p class="text-sm text-red-800 dark:text-red-300">
+                  {t('account.confirmDelete')}
+                </p>
+              </div>
+              <form id="delete-form">
+                <div class="space-y-4">
+                  <div>
+                    <label for="delete-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('auth.password')}</label>
+                    <input 
+                      type="password" 
+                      id="delete-password" 
+                      name="password"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 dark:bg-gray-700 dark:text-white"
+                      placeholder={t('account.currentPasswordPlaceholder')}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label for="delete-confirmation" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('account.typeDeleteToConfirm')}</label>
+                    <input 
+                      type="text" 
+                      id="delete-confirmation" 
+                      name="confirmation"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 dark:bg-gray-700 dark:text-white"
+                      placeholder={t('account.deleteConfirmation')}
+                      required
+                    />
+                  </div>
+                </div>
+                <div class="flex gap-3 mt-6">
+                  <button 
+                    type="submit" 
+                    class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors duration-200"
+                    disabled
+                    id="delete-submit"
+                  >
+                    {t('account.deleteAccount')}
+                  </button>
+
+                </div>
+              </form>
+            </div>
+          </div>
+          
         </div>
-        
       </div>
     </div>
   </WidgetWrapper>
 </Layout>
 
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    console.log('Account page loaded successfully');
+<script define:vars={{ 
+  translations: {
+    // Loading and status messages
+    failedToLoadAccount: t('account.failedToLoadAccount'),
     
-    // API Configuration
-    const API_BASE = 'http://localhost:8000/api';
+    // Form validation
+    bothFieldsRequired: t('account.bothFieldsRequired'),
+    usernameAlreadySet: t('account.usernameAlreadySet'),
+    allPasswordFieldsRequired: t('account.allPasswordFieldsRequired'),
+    passwordsDoNotMatchError: t('account.passwordsDoNotMatchError'),
+    passwordTooShort: t('account.passwordTooShort'),
+    passwordRequired: t('account.passwordRequired'),
+    typeDeleteToConfirmFull: t('account.typeDeleteToConfirmFull'),
     
-    // Get auth token from localStorage
-    function getToken() {
-      return localStorage.getItem('authToken');
-    }
+    // Button states
+    updating: t('account.updating'),
+    updateUsername: t('account.updateUsername'),
+    updatePassword: t('account.updatePassword'),
+    deleting: t('account.deleting'),
+    deleteAccount: t('account.deleteAccount'),
     
-    // API Headers
-    function getHeaders() {
+    // Success messages
+    usernameUpdateSuccess: t('account.usernameUpdateSuccess'),
+    passwordUpdateSuccess: t('account.passwordUpdateSuccess'),
+    accountDeleteSuccess: t('account.accountDeleteSuccess'),
+    
+    // Error messages
+    failedToUpdateUsername: t('account.failedToUpdateUsername'),
+    failedToUpdatePassword: t('account.failedToUpdatePassword'),
+    failedToDeleteAccount: t('account.failedToDeleteAccount'),
+    usernameTooShortError: t('account.usernameTooShortError'),
+    usernameTooLongError: t('account.usernameTooLongError'),
+    usernameInvalidChars: t('account.usernameInvalidChars'),
+    
+    // Confirmation dialogs
+    confirmPasswordChange: t('account.confirmPasswordChange'),
+    confirmDeleteFinal: t('account.confirmDeleteFinal')
+  }
+}} type="module">
+
+  const ProfileService = {
+    baseUrl: 'http://localhost:8000/api',
+    
+    getAuthHeaders() {
+      const token = localStorage.getItem('access_token');
       return {
-        'Authorization': `Bearer ${getToken()}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       };
+    },
+
+    async getProfile() {
+      const response = await fetch(`${this.baseUrl}/profile/`, {
+        headers: this.getAuthHeaders()
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || `HTTP ${response.status}`);
+      }
+      
+      return response.json();
+    },
+
+    async changePassword(currentPassword, newPassword, confirmPassword) {
+      const response = await fetch(`${this.baseUrl}/profile/change-password`, {
+        method: 'PUT',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+          confirm_password: confirmPassword
+        })
+      });
+      
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || `HTTP ${response.status}`);
+      }
+      
+      return data;
+    },
+
+    async changeUsername(newUsername, currentPassword) {
+      const response = await fetch(`${this.baseUrl}/profile/change-username`, {
+        method: 'PUT',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({
+          new_username: newUsername,
+          current_password: currentPassword
+        })
+      });
+      
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || `HTTP ${response.status}`);
+      }
+      
+      return data;
+    },
+
+    async changeEmail(newEmail, currentPassword) {
+      const response = await fetch(`${this.baseUrl}/profile/change-email`, {
+        method: 'PUT',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({
+          new_email: newEmail,
+          current_password: currentPassword
+        })
+      });
+      
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || `HTTP ${response.status}`);
+      }
+      
+      return data;
+    },
+
+    async deleteAccount(currentPassword) {
+      const response = await fetch(`${this.baseUrl}/profile/delete-account`, {
+        method: 'DELETE',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({
+          current_password: currentPassword,
+          confirmation: "DELETE_MY_ACCOUNT"
+        })
+      });
+      
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || `HTTP ${response.status}`);
+      }
+      
+      return data;
+    }
+  };
+
+  // State management
+  let currentUser = null;
+  let isAccountPageInitialized = false;
+  
+  // Development mode check
+  const isDev = window.location.hostname === 'localhost' || window.location.hostname.includes('dev');
+
+  // DOM Elements
+  const loadingState = document.getElementById('loading-state');
+  const mainContent = document.getElementById('main-content');
+
+  // User info elements (will be initialized in initAccountPage)
+  let userEmail, userUsername, userFullname, userRole, userRank;
+
+  // Form elements
+  const usernameForm = document.getElementById('username-form');
+  const passwordForm = document.getElementById('password-form');
+  const deleteForm = document.getElementById('delete-form');
+
+  // Input elements
+  const newUsernameInput = document.getElementById('new-username');
+  const deleteConfirmationInput = document.getElementById('delete-confirmation');
+  const deleteSubmitBtn = document.getElementById('delete-submit');
+
+  async function initAccountPage() {
+    // Sprawdź czy jesteśmy na stronie account
+    if (!document.getElementById('account-page')) {
+      return;
+    }
+
+    // Zabezpieczenie przed wielokrotną inicjalizacją
+    if (isAccountPageInitialized) {
+      if (isDev) console.log('⚠️ Account page already initialized, skipping');
+      return;
+    }
+
+    if (isDev) console.log('🚀 Starting account page initialization');
+    isAccountPageInitialized = true;
+
+    try {
+      // Initialize DOM elements
+      const loadingStateElement = document.getElementById('loading-state');
+      const mainContentElement = document.getElementById('main-content');
+
+      userUsername = document.getElementById('user-username-info');
+      userEmail = document.getElementById('user-email-info');
+      userFullname = document.getElementById('user-fullname-info');
+      userRole = document.getElementById('user-role-info');
+      userRank = document.getElementById('user-rank-info');
+      
+      // Check authentication
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        if (isDev) console.log('❌ No token found, redirecting to login');
+        redirectToLogin();
+        return;
+      }
+
+      // Load user profile
+      currentUser = await ProfileService.getProfile();
+      if (isDev) console.log('✅ Profile loaded successfully');
+      
+      displayUserInfo();
+      setupFormHandlers();
+      
+      // Hide loading and show content
+      if (loadingStateElement) {
+        loadingStateElement.classList.add('hidden');
+      }
+      
+      if (mainContentElement) {
+        mainContentElement.classList.remove('hidden');
+      }
+
+    } catch (error) {
+      console.error('❌ Error initializing account page:', error);
+      isAccountPageInitialized = false;
+      showError(translations.failedToLoadAccount + ': ' + error.message);
+      
+      if (loadingState) loadingState.classList.add('hidden');
+      
+      // If unauthorized, redirect to login
+      if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+        localStorage.removeItem('access_token');
+        redirectToLogin();
+      }
+    }
+  }
+
+  function displayUserInfo() {
+    if (!currentUser) {
+      if (isDev) console.warn('❌ No currentUser data available');
+      return;
     }
     
-    // Profile Service
-    const ProfileService = {
-      async getProfile() {
-        try {
-          const response = await fetch(`${API_BASE}/profile/`, {
-            headers: getHeaders()
-          });
-          const data = await response.json();
-          if (response.ok) {
-            return { success: true, data };
-          } else {
-            return { success: false, error: data.detail || 'Błąd pobierania profilu' };
-          }
-        } catch (error) {
-          return { success: false, error: 'Błąd połączenia z serwerem' };
-        }
-      },
-
-      async changePassword(currentPassword, newPassword, confirmPassword) {
-        try {
-          const response = await fetch(`${API_BASE}/profile/change-password`, {
-            method: 'PUT',
-            headers: getHeaders(),
-            body: JSON.stringify({
-              current_password: currentPassword,
-              new_password: newPassword,
-              confirm_password: confirmPassword
-            })
-          });
-          const data = await response.json();
-          return { success: response.ok, data, error: data.detail };
-        } catch (error) {
-          return { success: false, error: 'Błąd połączenia z serwerem' };
-        }
-      },
-
-      async changeUsername(newUsername, currentPassword) {
-        try {
-          const response = await fetch(`${API_BASE}/profile/change-username`, {
-            method: 'PUT',
-            headers: getHeaders(),
-            body: JSON.stringify({
-              new_username: newUsername,
-              current_password: currentPassword
-            })
-          });
-          const data = await response.json();
-          return { success: response.ok, data, error: data.detail };
-        } catch (error) {
-          return { success: false, error: 'Błąd połączenia z serwerem' };
-        }
-      },
-
-      async changeEmail(newEmail, currentPassword) {
-        try {
-          const response = await fetch(`${API_BASE}/profile/change-email`, {
-            method: 'PUT',
-            headers: getHeaders(),
-            body: JSON.stringify({
-              new_email: newEmail,
-              current_password: currentPassword
-            })
-          });
-          const data = await response.json();
-          return { success: response.ok, data, error: data.detail };
-        } catch (error) {
-          return { success: false, error: 'Błąd połączenia z serwerem' };
-        }
-      },
-
-      async deleteAccount(currentPassword) {
-        try {
-          const response = await fetch(`${API_BASE}/profile/delete-account`, {
-            method: 'DELETE',
-            headers: getHeaders(),
-            body: JSON.stringify({
-              current_password: currentPassword,
-              confirmation: "DELETE_MY_ACCOUNT"
-            })
-          });
-          const data = await response.json();
-          return { success: response.ok, data, error: data.detail };
-        } catch (error) {
-          return { success: false, error: 'Błąd połączenia z serwerem' };
-        }
-      }
-    };
+    // Display basic info
+    if (userEmail) {
+      userEmail.textContent = currentUser.email || 'Not set';
+    }
     
-    // DOM Elements
-    const usernameForm = document.getElementById('username-form');
-    const passwordForm = document.getElementById('password-form');
-    const emailForm = document.getElementById('email-form');
-    const deleteForm = document.getElementById('delete-form');
-    const deleteConfirmationInput = document.getElementById('delete-confirmation');
-    const deleteSubmitBtn = document.getElementById('delete-submit');
+    if (userUsername) {
+      userUsername.textContent = currentUser.username || 'Not set';
+    }
     
-    // Load profile data on page load
-    loadProfileData();
-    
-    async function loadProfileData() {
-      const result = await ProfileService.getProfile();
-      if (result.success) {
-        updateProfileDisplay(result.data);
+    if (userFullname) {
+      userFullname.textContent = currentUser.full_name || 'Not set';
+    }
+
+    // Role handling
+    if (userRole) {
+      if (currentUser.role && typeof currentUser.role === 'object' && currentUser.role.display_name) {
+        userRole.textContent = currentUser.role.display_name;
+      } else if (currentUser.role && typeof currentUser.role === 'string') {
+        userRole.textContent = currentUser.role;
       } else {
-        showMessage(result.error, 'error');
+        userRole.textContent = 'Not set';
+      }
+    }
+
+    // Rank handling
+    if (userRank) {
+      if (currentUser.rank && typeof currentUser.rank === 'object' && currentUser.rank.display_name) {
+        userRank.textContent = currentUser.rank.display_name;
+      } else if (currentUser.rank && typeof currentUser.rank === 'string') {
+        userRank.textContent = currentUser.rank;
+      } else {
+        userRank.textContent = 'Not set';
       }
     }
     
-    function updateProfileDisplay(profile) {
-      const elements = {
-        'user-email': profile.email,
-        'user-username': profile.username,
-        'user-fullname': profile.full_name || 'Nie podano',
-        'user-role': profile.role?.display_name || profile.role?.name || 'User'
+    // Display member since date with language-specific formatting
+    const userCreated = document.getElementById('user-created-info');
+    if (userCreated && currentUser.created_at) {
+      const createdDate = new Date(currentUser.created_at);
+      
+      // Get current language from URL
+      const currentLang = window.location.pathname.split('/')[1] || 'en';
+      
+      // Language-specific date formatting
+      let locale = 'en-US'; // default
+      
+      switch(currentLang) {
+        case 'pl':
+          locale = 'pl-PL';
+          break;
+        case 'en':
+          locale = 'en-US';
+          break;
+        case 'de':
+          locale = 'de-DE';
+          break;
+        case 'fr':
+          locale = 'fr-FR';
+          break;
+        case 'es':
+          locale = 'es-ES';
+          break;
+        case 'it':
+          locale = 'it-IT';
+          break;
+        default:
+          locale = 'en-US';
+      }
+      
+      const dateOptions = {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
       };
       
-      Object.entries(elements).forEach(([id, value]) => {
-        const element = document.getElementById(id);
-        if (element) {
-          element.textContent = value;
-        }
-      });
-      
-      // Update form fields
-      const newUsernameInput = document.getElementById('new-username');
-      const newEmailInput = document.getElementById('new-email');
-      if (newUsernameInput) newUsernameInput.value = profile.username;
-      if (newEmailInput) newEmailInput.value = profile.email;
+      userCreated.textContent = createdDate.toLocaleDateString(locale, dateOptions);
     }
-    
-    // Username form handler
+
+    // Set current username in the form (if it exists)
+    if (newUsernameInput && currentUser.username) {
+      newUsernameInput.value = currentUser.username;
+    }
+  }
+
+  function setupFormHandlers() {
+    // Original Username form (keeping for compatibility)
     if (usernameForm) {
-      usernameForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const formData = new FormData(this);
-        const newUsername = formData.get('username');
-        const currentPassword = formData.get('current_password');
-        
-        if (!newUsername || !currentPassword) {
-          showMessage('Wypełnij wszystkie pola', 'error');
-          return;
-        }
-        
-        setButtonLoading(this.querySelector('button[type="submit"]'), true);
-        
-        const result = await ProfileService.changeUsername(newUsername, currentPassword);
-        
-        if (result.success) {
-          showMessage(result.data.message, 'success');
-          loadProfileData(); // Refresh profile data
-          this.querySelector('input[name="current_password"]').value = '';
-        } else {
-          showMessage(result.error, 'error');
-        }
-        
-        setButtonLoading(this.querySelector('button[type="submit"]'), false);
-      });
+      usernameForm.addEventListener('submit', handleUsernameUpdate);
     }
-    
-    // Password form handler
+
+    // Password form
     if (passwordForm) {
-      passwordForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const formData = new FormData(this);
-        const currentPassword = formData.get('currentPassword');
-        const newPassword = formData.get('newPassword');
-        const confirmPassword = formData.get('confirmPassword');
-        
-        if (!currentPassword || !newPassword || !confirmPassword) {
-          showMessage('Wypełnij wszystkie pola', 'error');
-          return;
-        }
-        
-        if (newPassword !== confirmPassword) {
-          showMessage('Nowe hasła nie są identyczne', 'error');
-          return;
-        }
-        
-        if (newPassword.length < 8) {
-          showMessage('Nowe hasło musi mieć minimum 8 znaków', 'error');
-          return;
-        }
-        
-        setButtonLoading(this.querySelector('button[type="submit"]'), true);
-        
-        const result = await ProfileService.changePassword(currentPassword, newPassword, confirmPassword);
-        
-        if (result.success) {
-          showMessage(result.data.message, 'success');
-          this.reset(); // Clear form
-        } else {
-          showMessage(result.error, 'error');
-        }
-        
-        setButtonLoading(this.querySelector('button[type="submit"]'), false);
-      });
+      passwordForm.addEventListener('submit', handlePasswordUpdate);
     }
-    
-    // Email form handler
-    if (emailForm) {
-      emailForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const formData = new FormData(this);
-        const newEmail = formData.get('email');
-        const currentPassword = formData.get('current_password');
-        
-        if (!newEmail || !currentPassword) {
-          showMessage('Wypełnij wszystkie pola', 'error');
-          return;
-        }
-        
-        if (!isValidEmail(newEmail)) {
-          showMessage('Nieprawidłowy format email', 'error');
-          return;
-        }
-        
-        setButtonLoading(this.querySelector('button[type="submit"]'), true);
-        
-        const result = await ProfileService.changeEmail(newEmail, currentPassword);
-        
-        if (result.success) {
-          showMessage(result.data.message, 'success');
-          if (result.data.requires_verification) {
-            showMessage('Email wymaga ponownej weryfikacji. Sprawdź swoją skrzynkę pocztową.', 'info');
-          }
-          loadProfileData(); // Refresh profile data
-          this.querySelector('input[name="current_password"]').value = '';
-        } else {
-          showMessage(result.error, 'error');
-        }
-        
-        setButtonLoading(this.querySelector('button[type="submit"]'), false);
-      });
-    }
-    
-    // Delete form handler
+
+    // Delete form
     if (deleteForm) {
-      deleteForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        if (!confirm('⚠️ OSTRZEŻENIE: Ta operacja jest NIEODWRACALNA!\n\nCzy na pewno chcesz usunąć swoje konto?\nWszystkie Twoje dane zostaną permanentnie utracone.')) {
-          return;
-        }
-        
-        const formData = new FormData(this);
-        const password = formData.get('password');
-        const confirmation = formData.get('confirmation');
-        
-        if (!password) {
-          showMessage('Wpisz hasło do potwierdzenia', 'error');
-          return;
-        }
-        
-        if (confirmation.trim().toUpperCase() !== 'DELETE_MY_ACCOUNT') {
-          showMessage('Wpisz dokładnie: DELETE_MY_ACCOUNT', 'error');
-          return;
-        }
-        
-        setButtonLoading(this.querySelector('button[type="submit"]'), true);
-        
-        const result = await ProfileService.deleteAccount(password);
-        
-        if (result.success) {
-          showMessage(result.data.message, 'success');
-          // Redirect to logout after successful deletion
-          setTimeout(() => {
-            localStorage.removeItem('authToken');
-            window.location.href = '/login';
-          }, 3000);
-        } else {
-          showMessage(result.error, 'error');
-        }
-        
-        setButtonLoading(this.querySelector('button[type="submit"]'), false);
-      });
+      deleteForm.addEventListener('submit', handleAccountDelete);
     }
-    
-    // Enable delete button when confirmation is typed
+
+    // Delete confirmation input
     if (deleteConfirmationInput && deleteSubmitBtn) {
-      deleteConfirmationInput.addEventListener('input', function() {
-        const isValid = this.value.trim().toUpperCase() === 'DELETE_MY_ACCOUNT';
+      deleteConfirmationInput.addEventListener('input', () => {
+        const isValid = deleteConfirmationInput.value.trim() === 'DELETE_MY_ACCOUNT';
         deleteSubmitBtn.disabled = !isValid;
         deleteSubmitBtn.className = isValid 
           ? 'px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors duration-200'
           : 'px-4 py-2 bg-gray-400 text-gray-700 rounded-lg font-medium cursor-not-allowed opacity-50';
       });
     }
-    
-    // Utility functions
-    function setButtonLoading(button, loading) {
-      if (!button) return;
+  }
+
+  async function handleUsernameUpdate(e) {
+    e.preventDefault();
+    if (!currentUser) return;
+
+    const formData = new FormData(usernameForm);
+    const newUsername = formData.get('username')?.toString().trim();
+    const currentPassword = formData.get('currentPassword')?.toString().trim();
+
+    if (!newUsername || !currentPassword) {
+      showError(translations.bothFieldsRequired);
+      return;
+    }
+
+    if (newUsername === currentUser.username) {
+      showInfo(translations.usernameAlreadySet);
+      return;
+    }
+
+    if (!validateUsername(newUsername)) {
+      return;
+    }
+
+    try {
+      const submitBtn = usernameForm.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = translations.updating;
+      }
+
+      await ProfileService.changeUsername(newUsername, currentPassword);
       
-      if (loading) {
-        button.disabled = true;
-        button.dataset.originalText = button.textContent;
-        button.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mx-auto"></div>';
-      } else {
-        button.disabled = false;
-        button.textContent = button.dataset.originalText || button.textContent;
+      // Update current user data
+      currentUser.username = newUsername;
+      displayUserInfo();
+      
+      // Clear password field
+      const passwordField = document.getElementById('username-current-password');
+      if (passwordField) passwordField.value = '';
+      
+      showSuccess(translations.usernameUpdateSuccess);
+
+    } catch (error) {
+      console.error('Error updating username:', error);
+      showError(translations.failedToUpdateUsername + ': ' + error.message);
+    } finally {
+      const submitBtn = usernameForm.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = translations.updateUsername;
       }
     }
-    
-    function isValidEmail(email) {
-      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  async function handlePasswordUpdate(e) {
+    e.preventDefault();
+
+    const formData = new FormData(passwordForm);
+    const currentPassword = formData.get('currentPassword')?.toString();
+    const newPassword = formData.get('newPassword')?.toString();
+    const confirmPassword = formData.get('confirmPassword')?.toString();
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      showError(translations.allPasswordFieldsRequired);
+      return;
     }
-    
-    // Message display function
-    function showMessage(message, type) {
-      const errorDiv = document.getElementById('error-message');
-      const successDiv = document.getElementById('success-message');
-      
-      if (!errorDiv || !successDiv) return;
-      
-      // Hide both messages first
-      errorDiv.classList.add('hidden');
-      successDiv.classList.add('hidden');
-      
-      // Show appropriate message
-      if (type === 'error') {
-        errorDiv.textContent = message;
-        errorDiv.classList.remove('hidden');
-      } else {
-        successDiv.textContent = message;
-        successDiv.classList.remove('hidden');
+
+    if (newPassword !== confirmPassword) {
+      showError(translations.passwordsDoNotMatchError);
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      showError(translations.passwordTooShort);
+      return;
+    }
+
+    if (!confirm(translations.confirmPasswordChange)) {
+      return;
+    }
+
+    try {
+      const submitBtn = passwordForm.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = translations.updating;
       }
+
+      await ProfileService.changePassword(currentPassword, newPassword, confirmPassword);
       
-      // Auto-hide after 8 seconds
+      passwordForm.reset();
+      showSuccess(translations.passwordUpdateSuccess);
+
+    } catch (error) {
+      if (isDev) console.error('Error updating password:', error);
+      showError(translations.failedToUpdatePassword + ': ' + error.message);
+    } finally {
+      const submitBtn = passwordForm.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = translations.updatePassword;
+      }
+    }
+  }
+
+  async function handleAccountDelete(e) {
+    e.preventDefault();
+
+    const formData = new FormData(deleteForm);
+    const password = formData.get('password')?.toString();
+    const confirmation = formData.get('confirmation')?.toString().trim().toUpperCase();
+
+    if (!password) {
+      showError(translations.passwordRequired);
+      return;
+    }
+
+    if (confirmation !== 'DELETE_MY_ACCOUNT') {
+      showError(translations.typeDeleteToConfirmFull);
+      return;
+    }
+
+    if (!confirm(translations.confirmDeleteFinal)) {
+      return;
+    }
+
+    try {
+      const submitBtn = deleteForm.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = translations.deleting;
+      }
+
+      await ProfileService.deleteAccount(password);
+      
+      showSuccess(translations.accountDeleteSuccess);
+      
+      // Clear local storage and redirect
+      localStorage.removeItem('access_token');
+      
       setTimeout(() => {
-        errorDiv.classList.add('hidden');
-        successDiv.classList.add('hidden');
-      }, 8000);
+        const currentLang = window.location.pathname.split('/')[1] || 'en';
+        window.location.href = `/${currentLang}`;
+      }, 2000);
+
+    } catch (error) {
+      if (isDev) console.error('Error deleting account:', error);
+      showError(translations.failedToDeleteAccount + ': ' + error.message);
+      
+      const submitBtn = deleteForm.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = translations.deleteAccount;
+      }
     }
+  }
+
+  function validateUsername(username) {
+    if (username.length < 3) {
+      showError(translations.usernameTooShortError);
+      return false;
+    }
+    
+    if (username.length > 50) {
+      showError(translations.usernameTooLongError);
+      return false;
+    }
+    
+    if (!/^[a-zA-Z0-9._-]+$/.test(username)) {
+      showError(translations.usernameInvalidChars);
+      return false;
+    }
+    
+    return true;
+  }
+
+  function redirectToLogin() {
+    const currentLang = window.location.pathname.split('/')[1] || 'en';
+    window.location.href = `/${currentLang}/login`;
+  }
+
+  function showError(message) {
+    if (window.StaticNotifications) {
+      window.StaticNotifications.error(message);
+    } else if (isDev) {
+      console.error('Notification system not available:', message);
+    }
+  }
+
+  function showSuccess(message) {
+    if (window.StaticNotifications) {
+      window.StaticNotifications.success(message);
+    } else if (isDev) {
+      console.log('Success:', message);
+    }
+  }
+
+  function showInfo(message) {
+    if (window.StaticNotifications) {
+      window.StaticNotifications.info(message);
+    } else if (isDev) {
+      console.info('Info:', message);
+    }
+  }
+
+  // Initialize on DOM load and Astro page navigation
+  document.addEventListener('DOMContentLoaded', () => {
+    if (isDev) console.log('📄 DOMContentLoaded - initializing account page');
+    initAccountPage();
+  });
+  
+  document.addEventListener('astro:page-load', () => {
+    if (isDev) console.log('🔄 Astro page load detected');
+    // Reset initialization flag on navigation
+    isAccountPageInitialized = false;
+    initAccountPage();
   });
 </script>
-
-<style>
-  /* Form field focus animations */
-  input:focus {
-    animation: focusGlow 0.3s ease-in-out;
-  }
-
-  @keyframes focusGlow {
-    0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5); }
-    100% { box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
-  }
-
-  /* Button loading state */
-  button:disabled {
-    cursor: not-allowed;
-    opacity: 0.7;
-  }
-
-  /* Smooth transitions */
-  .transition-all {
-    transition: all 0.2s ease-in-out;
-  }
-</style>
