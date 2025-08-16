@@ -145,6 +145,7 @@ export const blogTranslations = {
     'auth.logout': 'Logout',
     'auth.register': 'Register',
     'auth.forgotPassword': 'Forgot password?',
+    'auth.verifyAccount': 'Verify Account',
     
     // Registration
     'auth.registerTitle': 'Create Account',
@@ -165,6 +166,7 @@ export const blogTranslations = {
     'auth.passwordUppercase': 'One uppercase letter',
     'auth.passwordLowercase': 'One lowercase letter',
     'auth.passwordNumber': 'One number',
+    'auth.passwordSpecial': 'One special character (!@#$%^&*_...)',
     'auth.agreeToTerms': 'I agree to the',
     'auth.termsOfService': 'Terms of Service',
     'auth.and': 'and',
@@ -623,6 +625,7 @@ export const blogTranslations = {
     'auth.logout': 'Wyloguj',
     'auth.register': 'Rejestracja',
     'auth.forgotPassword': 'Zapomniałeś hasła?',
+    'auth.verifyAccount': 'Zweryfikuj Konto',
     
     // Rejestracja
     'auth.registerTitle': 'Utwórz Konto',

@@ -130,6 +130,7 @@ export const API_URLS = {
   verifyEmail: () => `${API_CONFIG.auth}/verify-email`,
   resendVerification: () => `${API_CONFIG.auth}/resend-verification`,
   me: () => `${API_CONFIG.auth}/me`, // Endpoint to check current user session
+  profile: () => `${API_CONFIG.baseUrl}/profile/`, // Full profile with role and rank
   updateProfile: () => `${API_CONFIG.auth}/update-profile`,
   updatePassword: () => `${API_CONFIG.auth}/update-password`,
   deleteAccount: () => `${API_CONFIG.auth}/delete-account`,

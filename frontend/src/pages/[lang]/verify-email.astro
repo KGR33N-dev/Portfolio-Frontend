@@ -45,14 +45,7 @@ const metadata = {
       />
       
       <!-- Messages -->
-      <div id="error-message" class="hidden bg-red-100 dark:bg-red-900/20 border border-red-400 text-red-700 dark:text-red-400 px-4 py-3 rounded">
-      </div>
-      
-      <div id="success-message" class="hidden bg-green-100 dark:bg-green-900/20 border border-green-400 text-green-700 dark:text-green-400 px-4 py-3 rounded">
-      </div>
-      
-      <div id="info-message" class="hidden bg-blue-100 dark:bg-blue-900/20 border border-blue-400 text-blue-700 dark:text-blue-400 px-4 py-3 rounded">
-      </div>
+      <!-- Using StaticNotifications instead of inline messages -->
       
       <!-- Verification Form -->
       <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 p-6">
@@ -149,15 +142,24 @@ const metadata = {
 <script>
   import { AdminAuth } from '../../utils/adminAuth';
   
+  // Type declarations for StaticNotifications
+  declare global {
+    interface Window {
+      StaticNotifications?: {
+        error: (message: string, duration?: number) => string | null;
+        success: (message: string, duration?: number) => string | null;
+        info: (message: string, duration?: number) => string | null;
+        warning: (message: string, duration?: number) => string | null;
+      };
+    }
+  }
+  
   function initVerifyEmailPage() {
     // Check if already logged in
     if (AdminAuth.isAuthenticated()) {
       const currentLang = window.location.pathname.split('/')[1];
-      const user = AdminAuth.getCurrentUser();
-      const redirectUrl = user?.is_admin 
-        ? `/${currentLang}/admin/dashboard` 
-        : `/${currentLang}/blog`;
-      window.location.href = redirectUrl;
+      // Remove getCurrentUser call as it doesn't exist
+      window.location.href = `/${currentLang}/blog`;
       return;
     }
     
@@ -173,38 +175,23 @@ const metadata = {
     const countdownTimer = document.getElementById('countdown-timer') as HTMLSpanElement;
     const emailDisplay = document.getElementById('email-display') as HTMLParagraphElement;
     
-    const errorDiv = document.getElementById('error-message') as HTMLDivElement;
-    const successDiv = document.getElementById('success-message') as HTMLDivElement;
-    const infoDiv = document.getElementById('info-message') as HTMLDivElement;
-    
     // let resendTimeout: NodeJS.Timeout | null = null;
     let countdownInterval: NodeJS.Timeout | null = null;
     
     function showError(message: string) {
-      errorDiv.textContent = message;
-      errorDiv.classList.remove('hidden');
-      successDiv.classList.add('hidden');
-      infoDiv.classList.add('hidden');
+      window.StaticNotifications?.error(message);
     }
     
     function showSuccess(message: string) {
-      successDiv.textContent = message;
-      successDiv.classList.remove('hidden');
-      errorDiv.classList.add('hidden');
-      infoDiv.classList.add('hidden');
+      window.StaticNotifications?.success(message);
     }
     
     function showInfo(message: string) {
-      infoDiv.textContent = message;
-      infoDiv.classList.remove('hidden');
-      errorDiv.classList.add('hidden');
-      successDiv.classList.add('hidden');
+      window.StaticNotifications?.info(message);
     }
     
     function hideMessages() {
-      errorDiv.classList.add('hidden');
-      successDiv.classList.add('hidden');
-      infoDiv.classList.add('hidden');
+      // Not needed with StaticNotifications - they auto-dismiss
     }
     
     function startResendCountdown() {
@@ -250,6 +237,9 @@ const metadata = {
     verifyForm?.addEventListener('submit', async (e) => {
       e.preventDefault();
       
+      // Prevent double submission
+      if (verifyButton.disabled) return;
+      
       const email = emailInput.value.trim();
       const code = codeInput.value.trim();
       
@@ -270,7 +260,7 @@ const metadata = {
       hideMessages();
       
       try {
-        // const result = await AdminAuth.verifyEmail(email, code);
+        await AdminAuth.verifyEmail(email, code);
         
         // Success
         showSuccess('Email verified successfully! Redirecting...');
@@ -297,6 +287,9 @@ const metadata = {
     
     // Resend verification code
     resendButton?.addEventListener('click', async () => {
+      // Prevent double clicks
+      if (resendButton.disabled) return;
+      
       const email = emailInput.value.trim();
       
       if (!email) {
@@ -328,7 +321,16 @@ const metadata = {
     }
   }
   
+  // Initialize only once - prevent duplicate event listeners
+  let initialized = false;
+  
+  function safeInit() {
+    if (initialized) return;
+    initialized = true;
+    initVerifyEmailPage();
+  }
+  
   // Initialize on both DOMContentLoaded and astro:page-load
-  document.addEventListener('DOMContentLoaded', initVerifyEmailPage);
-  document.addEventListener('astro:page-load', initVerifyEmailPage);
+  document.addEventListener('DOMContentLoaded', safeInit);
+  document.addEventListener('astro:page-load', safeInit);
 </script>

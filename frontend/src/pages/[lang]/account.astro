@@ -44,8 +44,10 @@ const metadata = {
           }}
         />
         <a 
+          id="dashboard-link"
           href={`/${lang}/admin/dashboard`}
           class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200 font-medium"
+          style="display: none;"
         >
           ← Dashboard
         </a>
@@ -578,6 +580,24 @@ const metadata = {
     // Set current username in the form (if it exists)
     if (newUsernameInput && currentUser.username) {
       newUsernameInput.value = currentUser.username;
+    }
+    
+    // Show/hide Dashboard link based on user role
+    const dashboardLink = document.getElementById('dashboard-link');
+    if (dashboardLink) {
+      // Check if user is admin
+      const isAdmin = currentUser.role && 
+                     currentUser.role.name && 
+                     (currentUser.role.name.toLowerCase() === 'admin' || 
+                      currentUser.role.name.toLowerCase() === 'administrator');
+      
+      if (isAdmin) {
+        dashboardLink.style.display = 'inline-block';
+        if (isDev) console.log('✅ User is admin - showing Dashboard link');
+      } else {
+        dashboardLink.style.display = 'none';
+        if (isDev) console.log('🚫 User is not admin - hiding Dashboard link');
+      }
     }
   }
 

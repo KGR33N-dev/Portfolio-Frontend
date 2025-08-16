@@ -259,13 +259,14 @@ const metadata = {
 
     // Check user session
     try {
-      user = await AdminAuth.checkSession();
-      if (!user?.is_admin) {
+      user = await AdminAuth.verifyUser();
+      if (!user || !AdminAuth.isUserAdmin(user)) {
         if (import.meta.env.DEV) {
           console.log('User is not admin');
         }
-        document.getElementById('access-denied')?.classList.remove('hidden');
-        document.getElementById('create-post')?.style.setProperty('display', 'none');
+        // Redirect to 403 page instead of showing inline message
+        const currentLang = window.location.pathname.split('/')[1];
+        window.location.href = `/${currentLang}/403`;
         return;
       }
     } catch (error) {

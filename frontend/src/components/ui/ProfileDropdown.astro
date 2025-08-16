@@ -164,6 +164,7 @@ const t = useTranslations(lang as keyof typeof languages);
     }
 
     // Verify authentication securely via API
+    // Check if user is authenticated and get user data
     const user = await AdminAuth.verifyUser();
     
     if (import.meta.env.DEV) {
@@ -181,7 +182,9 @@ const t = useTranslations(lang as keyof typeof languages);
     }
 
     if (import.meta.env.DEV) {
-      console.log('User authenticated - showing profile dropdown for:', user.email, 'Admin:', user.is_admin);
+      console.log('User authenticated - showing profile dropdown for:', user.email, 'Admin:', AdminAuth.isUserAdmin(user));
+      console.log('User role data:', user.role);
+      console.log('User rank data:', user.rank);
     }
 
     // Valid user - hide login button, show profile dropdown
@@ -199,12 +202,32 @@ const t = useTranslations(lang as keyof typeof languages);
     }
     
     if (roleElement) {
-      roleElement.textContent = user.is_admin ? 'Administrator' : 'User';
+      // Update user role display using display_name from backend or fallback
+      let roleDisplay = 'User'; // default
+      
+      if (user.role) {
+        // Use display_name from role object if available
+        roleDisplay = user.role.display_name || user.role.name || 'User';
+        
+        // Also add rank if available  
+        if (user.rank) {
+          const rankDisplay = user.rank.display_name || user.rank.name;
+          roleDisplay += ` (${rankDisplay})`;
+        }
+      }
+      
+      roleElement.textContent = roleDisplay;
+      
+      // Apply role color if available
+      if (user.role?.color) {
+        roleElement.style.color = user.role.color;
+      }
     }
     
     // Setup admin dashboard link
     if (adminDashboardLink) {
-      if (user.is_admin) {
+      // Show/hide admin links based on user role
+      if (AdminAuth.isUserAdmin(user)) {
         const currentLang = window.location.pathname.split('/')[1] || 'en';
         adminDashboardLink.href = `/${currentLang}/admin/dashboard`;
         adminDashboardLink.style.display = 'block';

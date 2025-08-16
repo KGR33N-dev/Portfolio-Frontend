@@ -44,17 +44,8 @@ const metadata = {
         }}
       />
       
-      <!-- Error Message -->
-      <div id="error-message" class="hidden bg-red-100 dark:bg-red-900/20 border border-red-400 text-red-700 dark:text-red-400 px-4 py-3 rounded">
-      </div>
-      
-      <!-- Success Message -->
-      <div id="success-message" class="hidden bg-green-100 dark:bg-green-900/20 border border-green-400 text-green-700 dark:text-green-400 px-4 py-3 rounded">
-      </div>
-      
-      <!-- Info Message -->
-      <div id="info-message" class="hidden bg-blue-100 dark:bg-blue-900/20 border border-blue-400 text-blue-700 dark:text-blue-400 px-4 py-3 rounded">
-      </div>
+      <!-- Messages -->
+      <!-- Using StaticNotifications instead of inline messages -->
       
       <!-- Registration Form -->
       <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 p-6">
@@ -87,9 +78,7 @@ const metadata = {
               autocomplete="username"
               class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
               placeholder={t('auth.usernamePlaceholder')}
-              pattern="[-a-zA-Z0-9_.]+"
-              minlength="3"
-              maxlength="30"
+              pattern="^[A-Za-z0-9.-_]{3,15}$"
             />
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('auth.usernameHint')}</p>
           </div>
@@ -128,6 +117,10 @@ const metadata = {
                 <li id="number-check" class="flex items-center">
                   <span class="w-4 h-4 mr-2">✗</span>
                   {t('auth.passwordNumber')}
+                </li>
+                <li id="special-check" class="flex items-center">
+                  <span class="w-4 h-4 mr-2">✗</span>
+                  {t('auth.passwordSpecial')}
                 </li>
               </ul>
             </div>
@@ -215,17 +208,28 @@ const metadata = {
   import { RateLimiter } from '../../utils/rateLimiter';
   import { PasswordValidator } from '../../utils/passwordValidator';
   
+  // Type declarations for StaticNotifications
+  declare global {
+    interface Window {
+      StaticNotifications?: {
+        error: (message: string, duration?: number) => string | null;
+        success: (message: string, duration?: number) => string | null;
+        info: (message: string, duration?: number) => string | null;
+        warning: (message: string, duration?: number) => string | null;
+      };
+    }
+  }
+  
   function initRegisterPage() {
     // Check if already logged in
     if (AdminAuth.isAuthenticated()) {
       const currentLang = window.location.pathname.split('/')[1];
-      const user = AdminAuth.getCurrentUser();
-      const redirectUrl = user?.is_admin 
-        ? `/${currentLang}/admin/dashboard` 
-        : `/${currentLang}/blog`;
-      window.location.href = redirectUrl;
+      // Remove getCurrentUser call as it doesn't exist  
+      window.location.href = `/${currentLang}/blog`;
       return;
     }
+    
+    console.log('🚀 Initializing register page...');
     
     const registerForm = document.getElementById('register-form') as HTMLFormElement;
     const emailInput = document.getElementById('email') as HTMLInputElement;
@@ -237,28 +241,42 @@ const metadata = {
     const registerButton = document.getElementById('register-button') as HTMLButtonElement;
     const buttonText = document.getElementById('button-text') as HTMLSpanElement;
     const spinner = document.getElementById('loading-spinner') as HTMLElement;
-    const errorDiv = document.getElementById('error-message') as HTMLDivElement;
-    const successDiv = document.getElementById('success-message') as HTMLDivElement;
-    const infoDiv = document.getElementById('info-message') as HTMLDivElement;
+    
+    // Debug: Check if all elements are found
+    console.log('📋 Form elements found:', {
+      registerForm: !!registerForm,
+      emailInput: !!emailInput,
+      usernameInput: !!usernameInput,
+      passwordInput: !!passwordInput,
+      confirmPasswordInput: !!confirmPasswordInput,
+      fullNameInput: !!fullNameInput,
+      termsCheckbox: !!termsCheckbox,
+      registerButton: !!registerButton,
+      buttonText: !!buttonText,
+      spinner: !!spinner
+    });
     
     // Password strength indicators
     const lengthCheck = document.getElementById('length-check');
     const uppercaseCheck = document.getElementById('uppercase-check');
     const lowercaseCheck = document.getElementById('lowercase-check');
     const numberCheck = document.getElementById('number-check');
+    const specialCheck = document.getElementById('special-check');
+    
+    console.log('💪 Password strength indicators found:', {
+      lengthCheck: !!lengthCheck,
+      uppercaseCheck: !!uppercaseCheck,
+      lowercaseCheck: !!lowercaseCheck,
+      numberCheck: !!numberCheck,
+      specialCheck: !!specialCheck
+    });
     
     function showError(message: string) {
-      errorDiv.textContent = message;
-      errorDiv.classList.remove('hidden');
-      successDiv.classList.add('hidden');
-      infoDiv.classList.add('hidden');
+      window.StaticNotifications?.error(message);
     }
     
     function showSuccess(message: string) {
-      successDiv.textContent = message;
-      successDiv.classList.remove('hidden');
-      errorDiv.classList.add('hidden');
-      infoDiv.classList.add('hidden');
+      window.StaticNotifications?.success(message);
     }
     
     // function showInfo(message: string) {
@@ -270,14 +288,18 @@ const metadata = {
     // }
     
     function hideMessages() {
-      errorDiv.classList.add('hidden');
-      successDiv.classList.add('hidden');
-      infoDiv.classList.add('hidden');
+      // Not needed with StaticNotifications - they auto-dismiss
     }
     
     function updatePasswordStrength() {
       const password = passwordInput.value;
       const validation = PasswordValidator.validate(password);
+      
+      console.log('🔐 Password validation:', {
+        password: password.replace(/./g, '*'), // Hide actual password
+        length: password.length,
+        validation: validation
+      });
       
       // Update basic requirements UI
       if (lengthCheck) {
@@ -304,6 +326,12 @@ const metadata = {
         numberCheck.querySelector('span')!.className = hasNumber ? 'w-4 h-4 mr-2 text-green-500' : 'w-4 h-4 mr-2 text-red-500';
       }
       
+      if (specialCheck) {
+        const hasSpecial = /[!@#$%^&*(),.?":{}|<>_]/.test(password);
+        specialCheck.querySelector('span')!.textContent = hasSpecial ? '✓' : '✗';
+        specialCheck.querySelector('span')!.className = hasSpecial ? 'w-4 h-4 mr-2 text-green-500' : 'w-4 h-4 mr-2 text-red-500';
+      }
+      
       // Update password field border based on strength
       if (password.length > 0) {
         const strengthColor = validation.strength === 'weak' ? '#ef4444' :
@@ -312,6 +340,7 @@ const metadata = {
         passwordInput.style.borderColor = strengthColor;
       }
       
+      console.log('✅ Password strength result:', validation.isValid);
       return validation.isValid;
     }
     
@@ -322,8 +351,26 @@ const metadata = {
       const emailValid = emailInput.validity.valid && emailInput.value.length > 0;
       const usernameValid = usernameInput.validity.valid && usernameInput.value.length >= 3;
       
+      // Debug logging
+      console.log('🔍 Form validation debug:', {
+        email: emailInput.value,
+        emailValid: emailValid,
+        emailValidity: emailInput.validity,
+        username: usernameInput.value,
+        usernameValid: usernameValid,
+        usernameValidity: usernameInput.validity,
+        passwordLength: passwordInput.value.length,
+        isPasswordStrong: isPasswordStrong,
+        passwordsMatch: passwordsMatch,
+        termsAccepted: termsAccepted,
+        confirmPasswordLength: confirmPasswordInput.value.length
+      });
+      
       const isValid = isPasswordStrong && passwordsMatch && termsAccepted && emailValid && usernameValid;
       registerButton.disabled = !isValid;
+      
+      console.log('✅ Form is valid:', isValid);
+      console.log('🔘 Button disabled:', registerButton.disabled);
       
       // Show password match indicator
       if (confirmPasswordInput.value.length > 0) {
@@ -334,14 +381,33 @@ const metadata = {
     }
     
     // Event listeners for real-time validation
-    passwordInput?.addEventListener('input', validateForm);
-    confirmPasswordInput?.addEventListener('input', validateForm);
-    emailInput?.addEventListener('input', validateForm);
-    usernameInput?.addEventListener('input', validateForm);
-    termsCheckbox?.addEventListener('change', validateForm);
+    console.log('🎯 Adding event listeners...');
+    passwordInput?.addEventListener('input', () => {
+      console.log('🔐 Password input changed');
+      validateForm();
+    });
+    confirmPasswordInput?.addEventListener('input', () => {
+      console.log('🔐 Confirm password input changed');
+      validateForm();
+    });
+    emailInput?.addEventListener('input', () => {
+      console.log('📧 Email input changed');
+      validateForm();
+    });
+    usernameInput?.addEventListener('input', () => {
+      console.log('👤 Username input changed');
+      validateForm();
+    });
+    termsCheckbox?.addEventListener('change', () => {
+      console.log('📋 Terms checkbox changed:', termsCheckbox.checked);
+      validateForm();
+    });
     
     registerForm?.addEventListener('submit', async (e) => {
       e.preventDefault();
+      
+      // Prevent double submission
+      if (registerButton.disabled) return;
       
       if (!validateForm()) {
         showError('Please fix the errors above');
@@ -373,8 +439,7 @@ const metadata = {
           email,
           username,
           password,
-          full_name: fullName || null,
-          is_admin: false // Regular user registration
+          full_name: fullName || null
         };
         
         await AdminAuth.register(userData);
@@ -417,10 +482,27 @@ const metadata = {
     emailInput?.focus();
     
     // Initial validation
+    console.log('🔍 Running initial validation...');
     validateForm();
   }
   
+  // Initialize only once - prevent duplicate event listeners
+  let initialized = false;
+  
+  function safeInit() {
+    if (initialized) return;
+    initialized = true;
+    initRegisterPage();
+  }
+  
   // Initialize on both DOMContentLoaded and astro:page-load
-  document.addEventListener('DOMContentLoaded', initRegisterPage);
-  document.addEventListener('astro:page-load', initRegisterPage);
+  console.log('📄 Setting up page initialization listeners...');
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('📄 DOMContentLoaded fired - initializing register page');
+    safeInit();
+  });
+  document.addEventListener('astro:page-load', () => {
+    console.log('🔄 astro:page-load fired - initializing register page');
+    safeInit();
+  });
 </script>

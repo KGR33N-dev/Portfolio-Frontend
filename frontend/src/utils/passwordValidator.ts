@@ -48,8 +48,8 @@ export class PasswordValidator {
       weight: 15
     },
     {
-      test: (pwd: string) => /[!@#$%^&*(),.?":{}|<>]/.test(pwd),
-      message: 'One special character (!@#$%^&*...)',
+      test: (pwd: string) => /[!@#$%^&*(),.?":{}|<>_]/.test(pwd),
+      message: 'One special character (!@#$%^&*_...)',
       weight: 20
     },
     {

@@ -3,7 +3,7 @@ import Layout from '~/layouts/PageLayout.astro';
 import Headline from '~/components/ui/Headline.astro';
 import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
 import { useTranslations } from '~/i18n/utils';
-import { languages } from '~/i18n';
+import { languages } from '~/i18n/utils';
 
 export function getStaticPaths() {
   return Object.keys(languages).map(lang => ({
@@ -252,7 +252,7 @@ const metadata = {
     try {
       // Verify token with server
       const user = await window.AdminAuth.verifyUser();
-      if (!user || !user.is_admin) {
+      if (!user || !window.AdminAuth.isUserAdmin(user)) {
         showAccessDenied();
         return;
       }
@@ -539,11 +539,9 @@ const metadata = {
   }
 
   function showAccessDenied() {
-    const accessDenied = document.getElementById('access-denied');
-    const dashboard = document.getElementById('admin-dashboard');
-    
-    if (accessDenied) accessDenied.classList.remove('hidden');
-    if (dashboard) dashboard.classList.add('hidden');
+    // Redirect to 403 page instead of showing inline message
+    const currentLang = window.location.pathname.split('/')[1];
+    window.location.href = `/${currentLang}/403`;
   }
 
   function redirectToLogin() {

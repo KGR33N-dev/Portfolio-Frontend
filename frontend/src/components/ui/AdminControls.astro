@@ -100,10 +100,17 @@
   function showAdminControls() {
     const loginBtn = document.getElementById('admin-login-btn');
     const authenticatedControls = document.getElementById('admin-authenticated');
+    const dashboardBtn = document.getElementById('admin-dashboard-btn');
     const logoutBtn = document.getElementById('admin-logout-btn');
 
     if (loginBtn) loginBtn.style.display = 'none';
     if (authenticatedControls) authenticatedControls.style.display = 'flex';
+
+    // Update dashboard link with current language
+    if (dashboardBtn) {
+      const currentLang = window.location.pathname.split('/')[1] || 'en';
+      (dashboardBtn as HTMLAnchorElement).href = `/${currentLang}/admin/dashboard`;
+    }
 
     // Setup logout functionality
     if (logoutBtn) {

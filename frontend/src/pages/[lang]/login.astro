@@ -44,13 +44,8 @@ const metadata = {
         }}
       />
       
-      <!-- Error Message -->
-      <div id="error-message" class="hidden bg-red-100 dark:bg-red-900/20 border border-red-400 text-red-700 dark:text-red-400 px-4 py-3 rounded">
-      </div>
-      
-      <!-- Success Message -->
-      <div id="success-message" class="hidden bg-green-100 dark:bg-green-900/20 border border-green-400 text-green-700 dark:text-green-400 px-4 py-3 rounded">
-      </div>
+      <!-- Messages -->
+      <!-- Using StaticNotifications instead of inline messages -->
       
       <!-- Login Form -->
       <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 p-6">
@@ -117,6 +112,14 @@ const metadata = {
               </a>
             </p>
           </div>
+          
+          <div class="text-center">
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              <a href={`/${lang}/verify-email`} class="text-green-600 hover:text-green-500 dark:text-green-400 dark:hover:text-green-300">
+                {t('auth.verifyAccount')}
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -126,23 +129,31 @@ const metadata = {
 <script>
   import { AdminAuth } from '../../utils/adminAuth';
   
+  // Type declarations for StaticNotifications
+  declare global {
+    interface Window {
+      StaticNotifications?: {
+        error: (message: string, duration?: number) => string | null;
+        success: (message: string, duration?: number) => string | null;
+        info: (message: string, duration?: number) => string | null;
+        warning: (message: string, duration?: number) => string | null;
+      };
+    }
+  }
+  
   function initLoginPage() {
     // Check if already logged in
     if (AdminAuth.isAuthenticated()) {
       const currentLang = window.location.pathname.split('/')[1];
-      // Regular users go to blog, admins can go to dashboard
-      const user = AdminAuth.getCurrentUser();
-      const redirectUrl = user?.is_admin 
-        ? `/${currentLang}/admin/dashboard` 
-        : `/${currentLang}/blog`;
-      window.location.href = redirectUrl;
+      // Just redirect to blog since getCurrentUser doesn't exist
+      window.location.href = `/${currentLang}/blog`;
       return;
     }
     
     // Check for verification success message
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('verified') === 'true') {
-      showSuccess('Email verified successfully! You can now log in.');
+      window.StaticNotifications?.success('Email verified successfully! You can now log in.');
     }
     
     const loginForm = document.getElementById('login-form') as HTMLFormElement;
@@ -151,28 +162,24 @@ const metadata = {
     const loginButton = document.getElementById('login-button') as HTMLButtonElement;
     const buttonText = document.getElementById('button-text') as HTMLSpanElement;
     const spinner = document.getElementById('loading-spinner') as HTMLElement;
-    const errorDiv = document.getElementById('error-message') as HTMLDivElement;
-    const successDiv = document.getElementById('success-message') as HTMLDivElement;
     
     function showError(message: string) {
-      errorDiv.textContent = message;
-      errorDiv.classList.remove('hidden');
-      successDiv.classList.add('hidden');
+      window.StaticNotifications?.error(message);
     }
     
     function showSuccess(message: string) {
-      successDiv.textContent = message;
-      successDiv.classList.remove('hidden');
-      errorDiv.classList.add('hidden');
+      window.StaticNotifications?.success(message);
     }
     
     function hideMessages() {
-      errorDiv.classList.add('hidden');
-      successDiv.classList.add('hidden');
+      // Not needed with StaticNotifications - they auto-dismiss
     }
     
     loginForm?.addEventListener('submit', async (e) => {
       e.preventDefault();
+      
+      // Prevent double submission
+      if (loginButton.disabled) return;
       
       // Show loading state
       loginButton.disabled = true;
@@ -198,34 +205,34 @@ const metadata = {
         
         // Redirect based on user role after short delay
         setTimeout(() => {
-          const redirectUrl = user?.is_admin 
+          const redirectUrl = AdminAuth.isUserAdmin(user)
             ? `/${currentLang}/admin/dashboard` 
             : `/${currentLang}/blog`;
           window.location.href = redirectUrl;
         }, 1000);
         
       } catch (error) {
-        let message = error instanceof Error ? error.message : 'Login failed';
+        const message = error instanceof Error ? error.message : 'Login failed';
         
-        // Handle specific error cases
-        if (message.includes('email not verified')) {
-          message = 'Please verify your email before logging in.';
-          // Redirect to verification page after showing error
+        // Handle specific error cases - check for keywords in the detailed message
+        if (message.includes('email not verified') || message.includes('not verified')) {
+          // Show original detailed message but add redirect
+          showError(message);
           setTimeout(() => {
             const currentLang = window.location.pathname.split('/')[1];
             const emailValue = emailInput.value.trim();
             window.location.href = `/${currentLang}/verify-email?email=${encodeURIComponent(emailValue)}`;
           }, 3000);
-        } else if (message.includes('account locked')) {
-          message = 'Account temporarily locked due to too many failed attempts. Please try again later.';
-        } else if (message.includes('invalid credentials')) {
-          message = 'Invalid email or password. Please try again.';
+        } else if (message.includes('Too many') || message.includes('429')) {
+          // Rate limiting - show detailed message
+          showError(message);
+        } else {
+          // Show the detailed error message from server
+          showError(message);
         }
         
-        showError(message);
-        
         // Focus back to email if it was an auth error
-        if (message.includes('credentials') || message.includes('Invalid')) {
+        if (message.includes('Invalid') || message.includes('password')) {
           emailInput.focus();
         }
       } finally {
@@ -240,7 +247,16 @@ const metadata = {
     emailInput?.focus();
   }
   
+  // Initialize only once - prevent duplicate event listeners
+  let initialized = false;
+  
+  function safeInit() {
+    if (initialized) return;
+    initialized = true;
+    initLoginPage();
+  }
+  
   // Initialize on both DOMContentLoaded and astro:page-load
-  document.addEventListener('DOMContentLoaded', initLoginPage);
-  document.addEventListener('astro:page-load', initLoginPage);
+  document.addEventListener('DOMContentLoaded', safeInit);
+  document.addEventListener('astro:page-load', safeInit);
 </script>

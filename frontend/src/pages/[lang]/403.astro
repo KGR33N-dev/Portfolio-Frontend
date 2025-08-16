@@ -1,0 +1,116 @@
+---
+// Prerender this page as static
+export const prerender = true;
+
+import Layout from '~/layouts/Layout.astro';
+import { useTranslations } from '~/i18n/utils';
+import { languages } from '~/i18n';
+
+export function getStaticPaths() {
+  return Object.keys(languages).map(lang => ({
+    params: { lang }
+  }));
+}
+
+const { lang } = Astro.params;
+const t = useTranslations(lang as keyof typeof languages);
+---
+
+<Layout
+  metadata={{
+    title: t('403.title'),
+    description: t('403.description'),
+    ignoreTitleTemplate: true,
+  }}
+>
+  <section class="flex items-center justify-center min-h-screen px-4 py-16 bg-page dark:bg-dark">
+    <div class="text-center max-w-2xl mx-auto">
+      <!-- Error Icon -->
+      <div class="mb-8">
+        <div class="mx-auto w-24 h-24 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+          <svg class="w-12 h-12 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Error Content -->
+      <div class="mb-8">
+        <h1 class="text-6xl font-bold text-gray-900 dark:text-white mb-4">403</h1>
+        <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
+          {t('403.heading')}
+        </h2>
+        <p class="text-lg text-gray-600 dark:text-gray-400 mb-8">
+          {t('403.description')}
+        </p>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+        <a 
+          href={`/${lang}`}
+          class="inline-flex items-center px-6 py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary-600 transition-colors duration-200"
+        >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+          </svg>
+          {t('403.homeButton')}
+        </a>
+        
+        <a 
+          href={`/${lang}/contact`}
+          class="inline-flex items-center px-6 py-3 bg-secondary text-white font-medium rounded-lg hover:bg-secondary-600 transition-colors duration-200"
+        >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+          {t('403.contactButton')}
+        </a>
+      </div>
+
+      <!-- Help Section -->
+      <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-6 text-left max-w-xl mx-auto">
+        <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+          {t('403.reason')}
+        </h3>
+        <ul class="space-y-2 text-gray-600 dark:text-gray-400 mb-4">
+          <li class="flex items-start">
+            <span class="text-red-500 mr-2">•</span>
+            <span>{t('403.reason1')}</span>
+          </li>
+          <li class="flex items-start">
+            <span class="text-red-500 mr-2">•</span>
+            <span>{t('403.reason2')}</span>
+          </li>
+          <li class="flex items-start">
+            <span class="text-red-500 mr-2">•</span>
+            <span>{t('403.reason3')}</span>
+          </li>
+        </ul>
+        
+        <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+          {t('403.help')}
+        </h3>
+        <ul class="space-y-2 text-gray-600 dark:text-gray-400">
+          <li class="flex items-start">
+            <span class="text-blue-500 mr-2">•</span>
+            <span>{t('403.help1')}</span>
+          </li>
+          <li class="flex items-start">
+            <span class="text-blue-500 mr-2">•</span>
+            <span>{t('403.help2')}</span>
+          </li>
+          <li class="flex items-start">
+            <span class="text-blue-500 mr-2">•</span>
+            <span>{t('403.help3')}</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Screen Reader Content -->
+  <div class="sr-only">
+    <span>{t('403.srError')}</span>
+  </div>
+</Layout>

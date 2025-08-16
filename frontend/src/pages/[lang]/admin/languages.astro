@@ -334,17 +334,15 @@ const metadata = {
     // Check if user is admin
     try {
       console.log('🔐 Checking admin status...');
-      const user = await AdminAuth.checkSession();
+      const user = await AdminAuth.verifyUser();
       console.log('👤 User data:', user);
       
-      if (!user?.is_admin) {
-        console.log('❌ User is not admin, showing access denied');
-        const accessDeniedDiv = document.getElementById('access-denied');
-        const managementContent = document.getElementById('language-management');
-        
-        if (accessDeniedDiv) accessDeniedDiv.classList.remove('hidden');
-        if (managementContent) managementContent.style.display = 'none';
-        isCurrentlyInitializing = false; // Reset flag
+      if (!user || !AdminAuth.isUserAdmin(user)) {
+        console.log('❌ User is not admin, redirecting to 403');
+        // Redirect to 403 page instead of showing inline message
+        const currentLang = window.location.pathname.split('/')[1];
+        isCurrentlyInitializing = false; // Reset flag before redirect
+        window.location.href = `/${currentLang}/403`;
         return;
       }
       
