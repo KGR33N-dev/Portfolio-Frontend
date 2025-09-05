@@ -113,58 +113,22 @@ const t = useTranslations(lang as keyof typeof languages);
 
 <script>
   import { AdminAuth } from '../../utils/adminAuth';
-  
-  async function initProfileDropdown() {
+
+  // This function updates the UI based on auth state. It's safe to call multiple times.
+  async function updateProfileUI() {
     const loginBtn = document.getElementById('profile-login-btn') as HTMLAnchorElement;
     const profileDropdown = document.getElementById('profile-dropdown');
     
     if (import.meta.env.DEV) {
-      console.log('🔍 ProfileDropdown Debug:');
-      console.log('Login button found:', !!loginBtn);
-      console.log('Profile dropdown found:', !!profileDropdown);
+      console.log('🔍 Updating ProfileDropdown UI...');
     }
 
-    // Set login URL with current language
+    // Set login URL with current language, this can be updated on each check
     if (loginBtn) {
       const currentLang = window.location.pathname.split('/')[1] || 'en';
       loginBtn.href = `/${currentLang}/login`;
-      if (import.meta.env.DEV) {
-        console.log('Login URL set to:', loginBtn.href);
-      }
     }
 
-    // Quick check for token
-    const token = localStorage.getItem('access_token');
-    if (import.meta.env.DEV) {
-      console.log('Token exists:', !!token);
-    }
-    
-    if (!token) {
-      // No token - show login button, hide profile dropdown
-      if (import.meta.env.DEV) {
-        console.log('No token - showing login button');
-      }
-      if (loginBtn) {
-        loginBtn.style.display = 'inline-flex';
-        if (import.meta.env.DEV) {
-          console.log('Login button shown');
-        }
-      }
-      if (profileDropdown) {
-        profileDropdown.style.display = 'none';
-        if (import.meta.env.DEV) {
-          console.log('Profile dropdown hidden');
-        }
-      }
-      return;
-    }
-
-    if (import.meta.env.DEV) {
-      console.log('Token found - verifying with API...');
-    }
-
-    // Verify authentication securely via API
-    // Check if user is authenticated and get user data
     const user = await AdminAuth.verifyUser();
     
     if (import.meta.env.DEV) {
@@ -172,63 +136,46 @@ const t = useTranslations(lang as keyof typeof languages);
     }
     
     if (!user) {
-      // Invalid token - show login button, hide profile dropdown
-      if (import.meta.env.DEV) {
-        console.log('Invalid token - showing login button');
-      }
+      // Not authenticated
       if (loginBtn) loginBtn.style.display = 'inline-flex';
       if (profileDropdown) profileDropdown.style.display = 'none';
       return;
     }
 
+    // Authenticated
     if (import.meta.env.DEV) {
-      console.log('User authenticated - showing profile dropdown for:', user.email, 'Admin:', AdminAuth.isUserAdmin(user));
-      console.log('User role data:', user.role);
-      console.log('User rank data:', user.rank);
+      console.log('User authenticated - showing profile dropdown for:', user.email);
     }
 
-    // Valid user - hide login button, show profile dropdown
     if (loginBtn) loginBtn.style.display = 'none';
     if (profileDropdown) profileDropdown.style.display = 'block';
     
-    // Update profile info
     const emailElement = document.getElementById('user-email');
     const roleElement = document.getElementById('user-role');
     const adminDashboardLink = document.getElementById('admin-dashboard-link') as HTMLAnchorElement;
     const accountSettingsLink = document.getElementById('account-settings-link') as HTMLAnchorElement;
     
-    if (emailElement) {
-      emailElement.textContent = user.email || '';
-    }
+    if (emailElement) emailElement.textContent = user.email || '';
     
     if (roleElement) {
-      // Update user role display using display_name from backend or fallback
-      let roleDisplay = 'User'; // default
-      
+      let roleDisplay = 'User';
       if (user.role) {
-        // Use display_name from role object if available
         roleDisplay = user.role.display_name || user.role.name || 'User';
-        
-        // Also add rank if available  
         if (user.rank) {
           const rankDisplay = user.rank.display_name || user.rank.name;
           roleDisplay += ` (${rankDisplay})`;
         }
       }
-      
       roleElement.textContent = roleDisplay;
-      
-      // Apply role color if available
       if (user.role?.color) {
         roleElement.style.color = user.role.color;
       }
     }
     
-    // Setup admin dashboard link
+    // Update links that depend on language
+    const currentLang = window.location.pathname.split('/')[1] || 'en';
     if (adminDashboardLink) {
-      // Show/hide admin links based on user role
       if (AdminAuth.isUserAdmin(user)) {
-        const currentLang = window.location.pathname.split('/')[1] || 'en';
         adminDashboardLink.href = `/${currentLang}/admin/dashboard`;
         adminDashboardLink.style.display = 'block';
       } else {
@@ -236,122 +183,54 @@ const t = useTranslations(lang as keyof typeof languages);
       }
     }
 
-    // Handle dropdown toggle
+    if (accountSettingsLink) {
+        accountSettingsLink.href = `/${currentLang}/account`;
+    }
+  }
+
+  document.addEventListener('astro:page-load', () => {
+    updateProfileUI();
+
     const dropdownToggle = document.getElementById('profile-toggle-btn');
     const dropdownMenu = document.getElementById('profile-dropdown-menu');
-
-    // Setup account settings link (after dropdown elements are defined)
-    if (accountSettingsLink && dropdownMenu) {
-      const currentLang = window.location.pathname.split('/')[1] || 'en';
-      accountSettingsLink.href = `/${currentLang}/account`;
-      
-      // Clean navigation - close dropdown and navigate
-      accountSettingsLink.addEventListener('click', () => {
-        // Close dropdown before navigation
-        dropdownMenu.classList.add('hidden');
-      });
-    }
     
     if (dropdownToggle && dropdownMenu) {
-      // Remove existing listeners
-      const newToggle = dropdownToggle.cloneNode(true) as HTMLElement;
-      dropdownToggle.parentNode?.replaceChild(newToggle, dropdownToggle);
-      
-      newToggle.addEventListener('click', (e) => {
+      dropdownToggle.addEventListener('click', (e) => {
         e.stopPropagation();
         dropdownMenu.classList.toggle('hidden');
       });
       
-      // Close dropdown when clicking outside
       document.addEventListener('click', () => {
         dropdownMenu.classList.add('hidden');
       });
     }
 
-    // Setup logout functionality
-    const logoutBtn = document.getElementById('profile-logout-btn');
-    if (logoutBtn) {
-      // Remove old listeners
-      const newLogoutBtn = logoutBtn.cloneNode(true) as HTMLElement;
-      logoutBtn.parentNode?.replaceChild(newLogoutBtn, logoutBtn);
-      
-      newLogoutBtn.addEventListener('click', () => {
-        if (import.meta.env.DEV) {
-          console.log('Logout clicked');
-        }
-        AdminAuth.logout();
-        window.location.reload();
+    // Account settings link
+    const accountSettingsLink = document.getElementById('account-settings-link') as HTMLAnchorElement;
+    if (accountSettingsLink && dropdownMenu) {
+      accountSettingsLink.addEventListener('click', () => {
+        dropdownMenu.classList.add('hidden');
       });
     }
-  }
 
-  // Global cleanup and initialization tracker
-  let isProfileDropdownInitialized = false;
-  let storageListener: ((e: StorageEvent) => void) | null = null;
-
-  function cleanupProfileDropdown() {
-    if (storageListener) {
-      window.removeEventListener('storage', storageListener);
-      storageListener = null;
-    }
-  }
-
-  function initProfileDropdownOnce() {
-    // For language switches (full page reloads), always re-check authentication
-    if (import.meta.env.DEV) {
-      console.log('Initializing ProfileDropdown - checking if already initialized:', isProfileDropdownInitialized);
+    // Logout button
+    const logoutBtn = document.getElementById('profile-logout-btn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', () => {
+        if (import.meta.env.DEV) console.log('Logout clicked');
+        AdminAuth.logout();
+      });
     }
 
-    // Cleanup any existing listeners first
-    cleanupProfileDropdown();
-    
-    if (import.meta.env.DEV) {
-      console.log('Initializing ProfileDropdown and checking authentication');
-    }
-
-    isProfileDropdownInitialized = true;
-    
-    // Initialize the dropdown (this will check authentication)
-    initProfileDropdown();
-    
-    // Setup storage listener (only once)
-    storageListener = (e) => {
-      if (e.key === 'access_token') {
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'access_token' || e.key === 'refresh_token') {
         if (import.meta.env.DEV) {
-          console.log('Access token changed in storage, reinitializing ProfileDropdown');
+          console.log('Auth token changed in storage, re-validating UI.');
         }
-        initProfileDropdown();
+        updateProfileUI();
       }
-    };
-    window.addEventListener('storage', storageListener);
-  }
-
-  // Single initialization strategy - always re-check on page load for language switches
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      // Reset state for fresh page load (like language switches)
-      isProfileDropdownInitialized = false;
-      initProfileDropdownOnce();
-    }, { once: true });
-  } else {
-    // Page already loaded, initialize immediately
-    isProfileDropdownInitialized = false;
-    initProfileDropdownOnce();
-  }
-  
-  // For Astro SPA navigation, only reinitialize if not already initialized
-  document.addEventListener('astro:page-load', () => {
-    if (import.meta.env.DEV) {
-      console.log('Astro page load detected, checking ProfileDropdown status');
-    }
-    
-    // Reset initialization state and force re-check for language switches
-    isProfileDropdownInitialized = false;
-    initProfileDropdownOnce();
+    });
   });
-
-  // Cleanup on page unload
-  window.addEventListener('beforeunload', cleanupProfileDropdown);
 </script>
 
 <style>

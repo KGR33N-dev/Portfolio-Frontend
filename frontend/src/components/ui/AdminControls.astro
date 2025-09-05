@@ -63,15 +63,14 @@
       return;
     }
 
-    // Quick check for token
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      showLoginButton();
-      return;
+    // Check admin status securely via HTTP-only cookies
+    let isAdmin = false;
+    try {
+      const user = await AdminAuth.verifyUser();
+      isAdmin = user ? AdminAuth.isUserAdmin(user) : false;
+    } catch {
+      isAdmin = false;
     }
-
-    // Verify admin status securely via API
-    const isAdmin = await AdminAuth.isAdminSecure();
     
     console.log('AdminControls: Admin status verified:', isAdmin);
 

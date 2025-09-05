@@ -310,15 +310,15 @@ const metadata = {
     baseUrl: 'http://localhost:8000/api',
     
     getAuthHeaders() {
-      const token = localStorage.getItem('access_token');
+      // No longer needed - using HTTP-only cookies
       return {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       };
     },
 
     async getProfile() {
       const response = await fetch(`${this.baseUrl}/profile/`, {
+        credentials: 'include', // Important: include HTTP-only cookies
         headers: this.getAuthHeaders()
       });
       
@@ -333,6 +333,7 @@ const metadata = {
     async changePassword(currentPassword, newPassword, confirmPassword) {
       const response = await fetch(`${this.baseUrl}/profile/change-password`, {
         method: 'PUT',
+        credentials: 'include', // Important: include HTTP-only cookies
         headers: this.getAuthHeaders(),
         body: JSON.stringify({
           current_password: currentPassword,
@@ -352,6 +353,7 @@ const metadata = {
     async changeUsername(newUsername, currentPassword) {
       const response = await fetch(`${this.baseUrl}/profile/change-username`, {
         method: 'PUT',
+        credentials: 'include', // Important: include HTTP-only cookies
         headers: this.getAuthHeaders(),
         body: JSON.stringify({
           new_username: newUsername,
@@ -370,6 +372,7 @@ const metadata = {
     async changeEmail(newEmail, currentPassword) {
       const response = await fetch(`${this.baseUrl}/profile/change-email`, {
         method: 'PUT',
+        credentials: 'include', // Important: include HTTP-only cookies
         headers: this.getAuthHeaders(),
         body: JSON.stringify({
           new_email: newEmail,
@@ -388,6 +391,7 @@ const metadata = {
     async deleteAccount(currentPassword) {
       const response = await fetch(`${this.baseUrl}/profile/delete-account`, {
         method: 'DELETE',
+        credentials: 'include', // Important: include HTTP-only cookies
         headers: this.getAuthHeaders(),
         body: JSON.stringify({
           current_password: currentPassword,
@@ -413,7 +417,6 @@ const metadata = {
 
   // DOM Elements
   const loadingState = document.getElementById('loading-state');
-  const mainContent = document.getElementById('main-content');
 
   // User info elements (will be initialized in initAccountPage)
   let userEmail, userUsername, userFullname, userRole, userRank;
@@ -454,17 +457,12 @@ const metadata = {
       userRole = document.getElementById('user-role-info');
       userRank = document.getElementById('user-rank-info');
       
-      // Check authentication
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        if (isDev) console.log('❌ No token found, redirecting to login');
-        redirectToLogin();
-        return;
-      }
-
-      // Load user profile
+      // Check authentication by trying to load profile (HTTP-only cookies)
+      if (isDev) console.log('🔍 Checking authentication with HTTP-only cookies...');
+      
+      // Load user profile - this will fail if not authenticated
       currentUser = await ProfileService.getProfile();
-      if (isDev) console.log('✅ Profile loaded successfully');
+      if (isDev) console.log('✅ Profile loaded successfully, user is authenticated');
       
       displayUserInfo();
       setupFormHandlers();
@@ -487,7 +485,7 @@ const metadata = {
       
       // If unauthorized, redirect to login
       if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-        localStorage.removeItem('access_token');
+        if (isDev) console.log('🔄 Not authenticated, redirecting to login');
         redirectToLogin();
       }
     }

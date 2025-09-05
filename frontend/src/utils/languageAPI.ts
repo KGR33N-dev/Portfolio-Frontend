@@ -4,7 +4,9 @@ import type {
   LanguageStats,
   LanguageCreateRequest,
   LanguageUpdateRequest
-} from '../types/language.ts';// Language management utility functions
+} from '../types/language.ts';
+
+// Language management utility functions
 export class LanguageAPI {
   
   /**
@@ -43,13 +45,13 @@ export class LanguageAPI {
   /**
    * Create new language (Admin only)
    */
-  static async createLanguage(data: LanguageCreateRequest, adminToken: string): Promise<Language> {
+  static async createLanguage(data: LanguageCreateRequest): Promise<Language> {
     const response = await fetch(API_URLS.createLanguage(), {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${adminToken}`
+        'Content-Type': 'application/json'
       },
+      credentials: 'include',
       body: JSON.stringify(data)
     });
 
@@ -75,13 +77,13 @@ export class LanguageAPI {
   /**
    * Update language (Admin only)
    */
-  static async updateLanguage(code: string, data: LanguageUpdateRequest, adminToken: string): Promise<Language> {
+  static async updateLanguage(code: string, data: LanguageUpdateRequest): Promise<Language> {
     const response = await fetch(API_URLS.updateLanguage(code), {
       method: 'PUT',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${adminToken}`
+        'Content-Type': 'application/json'
       },
+      credentials: 'include',
       body: JSON.stringify(data)
     });
 
@@ -106,12 +108,13 @@ export class LanguageAPI {
   /**
    * Delete language permanently (Admin only)
    */
-  static async deleteLanguage(code: string, adminToken: string): Promise<void> {
+  static async deleteLanguage(code: string): Promise<void> {
     const response = await fetch(API_URLS.deleteLanguage(code), {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${adminToken}`
-      }
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -134,13 +137,13 @@ export class LanguageAPI {
   /**
    * Activate language (Admin only)
    */
-  static async activateLanguage(code: string, adminToken: string): Promise<Language> {
+  static async activateLanguage(code: string): Promise<Language> {
     const response = await fetch(API_URLS.activateLanguage(code), {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${adminToken}`
-      }
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -164,13 +167,13 @@ export class LanguageAPI {
   /**
    * Deactivate language (Admin only)
    */
-  static async deactivateLanguage(code: string, adminToken: string): Promise<Language> {
+  static async deactivateLanguage(code: string): Promise<Language> {
     const response = await fetch(API_URLS.deactivateLanguage(code), {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${adminToken}`
-      }
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include'
     });
 
     if (!response.ok) {

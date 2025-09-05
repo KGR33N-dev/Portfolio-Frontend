@@ -125,6 +125,8 @@ export const API_URLS = {
   
   // Auth endpoints
   login: () => `${API_CONFIG.auth}/login`,
+  logout: () => `${API_CONFIG.auth}/logout`,
+  refresh: () => `${API_CONFIG.auth}/refresh`,
   register: () => `${API_CONFIG.auth}/register`,
   verify: () => `${API_CONFIG.auth}/verify`,
   verifyEmail: () => `${API_CONFIG.auth}/verify-email`,
@@ -134,6 +136,10 @@ export const API_URLS = {
   updateProfile: () => `${API_CONFIG.auth}/update-profile`,
   updatePassword: () => `${API_CONFIG.auth}/update-password`,
   deleteAccount: () => `${API_CONFIG.auth}/delete-account`,
+  
+  // Password Reset endpoints
+  passwordResetRequest: () => `${API_CONFIG.auth}/password-reset-request`,
+  passwordResetConfirm: () => `${API_CONFIG.auth}/password-reset-confirm`,
   
   // Admin endpoints
   dashboard: () => `${API_CONFIG.admin}/dashboard`,
@@ -181,9 +187,11 @@ export const API_URLS = {
 
 // Development debugging status
 if (import.meta.env.DEV) {
+if (import.meta.env.DEV) {
   console.log(`🔧 API Configuration: Using ${isLocalApi() ? 'LOCAL' : 'PRODUCTION'} backend`);
   console.log(`📡 Base URL: ${API_CONFIG.baseUrl}`);
   console.log(`🌐 Frontend URL: ${API_CONFIG.frontendUrl}`);
+}
 }
 
 // Utility functions for common API calls

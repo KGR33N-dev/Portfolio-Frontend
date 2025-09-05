@@ -1,5 +1,5 @@
-import { API_URLS } from '~/config/api';
-import type { CreatePostData, ApiPost } from '~/types/blog';
+import { API_URLS } from '../config/api.ts';
+import type { CreatePostData, ApiPost } from '../types/blog.ts';
 
 // Types for better TypeScript support
 interface User {
@@ -46,8 +46,6 @@ interface User {
 }
 
 interface LoginResponse {
-  access_token: string;
-  token_type: string;
   user: User;
 }
 
@@ -56,6 +54,7 @@ interface RegisterRequest {
   username: string;
   password: string;
   full_name?: string | null;
+  language?: string;
 }
 
 interface RegisterResponse {
@@ -71,14 +70,33 @@ interface RegisterResponse {
 interface VerifyEmailResponse {
   success: boolean;
   message: string;
+  translation_code?: string;
   data?: {
     user: User;
-    access_token?: string;
-    token_type?: string;
+    // No tokens - they're set as HTTP-only cookies
   };
 }
 
+export interface ResendVerificationRequest {
+  email: string;
+  language?: string;
+}
+
 interface ResendVerificationResponse {
+  success: boolean;
+  message: string;
+  translation_code?: string;
+  data: {
+    expires_in_minutes: number;
+  };
+}
+
+export interface PasswordResetRequest {
+  email: string;
+  language?: string;
+}
+
+export interface PasswordResetResponse {
   success: boolean;
   message: string;
   data: {
@@ -86,32 +104,63 @@ interface ResendVerificationResponse {
   };
 }
 
-// Frontend Security Utils
+export interface PasswordResetConfirm {
+  email: string;
+  reset_token: string;
+  new_password: string;
+}
+
+export interface PasswordResetConfirmResponse {
+  success: boolean;
+  message: string;
+  data: Record<string, never>;
+}
+
+// Frontend Security Utils - Updated for HTTP-only cookies
 export class AdminAuth {
-  private static readonly TOKEN_KEY = 'access_token';
-  
   // User verification cache to prevent duplicate API calls
   private static verificationCache: { user: User | null; timestamp: number } | null = null;
   private static readonly CACHE_TTL = 5000; // 5 seconds cache
   
+  // Since tokens are now HTTP-only cookies, we can't access them from JavaScript
+  // Authentication status is determined by successful API calls
   static isAuthenticated(): boolean {
-    if (typeof window === 'undefined') return false;
-    return !!localStorage.getItem(this.TOKEN_KEY);
-  }
-  
-  static getToken(): string | null {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem(this.TOKEN_KEY);
-  }
-  
-  static logout(): void {
-    if (typeof window === 'undefined') return;
+    // We can't check tokens directly anymore, so we rely on cache or API calls
+    if (this.verificationCache && (Date.now() - this.verificationCache.timestamp) < this.CACHE_TTL) {
+      return this.verificationCache.user !== null;
+    }
     
-    localStorage.removeItem(this.TOKEN_KEY);
-    // Clear verification cache on logout
+    // If no recent cache, assume not authenticated
+    // The actual check will happen when verifyUser() is called
+    return false;
+  }
+  
+  // Since tokens are HTTP-only, this method is no longer needed
+  static getToken(): string | null {
+    // Tokens are not accessible from JavaScript anymore
+    return null;
+  }
+  
+  static async logout(): Promise<void> {
+    try {
+      // Call backend logout endpoint to clear HTTP-only cookies
+      await fetch(API_URLS.logout(), {
+        method: 'POST',
+        credentials: 'include', // Important: include cookies
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.warn('Logout request failed, but continuing with client cleanup:', error);
+      }
+    }
+    
+    // Clear verification cache
     this.verificationCache = null;
     
-    // Get current language from URL
+    // Redirect to login
     const currentLang = window.location.pathname.split('/')[1] || 'en';
     window.location.href = `/${currentLang}/login`;
   }
@@ -123,36 +172,52 @@ export class AdminAuth {
     
     const response = await fetch(API_URLS.login(), {
       method: 'POST',
+      credentials: 'include', // Important: include cookies for HTTP-only token setting
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Origin': 'http://localhost:4321',
       },
       body: formData.toString(),
     });
     
     if (!response.ok) {
-      let errorMessage = 'Login failed';
-      
       try {
         const errorData = await response.json();
         
-        // Handle specific HTTP status codes
-        if (response.status === 429) {
-          errorMessage = errorData.detail || 'Too many login attempts. Please try again later.';
-        } else if (response.status === 401) {
-          errorMessage = errorData.detail || 'Invalid email or password.';
-        } else if (response.status === 403) {
-          errorMessage = errorData.detail || 'Account is locked or email not verified.';
-        } else if (response.status === 422) {
-          errorMessage = errorData.detail || 'Invalid request format.';
+        // Preserve the API error structure for proper error handling
+        if (errorData.detail?.error_code) {
+          // Throw error with the same structure as API response
+          throw {
+            response: {
+              data: errorData
+            }
+          };
         } else {
-          errorMessage = errorData.detail || errorData.message || `Server error (${response.status})`;
+          // Fallback for old error format
+          let errorMessage = 'Login failed';
+          
+          if (response.status === 429) {
+            errorMessage = errorData.detail || 'Too many login attempts. Please try again later.';
+          } else if (response.status === 401) {
+            errorMessage = errorData.detail || 'Invalid email or password.';
+          } else if (response.status === 403) {
+            errorMessage = errorData.detail || 'Account is locked or email not verified.';
+          } else if (response.status === 422) {
+            errorMessage = errorData.detail || 'Invalid request format.';
+          } else {
+            errorMessage = errorData.detail || errorData.message || `Server error (${response.status})`;
+          }
+          
+          throw new Error(errorMessage);
         }
-      } catch {
-        errorMessage = `Server error (${response.status}): ${response.statusText}`;
+      } catch (error) {
+        // If parsing JSON fails, throw a generic error
+        if (error.response) {
+          // Re-throw the structured error
+          throw error;
+        } else {
+          throw new Error(`Server error (${response.status}): ${response.statusText}`);
+        }
       }
-      
-      throw new Error(errorMessage);
     }
     
     const data: LoginResponse = await response.json();
@@ -160,18 +225,12 @@ export class AdminAuth {
     if (import.meta.env.DEV) {
       console.log('🔐 Login Success Debug:');
       console.log('Response data:', data);
-      console.log('Access token:', data.access_token ? 'EXISTS' : 'MISSING');
       console.log('User data:', data.user);
+      console.log('Tokens are now set as HTTP-only cookies by the server');
     }
     
-    // Store only token
-    localStorage.setItem(this.TOKEN_KEY, data.access_token);
-    
-    if (import.meta.env.DEV) {
-      console.log('🔐 After saving token to localStorage:');
-      console.log('TOKEN_KEY:', this.TOKEN_KEY);
-      console.log('Saved token:', localStorage.getItem(this.TOKEN_KEY) ? 'SUCCESS' : 'FAILED');
-    }
+    // Clear any old cache and set new user data
+    this.verificationCache = { user: data.user, timestamp: Date.now() };
     
     return data.user;
   }
@@ -193,22 +252,55 @@ export class AdminAuth {
       console.log('⏭️ Skipping cache as requested');
     }
 
-    const token = this.getToken();
-    if (!token) {
-      this.verificationCache = { user: null, timestamp: Date.now() };
-      return null;
-    }
-
     try {
       if (import.meta.env.DEV) {
-        console.log('🔍 Verifying user with API...');
+        console.log('🔍 Verifying user with API (using HTTP-only cookies)...');
       }
-      const response = await fetch(API_URLS.me(), {
+      
+      // Make initial request
+      let response = await fetch(API_URLS.me(), {
+        method: 'GET',
+        credentials: 'include', // Important: include HTTP-only cookies
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
+
+      // Handle 401 - attempt refresh
+      if (response.status === 401) {
+        if (import.meta.env.DEV) {
+          console.log('🔄 Access token expired, attempting refresh...');
+        }
+        
+        const refreshResponse = await fetch(API_URLS.refresh(), {
+          method: 'POST',
+          credentials: 'include', // Important: include refresh token cookie
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (refreshResponse.ok) {
+          if (import.meta.env.DEV) {
+            console.log('✅ Token refresh successful, retrying user verification...');
+          }
+          
+          // Refresh successful, try user verification again
+          response = await fetch(API_URLS.me(), {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+        } else {
+          if (import.meta.env.DEV) {
+            console.log('❌ Token refresh failed with status:', refreshResponse.status);
+          }
+          this.verificationCache = { user: null, timestamp: Date.now() };
+          return null;
+        }
+      }
 
       if (response.ok) {
         const userData = await response.json();
@@ -222,10 +314,10 @@ export class AdminAuth {
         this.verificationCache = { user: userData, timestamp: Date.now() };
         return userData;
       } else {
-        // Token is invalid, clear storage and cache (but don't redirect immediately)
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem(this.TOKEN_KEY);
+        if (import.meta.env.DEV) {
+          console.log('❌ User verification failed with status:', response.status);
         }
+        
         this.verificationCache = { user: null, timestamp: Date.now() };
         return null;
       }
@@ -282,8 +374,8 @@ export class AdminAuth {
     }
     
     const normalizedRole = role.toLowerCase();
-    const isAdmin = normalizedRole === 'admin' || normalizedRole === 'administrator';
-    
+    const isAdmin = normalizedRole === 'role.admin' || normalizedRole === 'role.administrator';
+
     if (import.meta.env.DEV) {
       console.log('🔍 Admin check:', {
         originalRole: role,
@@ -332,10 +424,16 @@ export class AdminAuth {
     return this.isUserAdmin(user);
   }
 
-  // Method to check if token exists (quick check without API call)
+  // Check if user appears to be authenticated (quick cache check)
   static hasToken(): boolean {
-    if (typeof window === 'undefined') return false;
-    return !!localStorage.getItem('access_token');
+    // Since tokens are HTTP-only, we can't check them directly
+    // Use cache as a quick indicator
+    if (this.verificationCache && (Date.now() - this.verificationCache.timestamp) < this.CACHE_TTL) {
+      return this.verificationCache.user !== null;
+    }
+    
+    // No reliable way to check without API call
+    return false;
   }
 
   // Check if user is authenticated (API-based verification - secure)
@@ -359,45 +457,56 @@ export class AdminAuth {
     });
     
     if (!response.ok) {
-      let errorMessage = 'Registration failed';
-      
       try {
         const errorData = await response.json();
         
-        // Handle specific HTTP status codes
-        if (response.status === 429) {
-          errorMessage = errorData.detail || 'Too many registration attempts. Please try again later.';
-        } else if (response.status === 400) {
-          errorMessage = errorData.detail || 'Invalid registration data.';
-        } else if (response.status === 409) {
-          errorMessage = errorData.detail || 'Email or username already exists.';
-        } else if (response.status === 422) {
-          errorMessage = errorData.detail || 'Invalid request format.';
+        // Preserve the API error structure for proper error handling
+        if (errorData.detail?.error_code) {
+          // Throw error with the same structure as API response
+          throw {
+            response: {
+              data: errorData
+            }
+          };
         } else {
-          errorMessage = errorData.detail || errorData.message || `Server error (${response.status})`;
+          // Fallback for old error format
+          let errorMessage = 'Registration failed';
+          
+          if (response.status === 429) {
+            errorMessage = errorData.detail || 'Too many registration attempts. Please try again later.';
+          } else if (response.status === 400) {
+            errorMessage = errorData.detail || 'Invalid registration data.';
+          } else if (response.status === 409) {
+            errorMessage = errorData.detail || 'Email or username already exists.';
+          } else if (response.status === 422) {
+            errorMessage = errorData.detail || 'Invalid request format.';
+          } else {
+            errorMessage = errorData.detail || errorData.message || `Server error (${response.status})`;
+          }
+          
+          throw new Error(errorMessage);
         }
-      } catch {
-        errorMessage = `Server error (${response.status}): ${response.statusText}`;
+      } catch (error) {
+        // If parsing JSON fails, throw a generic error
+        if (error.response) {
+          // Re-throw the structured error
+          throw error;
+        } else {
+          throw new Error(`Server error (${response.status}): ${response.statusText}`);
+        }
       }
-      
-      throw new Error(errorMessage);
     }
     
     const data: RegisterResponse = await response.json();
     return data;
   }
 
-  // Helper method for authenticated requests
+  // Helper method for authenticated requests (using HTTP-only cookies)
   static async makeAuthenticatedRequest(url: string, options: RequestInit = {}): Promise<Response> {
-    const token = this.getToken();
-    if (!token) {
-      throw new Error('No authentication token available');
-    }
-
     const authOptions: RequestInit = {
       ...options,
+      credentials: 'include', // Important: include HTTP-only cookies
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
         ...options.headers,
       },
@@ -469,72 +578,60 @@ export class AdminAuth {
     });
 
     if (!response.ok) {
-      let errorMessage = 'Email verification failed';
-      
-      try {
-        const errorData = await response.json();
-        
-        // Handle specific HTTP status codes
-        if (response.status === 429) {
-          errorMessage = errorData.detail || 'Too many verification attempts. Please try again later.';
-        } else if (response.status === 400) {
-          errorMessage = errorData.detail || 'Invalid verification code or email.';
-        } else if (response.status === 404) {
-          errorMessage = errorData.detail || 'User not found or verification code expired.';
-        } else if (response.status === 422) {
-          errorMessage = errorData.detail || 'Invalid request format.';
-        } else {
-          errorMessage = errorData.detail || errorData.message || `Server error (${response.status})`;
-        }
-      } catch {
-        errorMessage = `Server error (${response.status}): ${response.statusText}`;
+      const errorData = await response.json();
+
+      const translation_code = errorData.detail.translation_code;
+      if (import.meta.env.DEV) {
+        console.error('Error verifying email:', errorData);
       }
-      
-      throw new Error(errorMessage);
+      throw new Error(translation_code);
     }
 
     const data: VerifyEmailResponse = await response.json();
     
-    // If verification includes new tokens, store them
-    if (data.success && data.data?.access_token) {
-      localStorage.setItem(this.TOKEN_KEY, data.data.access_token);
+    // If verification is successful and includes user data, cache it
+    if (data.success && data.data?.user) {
+      this.verificationCache = { user: data.data.user, timestamp: Date.now() };
     }
     
     return data;
   }
 
-  static async resendVerification(email: string): Promise<ResendVerificationResponse> {
+  static async resendVerification(email: string, language?: string): Promise<ResendVerificationResponse> {
+    console.log('🔥 AdminAuth.resendVerification called with:', { email, language });
+    console.log('🌐 API URL:', API_URLS.resendVerification());
+    
     const response = await fetch(API_URLS.resendVerification(), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, language }),
     });
 
+    console.log('📡 Response status:', response.status, response.statusText);
+
     if (!response.ok) {
-      let errorMessage = 'Failed to resend verification';
-      
-      try {
-        const errorData = await response.json();
-        
-        // Handle specific HTTP status codes
-        if (response.status === 429) {
-          errorMessage = errorData.detail || 'Too many resend attempts. Please wait before trying again.';
-        } else if (response.status === 400) {
-          errorMessage = errorData.detail || 'Invalid email address.';
-        } else if (response.status === 404) {
-          errorMessage = errorData.detail || 'User not found.';
-        } else if (response.status === 422) {
-          errorMessage = errorData.detail || 'Invalid request format.';
-        } else {
-          errorMessage = errorData.detail || errorData.message || `Server error (${response.status})`;
-        }
-      } catch {
-        errorMessage = `Server error (${response.status}): ${response.statusText}`;
+      const errorData = await response.json();
+      console.log('🔍 Error data received:', errorData);
+
+      const translation_code = errorData.detail.translation_code;
+      const errorType = errorData.detail.type;
+
+      if (import.meta.env.DEV) {
+        console.error('Error verifying email:', errorData);
       }
       
-      throw new Error(errorMessage);
+      // Special handling for EMAIL_ALREADY_VERIFIED - treat as info, not error
+      if (translation_code === 'EMAIL_ALREADY_VERIFIED' && errorType === 'info') {
+        console.log('📧 Email already verified - treating as info message');
+        // Create a custom error object with type info
+        const infoError = new Error(translation_code) as Error & { type: string };
+        infoError.type = 'info';
+        throw infoError;
+      }
+      
+      throw new Error(translation_code);
     }
     
     const data: ResendVerificationResponse = await response.json();
@@ -547,14 +644,11 @@ export class AdminAuth {
   }
 
   // Update user profile
-  static async updateProfile(userData: { username?: string; full_name?: string }): Promise<User> {
-    const token = this.getToken();
-    if (!token) throw new Error('Not authenticated');
-
+  static async updateProfile(userData: Partial<User>): Promise<User> {
     const response = await fetch(API_URLS.updateProfile(), {
       method: 'PUT',
+      credentials: 'include', // Important: include HTTP-only cookies
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(userData)
@@ -575,13 +669,10 @@ export class AdminAuth {
 
   // Update password
   static async updatePassword(currentPassword: string, newPassword: string): Promise<void> {
-    const token = this.getToken();
-    if (!token) throw new Error('Not authenticated');
-
     const response = await fetch(API_URLS.updatePassword(), {
       method: 'PUT',
+      credentials: 'include', // Important: include HTTP-only cookies
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -598,13 +689,10 @@ export class AdminAuth {
 
   // Delete account
   static async deleteAccount(password: string): Promise<void> {
-    const token = this.getToken();
-    if (!token) throw new Error('Not authenticated');
-
     const response = await fetch(API_URLS.deleteAccount(), {
       method: 'DELETE',
+      credentials: 'include', // Important: include HTTP-only cookies
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ password })
@@ -615,9 +703,101 @@ export class AdminAuth {
       throw new Error(errorData.detail || 'Failed to delete account');
     }
 
-    // Clear all local data
-    localStorage.removeItem(this.TOKEN_KEY);
+    // Clear cache - HTTP-only cookies are cleared by server
     this.verificationCache = null;
+  }
+
+  // Password Reset Request
+  static async requestPasswordReset(email: string, language?: string): Promise<PasswordResetResponse> {
+    console.log('AdminAuth.requestPasswordReset called with:', { email, language });
+    console.log('API_URLS.passwordResetRequest():', API_URLS.passwordResetRequest());
+    
+    const response = await fetch(API_URLS.passwordResetRequest(), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, language }),
+    });
+
+    console.log('Response received:', response.status, response.statusText);
+
+    if (!response.ok) {
+      let errorMessage = 'Failed to send password reset email';
+      
+      try {
+        const errorData = await response.json();
+        
+        // Handle specific HTTP status codes
+        if (response.status === 429) {
+          errorMessage = errorData.detail || 'Too many password reset attempts. Please wait before trying again.';
+        } else if (response.status === 400) {
+          // Check if it's specifically about email verification
+          if (errorData.detail && errorData.detail.toLowerCase().includes('not verified')) {
+            errorMessage = 'Your email address has not been verified yet. Please verify your email before resetting your password.';
+          } else {
+            errorMessage = errorData.detail || 'Email address not verified or invalid request.';
+          }
+        } else if (response.status === 404) {
+          // More specific message for non-existent email
+          errorMessage = 'Email address not found. Please check your email and try again.';
+        } else if (response.status === 422) {
+          errorMessage = errorData.detail || 'Invalid request format.';
+        } else {
+          errorMessage = errorData.detail || errorData.message || `Server error (${response.status})`;
+        }
+      } catch {
+        errorMessage = `Server error (${response.status}): ${response.statusText}`;
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    const data: PasswordResetResponse = await response.json();
+    return data;
+  }
+
+  // Password Reset Confirmation
+  static async confirmPasswordReset(email: string, resetToken: string, newPassword: string): Promise<PasswordResetConfirmResponse> {
+    const response = await fetch(API_URLS.passwordResetConfirm(), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        email, 
+        reset_token: resetToken, 
+        new_password: newPassword 
+      }),
+    });
+
+    if (!response.ok) {
+      let errorMessage = 'Failed to reset password';
+      
+      try {
+        const errorData = await response.json();
+        
+        // Handle specific HTTP status codes
+        if (response.status === 429) {
+          errorMessage = errorData.detail || 'Too many password reset attempts. Please try again later.';
+        } else if (response.status === 400) {
+          errorMessage = errorData.detail || 'Invalid reset token or email.';
+        } else if (response.status === 404) {
+          errorMessage = errorData.detail || 'Reset token expired or invalid.';
+        } else if (response.status === 422) {
+          errorMessage = errorData.detail || 'Invalid password format or request data.';
+        } else {
+          errorMessage = errorData.detail || errorData.message || `Server error (${response.status})`;
+        }
+      } catch {
+        errorMessage = `Server error (${response.status}): ${response.statusText}`;
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    const data: PasswordResetConfirmResponse = await response.json();
+    return data;
   }
 
 }

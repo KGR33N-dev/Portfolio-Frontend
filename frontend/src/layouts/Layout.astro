@@ -47,5 +47,10 @@ const { language, textDirection } = I18N;
     <slot />
 
     <BasicScripts />
+    
+    <!-- Global auto-initialization script -->
+    <script type="module">
+      import '/src/scripts/global-app.ts';
+    </script>
   </body>
 </html>

@@ -696,7 +696,7 @@ const metadata = {
             code,
             name,
             native_name: nativeName
-          }, AdminAuth.getToken());
+          });
           
           console.log('Language created successfully:', result);
           showSuccess(translations.languageCreatedSuccessfully);
@@ -706,7 +706,7 @@ const metadata = {
             name,
             native_name: nativeName,
             is_active: isActive
-          }, AdminAuth.getToken());
+          });
           
           console.log('Language updated successfully:', result);
           showSuccess(translations.languageUpdatedSuccessfully);
@@ -767,14 +767,13 @@ const metadata = {
         console.log('Using endpoint:', activate ? 
           `/api/languages/${code}/activate` : 
           `/api/languages/${code}/deactivate`);
-        console.log('Admin token available:', !!AdminAuth.getToken());
 
         if (activate) {
-          const result = await LanguageAPI.activateLanguage(code, AdminAuth.getToken());
+          const result = await LanguageAPI.activateLanguage(code);
           console.log('Activation result:', result);
           showSuccess(translations.languageActivatedSuccessfully);
         } else {
-          const result = await LanguageAPI.deactivateLanguage(code, AdminAuth.getToken());
+          const result = await LanguageAPI.deactivateLanguage(code);
           console.log('Deactivation result:', result);
           showSuccess(translations.languageDeactivatedSuccessfully);
         }
@@ -810,7 +809,7 @@ const metadata = {
       operationsInProgress.add(operationKey);
 
       try {
-        await LanguageAPI.deleteLanguage(code, AdminAuth.getToken());
+        await LanguageAPI.deleteLanguage(code);
         showSuccess(translations.languageDeletedSuccessfully);
         
         await loadLanguages();
@@ -823,7 +822,7 @@ const metadata = {
           const useDeactivateMsg = `${translations.languageUsedByPosts}\n\nWould you like to deactivate it instead?`;
           if (confirm(useDeactivateMsg)) {
             try {
-              await LanguageAPI.deactivateLanguage(code, AdminAuth.getToken());
+              await LanguageAPI.deactivateLanguage(code);
               showSuccess(translations.languageDeactivatedSuccessfully);
               await loadLanguages();
               await loadStats();

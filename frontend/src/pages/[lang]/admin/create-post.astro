@@ -223,7 +223,7 @@ const metadata = {
 
 <script>
   import { AdminAuth } from '../../../utils/adminAuth.js';
-  import { API_URLS, getFrontendUrl } from '../../../config/api.js';
+  import { API_URLS } from '../../../config/api.js';
   import { LanguageAPI } from '../../../utils/languageAPI.js';
   
   interface Translation {
@@ -246,11 +246,19 @@ const metadata = {
       console.log('Initializing create post page');
     }
 
-    // Check access token
-    const token = AdminAuth.getToken();
-    if (!token) {
+    // Check user session via HTTP-only cookies
+    let sessionValid = false;
+    try {
+      // Try to verify session using HTTP-only cookies
+      const sessionCheck = await AdminAuth.verifyUser();
+      sessionValid = !!sessionCheck;
+    } catch (error) {
+      sessionValid = false;
+    }
+    
+    if (!sessionValid) {
       if (import.meta.env.DEV) {
-        console.log('No access token found, redirecting to login');
+        console.log('No valid session found, redirecting to login');
       }
       const currentLang = window.location.pathname.split('/')[1];
       window.location.href = `/${currentLang}/login`;
@@ -541,11 +549,10 @@ const metadata = {
     hideMessages();
     
     try {
-      const token = AdminAuth.getToken();
-      
       // Test health using API_URLS
       const healthResponse = await fetch(API_URLS.health(), {
-        headers: { 'Accept': 'application/json', 'Origin': getFrontendUrl() }
+        headers: { 'Accept': 'application/json' },
+        credentials: 'include'
       });
       
       if (!healthResponse.ok) {
@@ -554,13 +561,12 @@ const metadata = {
       
       const healthData = await healthResponse.json();
       
-      // Test auth using API_URLS
+      // Test auth using HTTP-only cookies
       const authResponse = await fetch(API_URLS.me(), {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
-          'Origin': getFrontendUrl()
-        }
+          'Accept': 'application/json'
+        },
+        credentials: 'include'
       });
       
       if (!authResponse.ok) {
@@ -633,14 +639,12 @@ const metadata = {
         meta_fields: {}
       };
       
-      const token = AdminAuth.getToken();
       const response = await fetch(API_URLS.createPost(), {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'Origin': getFrontendUrl()
+          'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify(postData)
       });
       

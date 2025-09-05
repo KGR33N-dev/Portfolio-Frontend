@@ -119,6 +119,8 @@ export const blogTranslations = {
     'comments.showReplies': 'Show replies',
     'comments.hideReplies': 'Hide replies',
     'comments.replyTo': 'Reply to',
+    'comments.writeReply': 'Write your reply...',
+    'comments.submitReply': 'Reply',
     'comments.cancel': 'Cancel',
     'comments.edit': 'Edit',
     'comments.delete': 'Delete',
@@ -128,7 +130,13 @@ export const blogTranslations = {
     'comments.edited': 'edited',
     'comments.moderationNote': 'Comments are moderated and may take some time to appear.',
     'comments.loginRequired': 'Please log in to leave a comment',
+    'comments.loginRequiredTitle': 'Login Required',
+    'comments.loginRequiredText': 'You need to be logged in to participate in the discussion.',
+    'comments.loginButton': 'Sign In',
     'comments.loginRequiredToLike': 'Please log in to like or dislike comments',
+    'comments.selfLikeError': 'You cannot like your own comment',
+    'comments.likeError': 'Error while rating comment',
+    'comments.ownCommentTooltip': 'You cannot like/dislike your own comment',
     
     // ===== AUTHENTICATION SECTION =====
     'auth.title': 'Login',
@@ -163,10 +171,12 @@ export const blogTranslations = {
     'auth.usernameHint': '3-30 characters, letters, numbers, dots, dashes, underscores',
     'auth.passwordRequirements': 'Password must contain',
     'auth.passwordLength': 'At least 8 characters',
+    'auth.passwordMinLength': 'At least 8 characters',
     'auth.passwordUppercase': 'One uppercase letter',
     'auth.passwordLowercase': 'One lowercase letter',
     'auth.passwordNumber': 'One number',
     'auth.passwordSpecial': 'One special character (!@#$%^&*_...)',
+    'auth.resetPassword': 'Reset Password',
     'auth.agreeToTerms': 'I agree to the',
     'auth.termsOfService': 'Terms of Service',
     'auth.and': 'and',
@@ -175,6 +185,13 @@ export const blogTranslations = {
     'auth.signInHere': 'Sign in here',
     'auth.dontHaveAccount': "Don't have an account?",
     'auth.signUpHere': 'Sign up here',
+    
+    // Registration success/error messages
+    'auth.accountCreated': 'Account created! Please check your email for verification code.',
+    'auth.registrationFailed': 'Registration failed. Please try again.',
+    'auth.fixErrors': 'Please fix the errors above',
+    'auth.creatingAccount': 'Creating account...',
+    'auth.tooManyRegistrationAttempts': 'Too many registration attempts. Please try again later.',
     
     // Email Verification
     'auth.verifyEmailTitle': 'Verify Your Email',
@@ -194,6 +211,33 @@ export const blogTranslations = {
     'auth.resetPasswordInfo': 'Enter your email address and we will send you a link to reset your password',
     'auth.resetPasswordEmailHint': 'We will send a reset link to this email',
     'auth.sendResetLink': 'Send Reset Link',
+    'auth.resetPasswordTitle': 'Reset Your Password',
+    'auth.resetPasswordSubtitle': 'Enter your new password below',
+    'auth.setNewPasswordInfo': 'Set a new password for',
+    'auth.newPassword': 'New Password',
+    'auth.newPasswordPlaceholder': 'Enter your new password',
+    'auth.linkExpiresIn': 'Link expires in',
+    
+    // Reset password errors
+    'auth.emailNotFound': 'Email address not found. Please check your email and try again.',
+    'auth.emailNotVerified': 'Your email address has not been verified yet. Please verify your email before resetting your password.',
+    'auth.tooManyAttempts': 'Too many password reset attempts. Please wait before trying again.',
+    'auth.resetLinkSent': 'Password reset link sent! Please check your email.',
+    'auth.resetLinkExpiry': 'The link will expire in {minutes} minutes.',
+    'auth.sendingResetLink': 'Sending reset link...',
+    'auth.enterEmailAddress': 'Please enter your email address',
+    'auth.resetLinkFailed': 'Failed to send reset link. Please try again.',
+    
+    // Reset password form
+    'auth.passwordResetSuccess': 'Password reset successfully!',
+    'auth.passwordResetFailed': 'Failed to reset password. Please try again.',
+    'auth.invalidResetToken': 'Invalid or expired reset token.',
+    'auth.passwordsDoNotMatch': 'Passwords do not match.',
+    'auth.passwordTooWeak': 'Password does not meet requirements.',
+    'auth.resettingPassword': 'Resetting password...',
+    'auth.goToLogin': 'Go to Login',
+    'auth.linkExpired': 'Link expired',
+    'auth.requestNewLink': 'Request New Link',
     
     // ===== ADMIN SECTION =====
     'admin.title': 'Blog Administration',
@@ -545,6 +589,8 @@ export const blogTranslations = {
     'comments.showReplies': 'Pokaż odpowiedzi',
     'comments.hideReplies': 'Ukryj odpowiedzi',
     'comments.replyTo': 'Odpowiedz na',
+    'comments.writeReply': 'Napisz swoją odpowiedź...',
+    'comments.submitReply': 'Odpowiedz',
     'comments.cancel': 'Anuluj',
     'comments.edit': 'Edytuj',
     'comments.delete': 'Usuń',
@@ -554,7 +600,13 @@ export const blogTranslations = {
     'comments.edited': 'edytowany',
     'comments.moderationNote': 'Komentarze są moderowane i mogą pojawić się z opóźnieniem.',
     'comments.loginRequired': 'Zaloguj się, aby zostawić komentarz',
+    'comments.loginRequiredTitle': 'Wymagane logowanie',
+    'comments.loginRequiredText': 'Musisz być zalogowany, aby uczestniczyć w dyskusji.',
+    'comments.loginButton': 'Zaloguj się',
     'comments.loginRequiredToLike': 'Zaloguj się, aby polubić lub odrzucić komentarze',
+    'comments.selfLikeError': 'Nie możesz polubić własnego komentarza',
+    'comments.likeError': 'Błąd podczas oceniania komentarza',
+    'comments.ownCommentTooltip': 'Nie możesz polubić/odrzucić własnego komentarza',
     
     // ===== SYSTEM KOMENTARZY BLOGA =====
     'blog.comments': 'Komentarze',
@@ -643,9 +695,12 @@ export const blogTranslations = {
     'auth.usernameHint': '3-30 znaków, litery, cyfry, kropki, myślniki, podkreślenia',
     'auth.passwordRequirements': 'Hasło musi zawierać',
     'auth.passwordLength': 'Co najmniej 8 znaków',
+    'auth.passwordMinLength': 'Co najmniej 8 znaków',
     'auth.passwordUppercase': 'Jedną wielką literę',
     'auth.passwordLowercase': 'Jedną małą literę',
     'auth.passwordNumber': 'Jedną cyfrę',
+    'auth.passwordSpecial': 'Jeden znak specjalny',
+    'auth.resetPassword': 'Zresetuj Hasło',
     'auth.agreeToTerms': 'Zgadzam się z',
     'auth.termsOfService': 'Regulaminem',
     'auth.and': 'i',
@@ -654,6 +709,13 @@ export const blogTranslations = {
     'auth.signInHere': 'Zaloguj się tutaj',
     'auth.dontHaveAccount': 'Nie masz konta?',
     'auth.signUpHere': 'Zarejestruj się tutaj',
+    
+    // Wiadomości sukcesu/błędu rejestracji
+    'auth.accountCreated': 'Konto zostało utworzone! Sprawdź swój email w poszukiwaniu kodu weryfikacyjnego.',
+    'auth.registrationFailed': 'Rejestracja nie powiodła się. Spróbuj ponownie.',
+    'auth.fixErrors': 'Proszę poprawić błędy powyżej',
+    'auth.creatingAccount': 'Tworzenie konta...',
+    'auth.tooManyRegistrationAttempts': 'Zbyt wiele prób rejestracji. Spróbuj ponownie później.',
     
     // Weryfikacja Email
     'auth.verifyEmailTitle': 'Zweryfikuj Swój Email',
@@ -673,6 +735,33 @@ export const blogTranslations = {
     'auth.resetPasswordInfo': 'Wprowadź swój adres email, a wyślemy Ci link do zresetowania hasła',
     'auth.resetPasswordEmailHint': 'Wyślemy link resetujący na ten email',
     'auth.sendResetLink': 'Wyślij Link Resetujący',
+    'auth.resetPasswordTitle': 'Zresetuj Swoje Hasło',
+    'auth.resetPasswordSubtitle': 'Wprowadź nowe hasło poniżej',
+    'auth.setNewPasswordInfo': 'Ustaw nowe hasło dla',
+    'auth.newPassword': 'Nowe Hasło',
+    'auth.newPasswordPlaceholder': 'Wprowadź nowe hasło',
+    'auth.linkExpiresIn': 'Link wygasa za',
+    
+    // Błędy resetowania hasła
+    'auth.emailNotFound': 'Adres email nie został znaleziony. Sprawdź swój email i spróbuj ponownie.',
+    'auth.emailNotVerified': 'Twój adres email nie został jeszcze zweryfikowany. Zweryfikuj swój email przed resetowaniem hasła.',
+    'auth.tooManyAttempts': 'Zbyt wiele prób resetowania hasła. Poczekaj przed ponowną próbą.',
+    'auth.resetLinkSent': 'Link resetujący hasło został wysłany! Sprawdź swój email.',
+    'auth.resetLinkExpiry': 'Link wygaśnie za {minutes} minut.',
+    'auth.sendingResetLink': 'Wysyłanie linku resetującego...',
+    'auth.enterEmailAddress': 'Proszę wprowadź swój adres email',
+    'auth.resetLinkFailed': 'Nie udało się wysłać linku resetującego. Spróbuj ponownie.',
+    
+    // Formularz resetowania hasła
+    'auth.passwordResetSuccess': 'Hasło zostało pomyślnie zresetowane!',
+    'auth.passwordResetFailed': 'Nie udało się zresetować hasła. Spróbuj ponownie.',
+    'auth.invalidResetToken': 'Nieprawidłowy lub wygasły token resetowania.',
+    'auth.passwordsDoNotMatch': 'Hasła nie są identyczne.',
+    'auth.passwordTooWeak': 'Hasło nie spełnia wymagań.',
+    'auth.resettingPassword': 'Resetowanie hasła...',
+    'auth.goToLogin': 'Przejdź do logowania',
+    'auth.linkExpired': 'Link wygasł',
+    'auth.requestNewLink': 'Poproś o nowy link',
     
     // ===== SEKCJA ADMIN =====
     'admin.title': 'Administracja Bloga',

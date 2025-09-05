@@ -1,19 +1,55 @@
 ---
 // StaticNotificationSystem - Always available notification system without initialization
 // This component provides immediate notification functionality across the entire site
+import { ui, defaultLang } from '~/i18n';
 ---
 
 <!-- Static notification container - always present in DOM -->
 <div id="notification-container" class="fixed top-20 right-4 space-y-3 pointer-events-none" style="z-index: 40;"></div>
 
-<!-- Inline notification system - always available -->
-<script is:inline>
-  // Static notification system - immediately available everywhere
+<!-- Inline notification system with i18n support -->
+<script is:inline define:vars={{ ui, defaultLang }}>
+  // Static notification system with i18n integration
   window.StaticNotifications = (function() {
     let notificationCounter = 0;
 
     function generateId() {
       return 'notification-' + Date.now() + '-' + (++notificationCounter);
+    }
+
+    // Get current language from URL or fallback
+    function getCurrentLanguage() {
+      try {
+        const path = window.location.pathname;
+        const langMatch = path.match(/^\/([a-z]{2})\//);
+        return langMatch ? langMatch[1] : 'en';
+      } catch {
+        return 'en';
+      }
+    }
+
+    // Get translation for a key
+    function getTranslation(key, lang = null) {
+      try {
+        lang = lang || getCurrentLanguage();
+        
+        // Use ui object from i18n directly
+        if (ui && ui[lang] && ui[lang][key]) {
+          return ui[lang][key];
+        }
+        
+        // Fallback to default language
+        if (ui && ui[defaultLang] && ui[defaultLang][key]) {
+          return ui[defaultLang][key];
+        }
+        
+        // If translation not found, log warning and return the key itself
+        console.warn(`Translation missing for key: ${key} in language: ${lang}`);
+        return key;
+      } catch (error) {
+        console.error('Translation error:', error);
+        return key || 'Translation error';
+      }
     }
 
     function getNotificationStyles(type) {
@@ -54,7 +90,39 @@
       return styles[type] || styles.info;
     }
 
-    function show(message, type, duration) {
+    function show(messageOrKey, type, duration, isTranslationKey = false) {
+      let message;
+      
+      // Handle translation keys vs direct messages
+      if (isTranslationKey || (typeof messageOrKey === 'string' && messageOrKey.includes('.'))) {
+        // Treat as translation key
+        message = getTranslation(messageOrKey);
+      } else {
+        // Handle direct messages (backward compatibility)
+        if (typeof messageOrKey !== 'string') {
+          if (messageOrKey && typeof messageOrKey === 'object') {
+            // Try to extract meaningful text from object
+            if (messageOrKey.message) {
+              message = messageOrKey.message;
+            } else if (messageOrKey.detail) {
+              message = messageOrKey.detail;
+            } else if (messageOrKey.error) {
+              message = messageOrKey.error;
+            } else {
+              try {
+                message = JSON.stringify(messageOrKey);
+              } catch {
+                message = getTranslation('error.general');
+              }
+            }
+          } else {
+            message = String(messageOrKey) || getTranslation('error.general');
+          }
+        } else {
+          message = messageOrKey;
+        }
+      }
+      
       type = type || 'info';
       duration = duration !== undefined ? duration : 5000;
 
@@ -135,6 +203,8 @@
     return {
       show: show,
       close: close,
+      
+      // Direct message methods (backward compatibility)
       success: function(message, duration) {
         return show(message, 'success', duration);
       },
@@ -146,28 +216,30 @@
       },
       info: function(message, duration) {
         return show(message, 'info', duration);
-      }
+      },
+      
+      // Translation key methods (new i18n support)
+      showTranslated: function(translationKey, type, duration) {
+        return show(translationKey, type, duration, true);
+      },
+      successKey: function(translationKey, duration) {
+        return show(translationKey, 'success', duration, true);
+      },
+      errorKey: function(translationKey, duration) {
+        return show(translationKey, 'error', duration, true);
+      },
+      warningKey: function(translationKey, duration) {
+        return show(translationKey, 'warning', duration, true);
+      },
+      infoKey: function(translationKey, duration) {
+        return show(translationKey, 'info', duration, true);
+      },
+      
+      // Utility methods
+      getCurrentLanguage: getCurrentLanguage,
+      getTranslation: getTranslation
     };
   })();
 
-  // Also provide legacy compatibility
-  window.NotificationManager = {
-    success: function(message) {
-      return window.StaticNotifications.success(message);
-    },
-    error: function(message) {
-      return window.StaticNotifications.error(message);
-    },
-    warning: function(message) {
-      return window.StaticNotifications.warning(message);
-    },
-    info: function(message) {
-      return window.StaticNotifications.info(message);
-    },
-    close: function(id) {
-      return window.StaticNotifications.close(id);
-    }
-  };
-
-  console.log('✅ Static notification system ready - no initialization required');
+  console.log('✅ Static notification system ready with i18n support - no initialization required');
 </script>
