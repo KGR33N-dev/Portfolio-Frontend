@@ -28,6 +28,7 @@ export default defineConfig({
   adapter: cloudflare(),
   trailingSlash: 'never',
   
+  
   i18n: {
     defaultLocale: 'en',
     locales: ['en', 'pl'],
@@ -95,8 +96,8 @@ export default defineConfig({
 
   vite: {
     resolve: {
-      alias: {
-        '~': path.resolve(__dirname, './src'),
+      alias:  {
+        "react-dom/server": "react-dom/server.edge",
       },
     },
     server: {
