@@ -1,6 +1,6 @@
 // API Configuration - używa zmiennych środowiskowych
-const API_BASE_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000';
-const FRONTEND_URL = import.meta.env.PUBLIC_FRONTEND_URL || 'http://localhost:4321';
+const API_BASE_URL = import.meta.env.PUBLIC_API_URL || 'https://api.kgr33n.com';
+const FRONTEND_URL = import.meta.env.PUBLIC_FRONTEND_URL || 'https://kgr33n.pages.dev';
 
 // Usuwamy stary system przełączania USE_LOCAL_API
 export const API_CONFIG = {
