@@ -340,12 +340,18 @@ export async function initResetPasswordPage(currentLang: string): Promise<void> 
         console.error('Password reset error:', error);
       }
       
-      // Handle API error with translation_code
-      if (error && typeof error === 'object' && 'translation_code' in error) {
-        notifications.errorKey(error.translation_code, 'api.');
+      // Handle API error with translation_code from response.detail
+      if (error && error.response && error.response.detail && error.response.detail.translation_code) {
+        console.log('🔑 Using translation code:', error.response.detail.translation_code);
+        notifications.errorKey(error.response.detail.translation_code, 'api.');
+      } else if (error && error.response && error.response.detail && error.response.detail.message) {
+        console.log('💬 Using error message:', error.response.detail.message);
+        showNotification(error.response.detail.message, 'error');
       } else if (error && typeof error === 'object' && 'message' in error) {
+        console.log('💬 Using fallback error message:', error.message);
         showNotification(error.message, 'error');
       } else {
+        console.log('❓ Using fallback error');
         notifications.errorKey('UNKNOWN_ERROR', 'api.');
       }
     } finally {

@@ -29,7 +29,10 @@ interface Translations {
   [key: string]: string;
 }
 
-// Debounced likes system for better UX and performance
+// Enhanced likes functionality with debouncing and UI feedback
+import { AuthHelper } from '../utils/authHelper.ts';
+
+// Types
 export class DebouncedLikes {
   private debounceTimers = new Map<number, NodeJS.Timeout>();
   private pendingStates = new Map<number, PendingLikeState>();
@@ -202,18 +205,25 @@ export class DebouncedLikes {
 
   private async sendLikeToServer(commentId: number, action: 'like' | 'dislike', likeState: boolean | null): Promise<void> {
     try {
-      // Import API_CONFIG to get the correct backend URL
-      const { API_CONFIG } = await import('../config/api.ts');
-      const response = await fetch(`${API_CONFIG.comments}/${commentId}/like`, {
+      // Use API_URLS helper function instead of constructing URL manually
+      const { API_URLS } = await import('~/config/api');
+      const url = API_URLS.likeComment(commentId);
+      
+      console.log(`📡 Sending ${action} request for comment ${commentId} to: ${url}`);
+      console.log(`📤 Request body:`, { is_like: likeState === true });
+      
+      // Use AuthHelper for automatic token refresh
+      const response = await AuthHelper.makeAuthenticatedRequest(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
         body: JSON.stringify({
           is_like: likeState === true
         })
       });
+
+      console.log(`📥 Response status: ${response.status} ${response.statusText}`);
 
       if (!response.ok) {
         let errorData;
@@ -301,6 +311,18 @@ export async function handleLikeDislike(
     console.log('❌ User not logged in');
     showError(errorMsg);
     return;
+  }
+
+  // Check if comment is deleted
+  const commentElement = document.querySelector(`[data-comment-id="${commentId}"]`) as HTMLElement;
+  if (commentElement) {
+    const isDeleted = commentElement.dataset.isDeleted === 'true';
+    if (isDeleted) {
+      console.log(`❌ Cannot like/dislike deleted comment ${commentId}`);
+      const errorMsg = translations['comments.deletedComment'] || 'This comment has been deleted';
+      showError(errorMsg);
+      return;
+    }
   }
 
   // Check if user is trying to like/dislike their own comment

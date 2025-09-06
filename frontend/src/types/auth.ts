@@ -20,6 +20,7 @@ export interface ResetPasswordResponse {
 export interface ForgotPasswordResponse {
   success: boolean;
   message: string;
+  translation_code?: string;
   data?: {
     expires_in_minutes?: number;
   };

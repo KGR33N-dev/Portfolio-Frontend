@@ -1,5 +1,7 @@
 // Comment replies functionality  
 import type { Comment } from '../types/blog.ts';
+import { AuthHelper } from '../utils/authHelper.ts';
+import { API_CONFIG } from '../config/api.ts';
 
 interface User {
   id: number;
@@ -183,19 +185,16 @@ export async function handleSubmitReply(
       replyForm.remove();
     }
 
-    // Import API_CONFIG to get the correct backend URL
-    const { API_CONFIG } = await import('../config/api.ts');
-    
     // Use the correct URL format: /api/comments/post/{post_id}
     const url = `${API_CONFIG.comments}/post/${postId}`;
     console.log('Creating reply at URL:', url, 'for parent:', parentCommentId);
     
-    const response = await fetch(url, {
+    // Use AuthHelper for automatic token refresh
+    const response = await AuthHelper.makeAuthenticatedRequest(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      credentials: 'include', // Use HTTP-only cookies for authentication
       body: JSON.stringify({
         content: content,
         parent_id: parentCommentId // ID komentarza na który odpowiadamy

@@ -52,12 +52,6 @@ export class AuthHelper {
       },
     };
 
-    // Add Bearer token if available (for backward compatibility)
-    const token = localStorage.getItem('access_token');
-    if (token && requestOptions.headers) {
-      (requestOptions.headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
-    }
-
     // Make the initial request
     let response = await fetch(url, requestOptions);
 
@@ -67,10 +61,6 @@ export class AuthHelper {
       
       if (refreshSuccess) {
         // Retry the request after successful refresh
-        const retryToken = localStorage.getItem('access_token');
-        if (retryToken && requestOptions.headers) {
-          (requestOptions.headers as Record<string, string>)['Authorization'] = `Bearer ${retryToken}`;
-        }
         response = await fetch(url, requestOptions);
       }
     }
@@ -118,8 +108,6 @@ export class AuthHelper {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        
         if (import.meta.env.DEV) {
           console.log('✅ AuthHelper: Token refresh successful');
         }
@@ -127,10 +115,6 @@ export class AuthHelper {
         // Clear user cache to force fresh verification
         this.userCache = null;
         
-        // Update localStorage token if provided (for backward compatibility)
-        if (data.access_token) {
-          localStorage.setItem('access_token', data.access_token);
-        }
 
         return true;
       } else {
@@ -138,8 +122,7 @@ export class AuthHelper {
           console.log('❌ AuthHelper: Token refresh failed with status:', response.status);
         }
 
-        // Clear invalid tokens
-        localStorage.removeItem('access_token');
+        // Clear user cache on failed refresh
         this.userCache = { user: null, timestamp: Date.now() };
         
         return false;
@@ -149,8 +132,7 @@ export class AuthHelper {
         console.error('❌ AuthHelper: Token refresh error:', error);
       }
       
-      // Clear tokens on error
-      localStorage.removeItem('access_token');
+      // Clear user cache on error
       this.userCache = { user: null, timestamp: Date.now() };
       
       return false;
@@ -245,7 +227,6 @@ export class AuthHelper {
     }
     
     // Clear local state
-    localStorage.removeItem('access_token');
     this.userCache = null;
   }
 }

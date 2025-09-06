@@ -3,7 +3,6 @@ import { validateEmail } from './validate';
 import { AdminAuth } from '../../utils/adminAuth';
 import { notifications } from '~/utils/notifications';
 import { addEventListener } from '~/utils/pageLifecycle';
-import { showNotification } from '~/utils/notifications';
 
 // Global flag to prevent double initialization
 let isForgotPasswordInitialized = false;
@@ -39,29 +38,31 @@ export async function requestPasswordReset(payload: ForgotPasswordPayload): Prom
     
   } catch (error) {
     console.error('Forgot password error:', error);
+    console.log('Error details:', error?.response?.data);
     
-    let message = 'Failed to send reset link. Please try again.';
-    
-    if (error instanceof Error) {
-      const errorMsg = error.message.toLowerCase();
-      
-      // Check for specific error conditions
-      if (errorMsg.includes('email address not found') || errorMsg.includes('not found')) {
-        message = 'This email address is not registered in our system.';
-      } else if (errorMsg.includes('not verified') || errorMsg.includes('email verification')) {
-        message = 'Please verify your email address before requesting a password reset.';
-      } else if (errorMsg.includes('too many') || errorMsg.includes('rate limit')) {
-        message = 'Too many reset attempts. Please wait before trying again.';
-      } else if (!error.message.includes('Server error')) {
-        // Use the original error message if it's user-friendly
-        message = error.message;
-      }
+    // Handle API error with translation_code from response.data.detail
+    if (error && typeof error === 'object' && 'response' in error && error.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        console.log('🔑 Using translation code:', detail.translation_code);
+        return { 
+          success: false, 
+          translation_code: detail.translation_code,
+          message: detail.message || 'Failed to send reset link. Please try again.'
+        };
+    } else if (error && typeof error === 'object' && 'message' in error) {
+      console.log('💬 Using fallback error message:', error.message);
+      return { 
+        success: false, 
+        message: error.message
+      };
+    } else {
+      console.log('❓ Using fallback error');
+      return { 
+        success: false, 
+        translation_code: 'UNKNOWN_ERROR',
+        message: 'Failed to send reset link. Please try again.'
+      };
     }
-    
-    return { 
-      success: false, 
-      message 
-    };
   }
 }
 
@@ -126,7 +127,7 @@ export async function initForgotPasswordPage(currentLang?: string): Promise<void
     const email = emailInput.value.trim();
     
     if (!email) {
-      showNotification('Please enter your email address', 'error');
+      notifications.error('Please enter your email address');
       emailInput.focus();
       return;
     }
@@ -146,28 +147,54 @@ export async function initForgotPasswordPage(currentLang?: string): Promise<void
         // Show success message using API response message
         notifications.success(result.message);
       } else {
-        showNotification(result.message || 'Failed to send reset link. Please try again.', 'error');
+        // Handle API error with translation_code similar to registration
+        if (result.translation_code) {
+          console.log('🔑 Using translation code:', result.translation_code);
+          notifications.errorKey(result.translation_code, 'api.');
+        } else {
+          console.log('💬 Using error message:', result.message);
+          notifications.error(result.message || 'Failed to send reset link. Please try again.');
+        }
       }
       
     } catch (error) {
       if (import.meta.env.DEV) {
         console.error('Password reset error:', error);
+        console.log('Error structure:', {
+          hasResponse: !!error?.response,
+          hasData: !!error?.response?.data,
+          hasDetail: !!error?.response?.data?.detail,
+          detail: error?.response?.data?.detail
+        });
       }
       
-      // Handle API error with translation_code
-      if (error && typeof error === 'object' && 'translation_code' in error) {
-        notifications.errorKey(error.translation_code, 'api.');
-        
-        // Handle special redirects for email verification
-        if (error.translation_code === 'EMAIL_NOT_VERIFIED') {
-          setTimeout(() => {
-            const emailValue = emailInput.value.trim();
-            window.location.href = `/${lang}/verify-email?email=${encodeURIComponent(emailValue)}`;
-          }, 3000);
+      // Handle API error with translation_code from response.data.detail
+      if (error && error.response && error.response.data && error.response.data.detail) {
+        const detail = error.response.data.detail;
+        console.log('🔑 Detail object:', detail);
+        if (detail.translation_code) {
+          console.log('🔑 Using translation code:', detail.translation_code);
+          notifications.errorKey(detail.translation_code, 'api.');
+          
+          // Handle special redirects for email verification
+          if (detail.translation_code === 'EMAIL_NOT_VERIFIED') {
+            setTimeout(() => {
+              const emailValue = emailInput.value.trim();
+              window.location.href = `/${lang}/verify-email?email=${encodeURIComponent(emailValue)}`;
+            }, 3000);
+          }
+        } else if (detail.message) {
+          console.log('💬 Using error message:', detail.message);
+          notifications.error(detail.message);
+        } else {
+          console.log('❌ Detail without translation_code or message');
+          notifications.errorKey('UNKNOWN_ERROR', 'api.');
         }
       } else if (error && typeof error === 'object' && 'message' in error) {
-        showNotification(error.message, 'error');
+        console.log('💬 Using fallback error message:', error.message);
+        notifications.error(error.message);
       } else {
+        console.log('❓ Using fallback error');
         notifications.errorKey('UNKNOWN_ERROR', 'api.');
       }
     } finally {

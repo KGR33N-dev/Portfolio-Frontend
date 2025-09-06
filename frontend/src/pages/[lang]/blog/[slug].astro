@@ -25,7 +25,6 @@ if (!slug) {
 
 // Check if this is a preview request for draft posts
 const isPreviewMode = Astro.url.searchParams.get('preview') === 'true';
-const adminToken = Astro.url.searchParams.get('admin_token');
 
 let currentPost: Post | null = null;
 
@@ -33,44 +32,10 @@ try {
   console.log(`🔍 Fetching post: ${slug} (${lang})`);
   
   // For preview mode, try to fetch from admin API first (includes drafts)
-  if (isPreviewMode && adminToken) {
+  if (isPreviewMode) {
     console.log('🔍 Preview mode detected, trying admin API...');
-    
-    try {
-      // Note: This requires the admin API to support slug-based lookup
-      // You might need to modify this based on your backend implementation
-      const adminPostsResponse = await fetch(API_URLS.getAdminPosts(), {
-        headers: {
-          'Authorization': `Bearer ${adminToken}`
-        }
-      });
-      
-      if (adminPostsResponse.ok) {
-        const adminPosts = await adminPostsResponse.json();
-        const foundAdminPost = adminPosts.items?.find((p: ApiPost) => p.slug === slug);
-        
-        if (foundAdminPost) {
-          console.log(`✅ Found post in admin API: ${foundAdminPost.id} (published: ${foundAdminPost.is_published})`);
-          
-          // Check if requested language is available
-          const hasRequestedLang = foundAdminPost.translations?.some((t: Translation) => t.language_code === lang);
-          
-          if (hasRequestedLang) {
-            currentPost = convertApiPostToPost(foundAdminPost, lang);
-            console.log('✅ Post loaded with requested language from admin API:', currentPost.title);
-          } else {
-            // Use first available language as fallback
-            const fallbackLang = foundAdminPost.translations?.[0]?.language_code || 'en';
-            console.log(`⚠️ Post found but no ${lang} translation, using ${fallbackLang} with ${lang} URL structure`);
-            currentPost = convertApiPostToPost(foundAdminPost, lang);
-          }
-        }
-      }
-    } catch (adminError) {
-      console.log('⚠️ Admin API failed, falling back to public API:', adminError);
-    }
   }
-  
+    
   // If not found in admin API or not preview mode, try public API
   if (!currentPost) {
     // Try to fetch all posts first, then find by slug (more reliable)
@@ -113,7 +78,6 @@ try {
       console.error('API Error:', errorText);
     }
   }
-  
 } catch (e) {
   console.error('❌ Error fetching post:', e);
   // Error variable removed as it was unused

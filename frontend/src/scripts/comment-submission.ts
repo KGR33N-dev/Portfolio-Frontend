@@ -1,5 +1,6 @@
 // Comment submission functionality
 import type { Comment } from '../types/blog.ts';
+import { AuthHelper } from '../utils/authHelper.ts';
 
 interface CommentData {
   postId: number;
@@ -91,12 +92,12 @@ export async function handleSubmitComment(
       });
     }
 
-    const response = await fetch(apiUrls.createPostComment, {
+    // Use AuthHelper for automatic token refresh
+    const response = await AuthHelper.makeAuthenticatedRequest(apiUrls.createPostComment, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      credentials: 'include', // Use HTTP-only cookies for authentication
       body: JSON.stringify(commentData)
     });
 
@@ -137,7 +138,7 @@ export async function handleSubmitComment(
         addRealComment(commentFromApi);
         
         // Show success message
-        showSuccess(translations['comments.posted'] || 'Comment posted successfully!');
+        showSuccess(translations['comments.success'] || 'Comment posted successfully!');
         if (isDev) {
           console.log('✅ Comment posted successfully!');
         }
@@ -161,7 +162,7 @@ export async function handleSubmitComment(
     await loadComments();
 
     // Show success message
-    showSuccess(translations['comments.posted'] || 'Comment posted successfully!');
+    showSuccess(translations['comments.success'] || 'Comment posted successfully!');
     if (isDev) {
       console.log('✅ Comment posted successfully!');
     }

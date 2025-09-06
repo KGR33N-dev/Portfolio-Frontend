@@ -11,36 +11,41 @@ let isRegisterInitialized = false;
 // No need for local showNotification - using centralized one
 
 function updatePasswordStrength(password: string) {
-  const validation = PasswordValidator.validate(password);
-  
-  const checks = {
-    'length-check': password.length >= 8,
-    'uppercase-check': /[A-Z]/.test(password),
-    'lowercase-check': /[a-z]/.test(password),
-    'number-check': /\d/.test(password),
-    'special-check': /[!@#$%^&*(),.?":{}|<>_]/.test(password),
-  };
+  try {
+    const validation = PasswordValidator.validate(password);
+    
+    const checks = {
+      'length-check': password.length >= 8,
+      'uppercase-check': /[A-Z]/.test(password),
+      'lowercase-check': /[a-z]/.test(password),
+      'number-check': /\d/.test(password),
+      'special-check': /[!@#$%^&*(),.?":{}|<>_]/.test(password),
+    };
 
-  for (const [id, isValid] of Object.entries(checks)) {
-    const el = document.getElementById(id);
-    if (el) {
-      const span = el.querySelector('span');
-      if (span) {
-        span.textContent = isValid ? '✓' : '✗';
-        span.className = isValid ? 'w-4 h-4 mr-2 text-green-500' : 'w-4 h-4 mr-2 text-red-500';
+    for (const [id, isValid] of Object.entries(checks)) {
+      const el = document.getElementById(id);
+      if (el) {
+        const span = el.querySelector('span');
+        if (span) {
+          span.textContent = isValid ? '✓' : '✗';
+          span.className = isValid ? 'w-4 h-4 mr-2 text-green-500' : 'w-4 h-4 mr-2 text-red-500';
+        }
       }
     }
+    
+    const passwordInput = document.getElementById('password') as HTMLInputElement;
+    if (password.length > 0 && passwordInput) {
+      const strengthColor = validation.strength === 'weak' ? '#ef4444' :
+                           validation.strength === 'medium' ? '#f59e0b' :
+                           validation.strength === 'strong' ? '#3b82f6' : '#10b981';
+      passwordInput.style.borderColor = strengthColor;
+    }
+    
+    return validation.isValid;
+  } catch (error) {
+    console.error('Error in updatePasswordStrength:', error);
+    return false;
   }
-  
-  const passwordInput = document.getElementById('password') as HTMLInputElement;
-  if (password.length > 0 && passwordInput) {
-    const strengthColor = validation.strength === 'weak' ? '#ef4444' :
-                         validation.strength === 'medium' ? '#f59e0b' :
-                         validation.strength === 'strong' ? '#3b82f6' : '#10b981';
-    passwordInput.style.borderColor = strengthColor;
-  }
-  
-  return validation.isValid;
 }
 
 export function initRegisterPage(currentLang: string) {
@@ -50,6 +55,7 @@ export function initRegisterPage(currentLang: string) {
     return;
   }
   
+  console.log('🔄 Initializing register page for language:', currentLang);
   isRegisterInitialized = true;
   
   // Reset initialization flag on page navigation
@@ -107,7 +113,9 @@ export function initRegisterPage(currentLang: string) {
     }
   }
 
+  // Check if user is already authenticated - redirect to blog if yes
   if (AdminAuth.isAuthenticated()) {
+    console.log('👤 User already authenticated, redirecting to blog');
     window.location.href = `/${currentLang}/blog`;
     return;
   }
@@ -128,8 +136,10 @@ export function initRegisterPage(currentLang: string) {
     
     const email = emailInput.value.trim();
     
+    // Check rate limit BEFORE attempting registration
     const rateLimitResult = RateLimiter.checkLimit(email, 'REGISTER');
     if (!rateLimitResult.allowed) {
+      console.warn('🚫 Rate limit exceeded for email:', email);
       notifications.errorKey('auth.tooManyRegistrationAttempts');
       return;
     }
@@ -145,42 +155,70 @@ export function initRegisterPage(currentLang: string) {
         language: currentLang
       };
       
+      console.log('📤 Sending registration request for:', email);
       const response = await AdminAuth.register(userData);
       
       // Show success message using API response message
+      console.log('✅ Registration successful:', response.message);
       notifications.success(response.message);
       
+      // Clear rate limit only on success
       RateLimiter.clearLimit(email, 'REGISTER');
-      localStorage.setItem('pending_verification_email', email);
       
       registerForm.reset();
-      validateForm();
+      // Don't call validateForm() after reset to avoid conflicts
       
+      console.log('🔄 Redirecting to verify-email in 2 seconds...');
+      
+      // Use pageLifecycle setTimeout to avoid recursion
       setTimeout(() => {
-        window.location.href = `/${currentLang}/verify-email?email=${encodeURIComponent(email)}`;
+        window.location.href = `/${currentLang}/verify-email`;
       }, 2000);
       
+      // Don't execute any more code after successful registration
+      return;
+      
     } catch (error) {
+      console.error('❌ Registration error:', error);
+      console.log('Error structure:', {
+        hasResponse: !!error?.response,
+        hasData: !!error?.response?.data,
+        hasDetail: !!error?.response?.data?.detail,
+        detail: error?.response?.data?.detail
+      });
       RateLimiter.recordAttempt(email, 'REGISTER');
       
-      // Handle API error with translation_code
-      if (error && typeof error === 'object' && 'translation_code' in error) {
-        notifications.errorKey(error.translation_code, 'api.');
+      // Handle API error with translation_code from response.data.detail
+      if (error && error.response && error.response.data && error.response.data.detail) {
+        const detail = error.response.data.detail;
+        console.log('🔑 Detail object:', detail);
+        if (detail.translation_code) {
+          console.log('🔑 Using translation code:', detail.translation_code);
+          notifications.errorKey(detail.translation_code, 'api.');
+        } else if (detail.message) {
+          console.log('💬 Using error message:', detail.message);
+          notifications.error(detail.message);
+        } else {
+          console.log('❌ Detail without translation_code or message');
+          notifications.errorKey('UNKNOWN_ERROR', 'api.');
+        }
       } else if (error && typeof error === 'object' && 'message' in error) {
+        console.log('💬 Using fallback error message:', error.message);
         notifications.error(error.message);
       } else {
+        console.log('❓ Using fallback error');
         notifications.errorKey('UNKNOWN_ERROR', 'api.');
       }
     } finally {
       setLoadingState(false);
-      validateForm();
+      // Don't call validateForm() here to avoid conflicts after successful registration
     }
   };
   
   addEventListener(registerForm, 'submit', submitHandler);
   
   emailInput?.focus();
-  validateForm();
+  // Call validateForm only once at init, not continuously
   if (import.meta.env.DEV) {
     console.log('Register page initialized.');
   }

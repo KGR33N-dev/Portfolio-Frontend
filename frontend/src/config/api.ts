@@ -187,11 +187,9 @@ export const API_URLS = {
 
 // Development debugging status
 if (import.meta.env.DEV) {
-if (import.meta.env.DEV) {
   console.log(`🔧 API Configuration: Using ${isLocalApi() ? 'LOCAL' : 'PRODUCTION'} backend`);
   console.log(`📡 Base URL: ${API_CONFIG.baseUrl}`);
   console.log(`🌐 Frontend URL: ${API_CONFIG.frontendUrl}`);
-}
 }
 
 // Utility functions for common API calls

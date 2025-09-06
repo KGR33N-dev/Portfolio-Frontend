@@ -11,7 +11,6 @@ import partytown from '@astrojs/partytown';
 import icon from 'astro-icon';
 import compress from 'astro-compress';
 import type { AstroIntegration } from 'astro';
-import cloudflare from '@astrojs/cloudflare';
 
 import astrowind from './vendor/integration';
 
@@ -24,8 +23,8 @@ const whenExternalScripts = (items: (() => AstroIntegration) | (() => AstroInteg
   hasExternalScripts ? (Array.isArray(items) ? items.map((item) => item()) : [items()]) : [];
 
 export default defineConfig({
-  output: 'server',
-  adapter: cloudflare(),
+  // 👉 Static build - API calls będą client-side
+  output: 'static',
   trailingSlash: 'never',
   
   i18n: {
@@ -94,6 +93,16 @@ export default defineConfig({
   },
 
   vite: {
+    build: {
+      minify: "terser", // zamiast esbuild
+      terserOptions: {
+        compress: {
+          // Usuń tylko console.log i console.debug, zostaw error/warn
+          pure_funcs: ['console.log', 'console.debug'],
+          drop_debugger: true,  // usuwa debugger;
+        },
+      },
+    },
     resolve: {
       alias: {
         '~': path.resolve(__dirname, './src'),
@@ -101,7 +110,7 @@ export default defineConfig({
     },
     server: {
       port: 4321,
-      hmr: false, // Wyłączamy HMR - strona nie będzie się automatycznie odświeżać
+      hmr: true, // Przywracamy HMR dla lepszego DX
     },
   },
 });

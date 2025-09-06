@@ -1,7 +1,7 @@
 ---
 import type { Language } from '../../types/language';
 import { blogTranslations } from '../../i18n/pages/blog';
-import { API_URLS } from '../../config/api';
+import { API_URLS, API_CONFIG } from '../../config/api';
 
 interface Props {
   postId: number;
@@ -16,9 +16,9 @@ const translations = blogTranslations[lang as unknown as 'en' | 'pl'];
 const apiUrls = {
   getPostComments: API_URLS.getPostComments(postId),
   createPostComment: API_URLS.createPostComment(postId),
-  likeCommentTemplate: API_URLS.likeComment,
-  updateCommentTemplate: API_URLS.updateComment,
-  deleteCommentTemplate: API_URLS.deleteComment,
+  likeCommentTemplate: `${API_CONFIG.comments}/{id}/like`,
+  updateCommentTemplate: `${API_CONFIG.comments}/{id}`,
+  deleteCommentTemplate: `${API_CONFIG.comments}/{id}`,
 };
 ---
 <section 

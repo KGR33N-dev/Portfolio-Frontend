@@ -9,7 +9,9 @@ let isLoginInitialized = false;
 export function initLoginPage(currentLang: string) {
   // Prevent double initialization
   if (isLoginInitialized) {
-    console.warn('Login page already initialized, skipping...');
+    if (import.meta.env.DEV) {
+      console.warn('Login page already initialized, skipping...');
+    }
     return;
   }
   
@@ -58,14 +60,15 @@ export function initLoginPage(currentLang: string) {
       }
 
       const user = await AdminAuth.login(email, password);
-      notifications.errorKey('auth.loginSuccess');
-      
-      if (import.meta.env.DEV) {
+      notifications.successKey('auth.loginSuccess');
+
+
+
       if (import.meta.env.DEV) {
         console.log('Login successful:', user);
         console.log('Tokens are now set as HTTP-only cookies');
       }
-      }
+      
       
       // Redirect to dashboard or intended page
       const urlParams = new URLSearchParams(window.location.search);
@@ -74,27 +77,41 @@ export function initLoginPage(currentLang: string) {
       // Small delay to ensure cookies are set
       setTimeout(() => {
         window.location.href = redirectTo;
-      }, 100);
+      }, 1000);
 
 
     } catch (error) {
       const currentLang = window.location.pathname.split('/')[1] as 'en' | 'pl';
+      console.error('Login error:', error);
+      console.log('Error structure:', {
+        hasResponse: !!error?.response,
+        hasData: !!error?.response?.data,
+        hasDetail: !!error?.response?.data?.detail,
+        detail: error?.response?.data?.detail
+      });
       
       // Handle API error with translation_code
-      if (error && typeof error === 'object' && 'translation_code' in error) {
-        notifications.errorKey(error.translation_code, 'api.');
-        
-        // Handle special redirects for email verification
-        if (error.translation_code === 'EMAIL_NOT_VERIFIED' || 
-            error.translation_code === 'ACCOUNT_NOT_ACTIVATED') {
-          setTimeout(() => {
-            const emailValue = emailInput.value.trim();
-            window.location.href = `/${currentLang}/verify-email?email=${encodeURIComponent(emailValue)}`;
-          }, 3000);
+      if (error && typeof error === 'object' && 'response' in error && error.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        console.log('🔑 Detail object:', detail);
+        if (detail.translation_code) {
+          console.log('🔑 Using translation code:', detail.translation_code);
+          notifications.errorKey(detail.translation_code, 'api.');
+
+          // Handle special redirects for email verification
+          if (detail.translation_code === 'EMAIL_NOT_VERIFIED' || 
+              detail.translation_code === 'ACCOUNT_NOT_ACTIVATED') {
+            setTimeout(() => {
+              const emailValue = emailInput.value.trim();
+              window.location.href = `/${currentLang}/verify-email?email=${encodeURIComponent(emailValue)}`;
+            }, 3000);
+          }
+        } else {
+          console.log('❌ API error without translation_code');
+          notifications.errorKey('UNKNOWN_ERROR', 'api.');
         }
-      } else if (error && typeof error === 'object' && 'message' in error) {
-        notifications.error(error.message);
       } else {
+        console.log('❌ Generic error (not from API)');
         notifications.errorKey('UNKNOWN_ERROR', 'api.');
       }
     } finally {

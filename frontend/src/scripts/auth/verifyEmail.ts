@@ -50,7 +50,6 @@ export function initVerifyEmailPage(_lang: string) {
     pageLifecycle.addEventListener(codeInput, 'input', formatCodeInput);
   }
   
-  // Get email from URL params or localStorage
   const urlParams = new URLSearchParams(window.location.search);
   const emailFromUrl = urlParams.get('email');
   const emailFromStorage = localStorage.getItem('pending_verification_email');
@@ -107,7 +106,7 @@ export function initVerifyEmailPage(_lang: string) {
         // Redirect to login after delay
         setTimeout(() => {
           const currentLang = window.location.pathname.split('/')[1];
-          window.location.href = `/${currentLang}/login?verified=true`;
+          window.location.href = `/${currentLang}/login`;
         }, 2000);
         
       } catch (error) {

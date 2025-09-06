@@ -221,15 +221,6 @@ const t = useTranslations(lang as keyof typeof languages);
         AdminAuth.logout();
       });
     }
-
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'access_token' || e.key === 'refresh_token') {
-        if (import.meta.env.DEV) {
-          console.log('Auth token changed in storage, re-validating UI.');
-        }
-        updateProfileUI();
-      }
-    });
   });
 </script>
 

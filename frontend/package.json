@@ -9,8 +9,11 @@
   },
   "scripts": {
     "dev": "astro dev",
+    "dev:no-logs": "PUBLIC_ENABLE_LOGS=false astro dev",
+    "dev:prod-mode": "astro dev --mode production",
     "start": "astro dev",
     "build": "astro build",
+    "build:test": "PUBLIC_ENABLE_LOGS=false astro build && astro preview",
     "preview": "astro preview",
     "astro": "astro",
     "test:api": "node test-api.js",

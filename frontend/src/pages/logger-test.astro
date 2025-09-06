@@ -1,0 +1,46 @@
+---
+// Test page for logger functionality
+---
+
+<html>
+<head>
+    <title>Logger Test</title>
+</head>
+<body>
+    <h1>Logger Test Page</h1>
+    <p>Open browser console to see results</p>
+    
+    <script>
+        // Simulate the logger behavior
+        const isDev = import.meta.env.DEV;
+        
+        console.log('=== LOGGER TEST ===');
+        console.log('Current DEV mode:', isDev);
+        console.log('Current MODE:', import.meta.env.MODE);
+        
+        // Simulate our logger
+        const testLogger = {
+            log: (...args) => {
+                if (isDev) console.log('[DEV ONLY]', ...args);
+            },
+            error: (...args) => {
+                if (isDev) console.error('[DEV ONLY]', ...args);
+            }
+        };
+        
+        const testProductionLogger = {
+            error: (...args) => {
+                console.error('[ALWAYS SHOWN]', ...args);
+            }
+        };
+        
+        // Test both loggers
+        testLogger.log('This message should only appear in DEV mode');
+        testLogger.error('This error should only appear in DEV mode');
+        
+        testProductionLogger.error('This error should ALWAYS appear');
+        
+        console.log('=== TEST COMPLETE ===');
+    </script>
+</body>
+</html>

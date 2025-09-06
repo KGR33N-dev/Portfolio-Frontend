@@ -184,7 +184,7 @@ export class AdminAuth {
         const errorData = await response.json();
         
         // Preserve the API error structure for proper error handling
-        if (errorData.detail?.error_code) {
+        if (errorData.detail?.error_code || errorData.detail?.translation_code) {
           // Throw error with the same structure as API response
           throw {
             response: {
@@ -598,8 +598,10 @@ export class AdminAuth {
   }
 
   static async resendVerification(email: string, language?: string): Promise<ResendVerificationResponse> {
-    console.log('🔥 AdminAuth.resendVerification called with:', { email, language });
-    console.log('🌐 API URL:', API_URLS.resendVerification());
+    if (import.meta.env.DEV) {
+      console.log('🔥 AdminAuth.resendVerification called with:', { email, language });
+      console.log('🌐 API URL:', API_URLS.resendVerification());
+    }
     
     const response = await fetch(API_URLS.resendVerification(), {
       method: 'POST',
@@ -609,7 +611,9 @@ export class AdminAuth {
       body: JSON.stringify({ email, language }),
     });
 
-    console.log('📡 Response status:', response.status, response.statusText);
+    if (import.meta.env.DEV) {
+      console.log('📡 Response status:', response.status, response.statusText);
+    }
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -709,8 +713,10 @@ export class AdminAuth {
 
   // Password Reset Request
   static async requestPasswordReset(email: string, language?: string): Promise<PasswordResetResponse> {
-    console.log('AdminAuth.requestPasswordReset called with:', { email, language });
-    console.log('API_URLS.passwordResetRequest():', API_URLS.passwordResetRequest());
+    if (import.meta.env.DEV) {
+      console.log('AdminAuth.requestPasswordReset called with:', { email, language });
+      console.log('API_URLS.passwordResetRequest():', API_URLS.passwordResetRequest());
+    }
     
     const response = await fetch(API_URLS.passwordResetRequest(), {
       method: 'POST',
@@ -720,37 +726,65 @@ export class AdminAuth {
       body: JSON.stringify({ email, language }),
     });
 
-    console.log('Response received:', response.status, response.statusText);
+    if (import.meta.env.DEV) {
+      console.log('Response received:', response.status, response.statusText);
+    }
 
     if (!response.ok) {
-      let errorMessage = 'Failed to send password reset email';
-      
       try {
         const errorData = await response.json();
-        
-        // Handle specific HTTP status codes
-        if (response.status === 429) {
-          errorMessage = errorData.detail || 'Too many password reset attempts. Please wait before trying again.';
-        } else if (response.status === 400) {
-          // Check if it's specifically about email verification
-          if (errorData.detail && errorData.detail.toLowerCase().includes('not verified')) {
-            errorMessage = 'Your email address has not been verified yet. Please verify your email before resetting your password.';
-          } else {
-            errorMessage = errorData.detail || 'Email address not verified or invalid request.';
-          }
-        } else if (response.status === 404) {
-          // More specific message for non-existent email
-          errorMessage = 'Email address not found. Please check your email and try again.';
-        } else if (response.status === 422) {
-          errorMessage = errorData.detail || 'Invalid request format.';
-        } else {
-          errorMessage = errorData.detail || errorData.message || `Server error (${response.status})`;
+        if (import.meta.env.DEV) {
+          console.log('Error data received:', errorData);
         }
-      } catch {
-        errorMessage = `Server error (${response.status}): ${response.statusText}`;
+        
+        // Preserve the API error structure for proper error handling - same as login/register
+        if (errorData.detail?.error_code || errorData.detail?.translation_code) {
+          if (import.meta.env.DEV) {
+            console.log('Found translation_code or error_code, throwing structured error');
+          }
+          // Throw error with the same structure as API response
+          throw {
+            response: {
+              data: errorData
+            }
+          };
+        } else {
+          // Fallback for old error format
+          let errorMessage = 'Failed to send password reset email';
+          
+          // Handle specific HTTP status codes
+          if (response.status === 429) {
+            errorMessage = errorData.detail || 'Too many password reset attempts. Please wait before trying again.';
+          } else if (response.status === 400) {
+            // Check if it's specifically about email verification
+            if (errorData.detail && errorData.detail.toLowerCase().includes('not verified')) {
+              errorMessage = 'Your email address has not been verified yet. Please verify your email before resetting your password.';
+            } else {
+              errorMessage = errorData.detail || 'Email address not verified or invalid request.';
+            }
+          } else if (response.status === 404) {
+            // More specific message for non-existent email
+            errorMessage = 'Email address not found. Please check your email and try again.';
+          } else if (response.status === 422) {
+            errorMessage = errorData.detail || 'Invalid request format.';
+          } else {
+            errorMessage = errorData.detail || errorData.message || `Server error (${response.status})`;
+          }
+          
+          throw new Error(errorMessage);
+        }
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.log('Error parsing response or re-throwing structured error:', error);
+        }
+        // If parsing JSON fails, throw a generic error
+        if (error.response) {
+          // Re-throw the structured error
+          throw error;
+        } else {
+          throw new Error(`Server error (${response.status}): ${response.statusText}`);
+        }
       }
-      
-      throw new Error(errorMessage);
     }
 
     const data: PasswordResetResponse = await response.json();

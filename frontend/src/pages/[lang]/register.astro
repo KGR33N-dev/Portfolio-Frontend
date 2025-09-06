@@ -205,3 +205,16 @@ const metadata = {
   </WidgetWrapper>
 </Layout>
 
+<script define:vars={{ currentLang: lang }}>
+  import { initRegisterPage } from '~/scripts/auth/registerInit';
+  
+  // Initialize on DOM load and Astro page navigation
+  document.addEventListener('DOMContentLoaded', () => {
+    initRegisterPage(currentLang);
+  });
+  
+  document.addEventListener('astro:page-load', () => {
+    initRegisterPage(currentLang);
+  });
+</script>
+

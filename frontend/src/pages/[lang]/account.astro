@@ -763,9 +763,6 @@ const metadata = {
       
       showSuccess(translations.accountDeleteSuccess);
       
-      // Clear local storage and redirect
-      localStorage.removeItem('access_token');
-      
       setTimeout(() => {
         const currentLang = window.location.pathname.split('/')[1] || 'en';
         window.location.href = `/${currentLang}`;
@@ -842,5 +839,16 @@ const metadata = {
     // Reset initialization flag on navigation
     isAccountPageInitialized = false;
     initAccountPage();
+  });
+</script>
+
+<script>
+  import { AuthGuard } from '~/utils/authGuard';
+  
+  // Dodatkowa warstwa ochrony autoryzacji
+  AuthGuard.initAuthGuard({
+    requireAuth: true,
+    requireAdmin: false,
+    showLoader: false // account page ma własny loader
   });
 </script>

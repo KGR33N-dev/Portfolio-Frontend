@@ -51,7 +51,7 @@ class PageLifecycleManager {
    * Set a timeout that will be automatically cleared on page navigation
    */
   setTimeout(callback: () => void, delay: number): NodeJS.Timeout {
-    const timeoutId = setTimeout(callback, delay);
+    const timeoutId = globalThis.setTimeout(callback, delay);
     this.timeouts.push(timeoutId);
     return timeoutId;
   }
@@ -60,7 +60,7 @@ class PageLifecycleManager {
    * Set an interval that will be automatically cleared on page navigation
    */
   setInterval(callback: () => void, delay: number): NodeJS.Timeout {
-    const intervalId = setInterval(callback, delay);
+    const intervalId = globalThis.setInterval(callback, delay);
     this.intervals.push(intervalId);
     return intervalId;
   }
@@ -76,11 +76,11 @@ class PageLifecycleManager {
     this.eventListeners.length = 0;
 
     // Clear all timeouts
-    this.timeouts.forEach(timeoutId => clearTimeout(timeoutId));
+    this.timeouts.forEach(timeoutId => globalThis.clearTimeout(timeoutId));
     this.timeouts.length = 0;
 
     // Clear all intervals
-    this.intervals.forEach(intervalId => clearInterval(intervalId));
+    this.intervals.forEach(intervalId => globalThis.clearInterval(intervalId));
     this.intervals.length = 0;
 
     if (import.meta.env.DEV) {
