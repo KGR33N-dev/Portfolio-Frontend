@@ -1,19 +1,105 @@
 ---
+export const prerender = true;
 import Layout from '~/layouts/PageLayout.astro';
 import { useTranslations } from '~/i18n/utils';
 import { languages } from '~/i18n';
+import { API_URLS } from '~/config/api';
+import Grid from '~/components/blog/Grid.astro';
+import Pagination from '~/components/blog/Pagination.astro';
+import { convertApiPostToPost } from '~/types/blog';
+import type { Post, BlogApiResponse } from '~/types/blog';
 
 export function getStaticPaths() {
-  return Object.keys(languages).map(lang => ({
-    params: { lang }
-  }));
+  return Object.keys(languages).flatMap(lang => [
+    { params: { lang } },
+    // Generate pagination paths
+    ...Array.from({ length: 5 }, (_, i) => ({ 
+      params: { lang, page: String(i + 2) } 
+    }))
+  ]);
 }
 
 const { lang } = Astro.params;
 const t = useTranslations(lang as keyof typeof languages);
 
+// Get current page from URL params or query
+const currentPage = parseInt(Astro.url.searchParams.get('page') || '1');
+
+// Fetch blog posts from FastAPI
+let posts: Post[] = [];
+let totalPages = 1;
+let error: string | null = null;
+
+try {
+  // First try to get all published posts, then filter by available translations
+  const apiUrl = API_URLS.getAllPosts({
+    page: currentPage,
+    per_page: 12,
+    published: true,
+    sort: 'published_at',
+    order: 'desc'
+  });
+  console.log('🔍 Fetching from API (all posts):', apiUrl);
+  
+  const response = await fetch(apiUrl);
+  
+  if (response.ok) {
+    const data: BlogApiResponse = await response.json();
+    console.log('📊 Raw API response:', data);
+    console.log('📊 Total posts found:', data.total);
+    
+    // Filter posts that have translation for current language OR fallback to first available
+    const availablePosts = data.items.filter(post => {
+      const hasRequestedLang = post.translations?.some(t => t.language_code === lang);
+      const hasAnyTranslation = post.translations?.length > 0;
+      console.log(`Post ${post.id} (${post.slug}): has ${lang}=${hasRequestedLang}, has any=${hasAnyTranslation}`);
+      return hasAnyTranslation; // Show posts that have any translation
+    });
+    
+    console.log('📋 Posts with translations:', availablePosts.length);
+    
+    // Convert API posts to our Post format with language preference
+    posts = availablePosts.map(post => {
+      try {
+        return convertApiPostToPost(post, lang);
+      } catch (conversionError) {
+        console.warn(`Failed to convert post ${post.id}:`, conversionError);
+        // Try with first available language as fallback
+        const firstLang = post.translations?.[0]?.language_code || 'en';
+        return convertApiPostToPost(post, firstLang);
+      }
+    });
+    
+    totalPages = data.pages;
+    
+    // Filter only published posts (additional safety check)
+    posts = posts.filter(post => post.is_published);
+    
+    console.log('✅ Published posts loaded:', posts.length);
+    if (posts.length > 0) {
+      console.log('📋 First post details:', {
+        id: posts[0].id,
+        title: posts[0].title,
+        currentTitle: posts[0].currentTitle,
+        language: posts[0].language,
+        is_published: posts[0].is_published,
+        permalink: posts[0].permalink,
+        available_translations: posts[0].translations?.map(t => t.language_code)
+      });
+    }
+  } else {
+    console.error('❌ API response not OK:', response.status, response.statusText);
+    const errorText = await response.text();
+    console.error('❌ Error details:', errorText);
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+} catch (e) {
+  console.error('❌ Error fetching posts:', e);
+  error = e instanceof Error ? e.message : 'Unknown error';
+}
+
 const metadata = {
-  title: t('blog.title'),
+  title: currentPage > 1 ? `${t('blog.title')} - ${t('blog.page')} ${currentPage}` : t('blog.title'),
   description: t('blog.description'),
   robots: {
     index: true,
@@ -28,9 +114,10 @@ const metadata = {
 ---
 
 <Layout metadata={metadata}>
-  <section class="px-4 md:px-6 py-12 sm:py-16 lg:py-20 mx-auto max-w-6xl">
+  <section class="px-4 md:px-6 py-12 sm:py-16 lg:py-20 mx-auto max-w-7xl">
+    <!-- Header -->
     <div class="text-center mb-12">
-      <h1 class="text-4xl md:text-5xl font-bold leading-tight mb-4">
+      <h1 class="text-4xl md:text-5xl font-bold leading-tight mb-4 font-heading">
         {t('blog.title')}
       </h1>
       <p class="text-xl text-muted max-w-3xl mx-auto">
@@ -38,17 +125,47 @@ const metadata = {
       </p>
     </div>
 
-    <!-- Coming Soon Section -->
-    <div class="text-center py-16">
-      <div class="bg-blue-50 dark:bg-gray-800 rounded-lg p-8 max-w-2xl mx-auto">
-        <div class="text-blue-600 dark:text-blue-400 mb-4">
-          <svg class="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
-          </svg>
+    <!-- Blog Posts Section -->
+    {error ? (
+      <div class="text-center py-16">
+        <div class="bg-red-50 dark:bg-red-900/20 rounded-lg p-8 max-w-2xl mx-auto">
+          <div class="text-red-600 dark:text-red-400 mb-4">
+            <svg class="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <h2 class="text-2xl font-bold text-red-800 dark:text-red-200 mb-4">{t('blog.errorTitle')}</h2>
+          <p class="text-red-700 dark:text-red-300">{error}</p>
         </div>
-        <h2 class="text-3xl font-bold text-default mb-4">{t('notification.comingSoon.title')}</h2>
-        <p class="text-lg text-muted">{t('notification.comingSoon.message')}</p>
       </div>
-    </div>
+    ) : posts.length === 0 ? (
+      <div class="text-center py-16">
+        <div class="bg-blue-50 dark:bg-gray-800 rounded-lg p-8 max-w-2xl mx-auto">
+          <div class="text-blue-600 dark:text-blue-400 mb-4">
+            <svg class="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <h2 class="text-3xl font-bold text-default mb-4">{t('blog.comingSoon')}</h2>
+          <p class="text-lg text-muted">{t('blog.noPostsMessage')}</p>
+        </div>
+      </div>
+    ) : (
+      <>
+        <!-- Posts Grid -->
+        <Grid posts={posts} lang={lang} />
+        
+        <!-- Pagination -->
+        {totalPages > 1 && (
+          <div class="mt-12">
+            <Pagination 
+              currentPage={currentPage}
+              totalPages={totalPages}
+              baseUrl={`/${lang}/blog`}
+            />
+          </div>
+        )}
+      </>
+    )}
   </section>
 </Layout>

@@ -1,0 +1,127 @@
+---
+import Layout from '~/layouts/PageLayout.astro';
+import Headline from '~/components/ui/Headline.astro';
+import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
+import { useTranslations } from '~/i18n/utils';
+import { languages } from '~/i18n';
+
+export function getStaticPaths() {
+  return Object.keys(languages).map(lang => ({
+    params: { lang }
+  }));
+}
+
+const { lang } = Astro.params;
+const t = useTranslations(lang as keyof typeof languages);
+
+const metadata = {
+  title: t('auth.title'),
+  description: t('auth.subtitle'),
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+---
+
+<Layout metadata={metadata}>
+  <WidgetWrapper 
+    id="login" 
+    containerClass="max-w-md mx-auto min-h-screen flex items-center"
+  >
+    <Fragment slot="bg">
+      <div class="absolute inset-0 bg-gray-50 dark:bg-gray-900"></div>
+    </Fragment>
+    
+    <div class="w-full space-y-8">
+      <Headline 
+        title={t('auth.title')}
+        subtitle={t('auth.subtitle')}
+        classes={{
+          container: 'text-center',
+          title: 'text-3xl font-extrabold',
+          subtitle: 'text-sm text-gray-600 dark:text-gray-400'
+        }}
+      />
+      
+      <!-- Messages -->
+      <!-- Using StaticNotifications instead of inline messages -->
+      
+      <!-- Login Form -->
+      <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <form id="login-form" class="space-y-6">
+          <div>
+            <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('auth.email')}
+            </label>
+            <input 
+              id="email" 
+              name="email" 
+              type="email" 
+              required 
+              autocomplete="email"
+              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+              placeholder={t('auth.email')}
+            />
+          </div>
+          
+          <div>
+            <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('auth.password')}
+            </label>
+            <input 
+              id="password" 
+              name="password" 
+              type="password" 
+              required 
+              autocomplete="current-password"
+              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+              placeholder={t('auth.password')}
+            />
+          </div>
+          
+          <div class="mt-6">
+            <button 
+              type="submit" 
+              id="login-button"
+              class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+            >
+              <span id="button-text">{t('auth.loginButton')}</span>
+              <svg id="loading-spinner" class="hidden animate-spin -mr-1 ml-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </button>
+          </div>
+        </form>
+        
+        <div class="mt-6 space-y-4">
+          <div class="text-center">
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              {t('auth.dontHaveAccount')} 
+              <a href={`/${lang}/register`} class="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 font-medium">
+                {t('auth.signUpHere')}
+              </a>
+            </p>
+          </div>
+          
+          <div class="text-center">
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              <a href={`/${lang}/forgot-password`} class="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300">
+                {t('auth.forgotPassword')}
+              </a>
+            </p>
+          </div>
+          
+          <div class="text-center">
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              <a href={`/${lang}/verify-email`} class="text-green-600 hover:text-green-500 dark:text-green-400 dark:hover:text-green-300">
+                {t('auth.verifyAccount')}
+              </a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </WidgetWrapper>
+</Layout>

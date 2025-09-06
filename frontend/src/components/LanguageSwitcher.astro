@@ -21,25 +21,241 @@ function getRedirectPath(currentPath: string, targetLang: string): string {
   segments[0] = targetLang;
   return `/${segments.join('/')}`;
 }
+
+// Get available languages (excluding current)
+const availableLanguages = Object.entries(languages).filter(([lang]) => lang !== currentLang);
 ---
 
-<div class="flex items-center space-x-2">
-  {Object.entries(languages).map(([lang, label]) => {
-    const targetUrl = getRedirectPath(currentPath, lang as keyof typeof languages);
-    
-    return (
-      <a
-        href={targetUrl}
-        class={`px-2 py-1 text-sm rounded transition-colors ${
-          currentLang === lang
-            ? 'bg-primary text-white'
-            : 'text-gray-600 hover:text-primary dark:text-gray-300 dark:hover:text-primary'
-        }`}
-        aria-label={`Switch to ${label}`}
-        data-language={lang}
-      >
-        {lang.toUpperCase()}
-      </a>
-    );
-  })}
+<div class="relative" id="language-switcher">
+  <!-- Current Language Button -->
+  <button
+    id="language-button"
+    type="button"
+    class="flex items-center px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors group"
+    aria-expanded="false"
+    aria-haspopup="true"
+    onclick="window.toggleLanguageDropdown()"
+  >
+    <span class="mr-2">{currentLang.toUpperCase()}</span>
+    <svg class="w-3 h-3 transition-transform duration-200" id="language-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+    </svg>
+  </button>
+
+  <!-- Dropdown Menu -->
+  <div
+    id="language-dropdown"
+    class="hidden absolute right-0 mt-2 md:mt-2 md:top-full bottom-full md:bottom-auto mb-2 md:mb-0 w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50 origin-top-right transform transition-all duration-200 ease-out"
+    role="menu"
+    aria-orientation="vertical"
+    aria-labelledby="language-button"
+  >
+    <div class="py-1" role="none">
+      {availableLanguages.map(([lang, label]) => {
+        const targetUrl = getRedirectPath(currentPath, lang as keyof typeof languages);
+        
+        return (
+          <a
+            href={targetUrl}
+            class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors"
+            role="menuitem"
+            data-language={lang}
+            onclick="window.handleLanguageChange(this, event)"
+          >
+            <span class="flex items-center">
+              <span class="font-medium">{lang.toUpperCase()}</span>
+              <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">{label}</span>
+            </span>
+          </a>
+        );
+      })}
+    </div>
+  </div>
 </div>
+
+<script is:inline>
+  // Global function for language switcher
+  window.toggleLanguageDropdown = function() {
+    // Debug log removed because import.meta.env.DEV doesn't work in inline scripts
+    const button = document.getElementById('language-button');
+    const dropdown = document.getElementById('language-dropdown');
+    const arrow = document.getElementById('language-arrow');
+    
+    if (!button || !dropdown || !arrow) {
+      // Debug log removed
+      return;
+    }
+
+    const isOpen = !dropdown.classList.contains('hidden');
+    // Debug log removed
+    
+    if (isOpen) {
+      dropdown.classList.add('hidden');
+      arrow.style.transform = 'rotate(0deg)';
+      button.setAttribute('aria-expanded', 'false');
+    } else {
+      dropdown.classList.remove('hidden');
+      arrow.style.transform = 'rotate(180deg)';
+      button.setAttribute('aria-expanded', 'true');
+    }
+  };
+
+  // Function to handle language change and show notification
+  window.handleLanguageChange = function(element, event) {
+    event.preventDefault(); // Prevent immediate navigation
+    
+    const targetUrl = element.getAttribute('href');
+    
+    // Set flag that language is being changed
+    localStorage.setItem('languageChanged', 'true');
+    
+    // Close the dropdown
+    window.closeLanguageDropdown();
+    
+    // Navigate immediately - no notification here
+    window.location.href = targetUrl;
+  };
+
+  // Function to reinitialize notifications after language change
+  window.reinitializeNotifications = function() {
+    // No need for initialization with static system - just show language change message
+    console.log('✅ Language change detected - using static notification system');
+    
+    // Check if language was just changed (not just page refresh)
+    const languageChanged = localStorage.getItem('languageChanged');
+    
+    if (languageChanged === 'true') {
+      // Clear the flag immediately
+      localStorage.removeItem('languageChanged');
+      
+      // Show notification after language change - detect current language from URL
+      setTimeout(() => {
+        const currentPath = window.location.pathname;
+        const isPolishPage = currentPath.startsWith('/pl');
+        
+        const message = isPolishPage 
+          ? 'Język zmieniony pomyślnie!' 
+          : 'Language changed successfully!';
+        
+        // Use static notification system
+        if (window.StaticNotifications) {
+          window.StaticNotifications.success(message, 3000);
+        } else if (window.NotificationManager) {
+          window.NotificationManager.success(message);
+        }
+      }, 300); // Short delay to ensure the page is fully loaded
+    }
+  };
+
+  // Function to reinitialize comments system after language change
+  window.reinitializeCommentsSystem = function() {
+    // Check if we're on a page with comments
+    const commentsContainer = document.getElementById('comments-list');
+    if (!commentsContainer) {
+      console.log('No comments container found, skipping comments reinit');
+      return;
+    }
+
+    // Reset comments system state (if available globally)
+    if (typeof window.resetCommentsSystem === 'function') {
+      window.resetCommentsSystem();
+      console.log('✅ Comments system reset after language change');
+    } else {
+      console.log('Comments reset function not available');
+    }
+  };
+
+  // Close dropdown on outside click
+  window.closeLanguageDropdown = function() {
+    const button = document.getElementById('language-button');
+    const dropdown = document.getElementById('language-dropdown');
+    const arrow = document.getElementById('language-arrow');
+    
+    if (dropdown && arrow && button) {
+      dropdown.classList.add('hidden');
+      arrow.style.transform = 'rotate(0deg)';
+      button.setAttribute('aria-expanded', 'false');
+    }
+  };
+</script>
+
+<script define:vars={{ isDev: import.meta.env.DEV }}>
+  // Initialize language switcher listeners
+  function initLanguageSwitcherListeners() {
+    if (isDev) {
+      console.log('Initializing language switcher listeners'); // Debug log
+    }
+    
+    // Close on outside click
+    document.addEventListener('click', function(e) {
+      const button = document.getElementById('language-button');
+      const dropdown = document.getElementById('language-dropdown');
+      
+      if (!button || !dropdown) return;
+      
+      const target = e.target;
+      if (target instanceof Node && 
+          !button.contains(target) && 
+          !dropdown.contains(target)) {
+        window.closeLanguageDropdown();
+      }
+    });
+
+    // Close on escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        window.closeLanguageDropdown();
+      }
+    });
+  }
+
+  // Global initialization tracker  
+  let isLanguageSwitcherInitialized = false;
+
+  function initLanguageSwitcherOnce() {
+    // Prevent multiple initializations
+    if (isLanguageSwitcherInitialized) {
+      if (isDev) {
+        console.log('LanguageSwitcher already initialized, skipping...');
+      }
+      return;
+    }
+
+    if (isDev) {
+      console.log('Initializing LanguageSwitcher for the first time');
+    }
+
+    isLanguageSwitcherInitialized = true;
+    initLanguageSwitcherListeners();
+  }
+
+  // Initialize immediately and on page load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initLanguageSwitcherOnce, { once: true });
+  } else {
+    initLanguageSwitcherOnce();
+  }
+  
+  // For Astro SPA navigation, only reinitialize if not already initialized
+  document.addEventListener('astro:page-load', () => {
+    if (isDev) {
+      console.log('Astro page load detected, checking LanguageSwitcher status');
+    }
+    
+    // Reinitialize notifications after language change/navigation
+    if (typeof window.reinitializeNotifications === 'function') {
+      window.reinitializeNotifications();
+    }
+    
+    // Reinitialize comments system after language change/navigation
+    if (typeof window.reinitializeCommentsSystem === 'function') {
+      window.reinitializeCommentsSystem();
+    }
+    
+    if (!isLanguageSwitcherInitialized) {
+      initLanguageSwitcherOnce();
+    } else if (isDev) {
+      console.log('LanguageSwitcher already initialized, skipping astro:page-load reinit');
+    }
+  });
+</script>

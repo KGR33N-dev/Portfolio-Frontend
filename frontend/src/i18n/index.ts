@@ -6,6 +6,8 @@ import { privacyTranslations } from './pages/privacy';
 import { termsTranslations } from './pages/terms';
 import { errorTranslations } from './pages/error';
 import { notificationTranslations } from './pages/notifications';
+import { authTranslations } from './pages/auth';
+import { apiErrorTranslations } from './pages/api-errors';
 
 export const languages = {
   en: 'English',
@@ -27,6 +29,8 @@ export const ui = {
     ...termsTranslations.en,
     ...errorTranslations.en,
     ...notificationTranslations.en,
+    ...authTranslations.en,
+    ...apiErrorTranslations.en,
   },
   pl: {
     ...commonTranslations.pl,
@@ -37,5 +41,7 @@ export const ui = {
     ...termsTranslations.pl,
     ...errorTranslations.pl,
     ...notificationTranslations.pl,
+    ...authTranslations.pl,
+    ...apiErrorTranslations.pl,
   },
 } as const;

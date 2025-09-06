@@ -6,6 +6,7 @@ import ToggleMenu from '~/components/common/ToggleMenu.astro';
 import Button from '~/components/ui/Button.astro';
 import LanguageSwitcher from '~/components/LanguageSwitcher.astro';
 import CVDownload from '~/components/ui/CVDownload.astro';
+import ProfileDropdown from '~/components/ui/ProfileDropdown.astro';
 import { languages } from '~/i18n';
 
 import { trimSlash } from '~/utils/permalinks';
@@ -50,6 +51,7 @@ const {
 } = Astro.props;
 
 const currentPath = `/${trimSlash(new URL(Astro.url).pathname)}`;
+const isIndexPage = currentPath === '/pl' || currentPath === '/en' || currentPath === '/';
 ---
 
 <header
@@ -115,43 +117,64 @@ const currentPath = `/${trimSlash(new URL(Astro.url).pathname)}`;
         <div class="flex items-center">
           <slot name="extra" />
           
-          {/* Social Media Icons */}
-          <div class="flex items-center border-r border-gray-200 dark:border-gray-700 pr-2 mr-2">
-            <a
-              class="text-muted dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5 inline-flex items-center mr-1"
-              aria-label="LinkedIn"
-              href="https://www.linkedin.com/in/krzysztof-głuchowski/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Icon name="tabler:brand-linkedin" class="w-5 h-5" />
-            </a>
-            
-            <a
-              class="text-muted dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5 inline-flex items-center mr-2"
-              aria-label="GitHub"
-              href="https://github.com/KGR33N-dev"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Icon name="tabler:brand-github" class="w-5 h-5" />
-            </a>
-          </div>
+          {/* Social Media Icons - shown only on index pages */}
+          {isIndexPage && (
+            <div class="flex items-center border-r border-gray-200 dark:border-gray-700 pr-2 mr-2">
+              <a
+                class="text-muted dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5 inline-flex items-center mr-1"
+                aria-label="LinkedIn"
+                href="https://www.linkedin.com/in/krzysztof-głuchowski/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Icon name="tabler:brand-linkedin" class="w-5 h-5" />
+              </a>
+              
+              <a
+                class="text-muted dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5 inline-flex items-center mr-2"
+                aria-label="GitHub"
+                href="https://github.com/KGR33N-dev"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Icon name="tabler:brand-github" class="w-5 h-5" />
+              </a>
+            </div>
+          )}
           
-          <!-- CV Download -->
-          <div class="flex items-center border-r border-gray-200 dark:border-gray-700 pr-2 mr-2">
-            <CVDownload lang={lang} variant="header" />
-          </div>
+          <!-- CV Download - shown only on index pages -->
+          {isIndexPage && (
+            <div class="flex items-center border-r border-gray-200 dark:border-gray-700 pr-2 mr-2">
+              <CVDownload lang={lang} variant="header" />
+            </div>
+          )}
           
-          <!-- Grupa 2: User Controls -->
-          <div class="flex items-center">
-            {
-              showLanguageSwitcher && (
-                <LanguageSwitcher />
-              )
-            }
-            {showToggleTheme && <ToggleTheme iconClass="w-6 h-6 md:w-5 md:h-5 md:inline-block" />}
-          </div>
+          <!-- Profile Dropdown and controls - shown only on non-index pages -->
+          {!isIndexPage && (
+            <div class="flex items-center">
+              <ProfileDropdown />
+              <div class="flex items-center border-l border-gray-200 dark:border-gray-700 pl-2 ml-2">
+                {
+                  showLanguageSwitcher && (
+                    <LanguageSwitcher />
+                  )
+                }
+                {showToggleTheme && <ToggleTheme iconClass="w-6 h-6 md:w-5 md:h-5 md:inline-block" />}
+              </div>
+            </div>
+          )}
+          
+          <!-- Grupa 2: User Controls - only on index pages -->
+          {isIndexPage && (
+            <div class="flex items-center">
+              {
+                showLanguageSwitcher && (
+                  <LanguageSwitcher />
+                )
+              }
+              {showToggleTheme && <ToggleTheme iconClass="w-6 h-6 md:w-5 md:h-5 md:inline-block" />}
+            </div>
+          )}
         </div>
         {
           actions?.length ? (
@@ -160,9 +183,7 @@ const currentPath = `/${trimSlash(new URL(Astro.url).pathname)}`;
                 <Button {...btnProps} class="ml-2 py-2.5 px-5.5 md:px-6 font-semibold shadow-none text-sm w-auto" />
               ))}
             </span>
-          ) : (
-            ''
-          )
+          ) : null
         }
       </div>
     </div>

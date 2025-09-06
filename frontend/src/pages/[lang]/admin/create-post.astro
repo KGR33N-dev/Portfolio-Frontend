@@ -1,0 +1,765 @@
+---
+import Layout from '~/layouts/PageLayout.astro';
+import Headline from '~/components/ui/Headline.astro';
+import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
+import { useTranslations } from '~/i18n/utils';
+import { languages } from '~/i18n';
+
+export function getStaticPaths() {
+  return Object.keys(languages).map(lang => ({
+    params: { lang }
+  }));
+}
+
+const { lang } = Astro.params;
+const t = useTranslations(lang as keyof typeof languages);
+
+const metadata = {
+  title: t('admin.createPost'),
+  description: t('admin.blogManagement'),
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+---
+
+<Layout metadata={metadata}>
+  <!-- Loading State -->
+  <div id="auth-loading" class="flex items-center justify-center min-h-screen">
+    <div class="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+  </div>
+
+  <WidgetWrapper 
+    id="create-post" 
+    containerClass="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8"
+  >
+    <!-- Main Content (hidden until auth check) -->
+    <div id="main-content" class="hidden">
+      <!-- Header -->
+      <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 mb-8">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+        <div>
+          <Headline 
+            title={t('admin.createPost')}
+            subtitle={t('admin.blogManagement')}
+            classes={{
+              container: '',
+              title: 'text-2xl font-bold text-gray-900 dark:text-white',
+              subtitle: 'text-sm text-gray-600 dark:text-gray-400 mt-1'
+            }}
+          />
+        </div>
+        <a 
+          href={`/${lang}/admin/dashboard`}
+          class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200 font-medium"
+        >
+          ← Dashboard
+        </a>
+      </div>
+    </div>
+
+    <!-- Error/Success Messages -->
+    <div id="error-message" class="hidden bg-red-100 dark:bg-red-900/20 border border-red-400 text-red-700 dark:text-red-400 px-4 py-3 rounded mb-6">
+    </div>
+    
+    <div id="success-message" class="hidden bg-green-100 dark:bg-green-900/20 border border-green-400 text-green-700 dark:text-green-400 px-4 py-3 rounded mb-6">
+    </div>
+
+    <!-- Create Post Form -->
+    <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700">
+      <form id="create-post-form" class="p-6 space-y-6">
+        
+        <!-- General Post Settings -->
+        <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{t('admin.generalSettings')}</h3>
+          
+          <!-- Slug -->
+          <div class="mb-6">
+            <label for="slug" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('admin.postSlugRequired')}
+            </label>
+            <input 
+              id="slug" 
+              name="slug" 
+              type="text" 
+              required 
+              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+              placeholder={t('admin.postSlugPlaceholder')}
+            />
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('admin.urlSlugDescription')}</p>
+          </div>
+
+          <!-- Author and Category Row -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <label for="author" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t('admin.author')}
+              </label>
+              <input 
+                id="author" 
+                name="author" 
+                type="text" 
+                class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                placeholder={t('admin.authorPlaceholder')}
+              />
+            </div>
+
+            <div>
+              <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t('admin.category')}
+              </label>
+              <select 
+                id="category" 
+                name="category" 
+                class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+              >
+                <option value="">{t('admin.selectCategory')}</option>
+                <option value="programming">Programming</option>
+                <option value="tutorial">Tutorial</option>
+                <option value="technology">Technology</option>
+                <option value="web-development">Web Development</option>
+                <option value="backend">Backend</option>
+                <option value="python">Python</option>
+                <option value="fastapi">FastAPI</option>
+                <option value="astro">Astro</option>
+                <option value="gamedev">GameDev</option>
+                <option value="general">General</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Featured Image -->
+          <div class="mb-6">
+            <label for="featured_image" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('admin.featuredImage')}
+            </label>
+            <input 
+              id="featured_image" 
+              name="featured_image" 
+              type="url" 
+              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+              placeholder={t('admin.imageUrlPlaceholder')}
+            />
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('admin.featuredImageDescription')}</p>
+          </div>
+
+          <!-- Tags -->
+          <div>
+            <label for="tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('admin.postTags')}
+            </label>
+            <input 
+              id="tags" 
+              name="tags" 
+              type="text" 
+              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+              placeholder={t('admin.tagsPlaceholder')}
+            />
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('admin.separateTagsComma')}</p>
+          </div>
+        </div>
+
+        <!-- Translation Management -->
+        <div>
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{t('admin.translations')}</h3>
+            <div id="translation-status" class="text-sm text-gray-600 dark:text-gray-400">
+              Loading languages...
+            </div>
+          </div>
+
+          <!-- Translation sections will be added here dynamically -->
+          <div id="translations-container" class="space-y-6">
+            <!-- Loading state -->
+            <div id="loading-languages" class="text-center py-8">
+              <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+              <span class="text-gray-600 dark:text-gray-400">Loading available languages...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <!-- Debug button for testing backend connection -->
+          <button 
+            type="button" 
+            id="test-backend-btn"
+            class="px-4 py-2 text-sm bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
+          >
+            {t('admin.testBackendConnection')}
+          </button>
+          
+          <button 
+            type="submit" 
+            id="save-draft-btn"
+            data-action="draft"
+            class="flex-1 flex items-center justify-center px-6 py-3 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+          >
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+            </svg>
+            <span id="draft-text">{t('admin.savePost')} ({t('admin.draft')})</span>
+          </button>
+          
+          <button 
+            type="submit" 
+            id="publish-btn"
+            data-action="publish"
+            class="flex-1 flex items-center justify-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+          >
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+            </svg>
+            <span id="publish-text">{t('admin.publishPost')}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+    </div> <!-- End main-content -->
+
+    <!-- Access Denied Message (hidden by default) -->
+    <div id="access-denied" class="hidden bg-red-100 dark:bg-red-900/20 border border-red-400 text-red-700 dark:text-red-400 px-6 py-4 rounded-lg text-center">
+      <h3 class="font-semibold text-lg mb-2">{t('admin.accessDenied')}</h3>
+      <p class="mb-4">You need to be logged in as an administrator to create posts.</p>
+      <a href={`/${lang}/login`} class="inline-block px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200">
+        Go to Login
+      </a>
+    </div>
+  </WidgetWrapper>
+</Layout>
+
+<script>
+  import { AdminAuth } from '../../../utils/adminAuth.js';
+  import { API_URLS } from '../../../config/api.js';
+  import { LanguageAPI } from '../../../utils/languageAPI.js';
+  
+  interface Translation {
+    language_code: string;
+    title: string;
+    content: string;
+    excerpt: string;
+    meta_title: string;
+    meta_description: string;
+  }
+  
+  let user: any = null;
+  let availableLanguages: any[] = [];
+  let requiredLanguages: any[] = [];
+  let isSubmitting = false;
+
+  // Initialize the page
+  async function init() {
+    if (import.meta.env.DEV) {
+      console.log('Initializing create post page');
+    }
+
+    // Check user session via HTTP-only cookies
+    let sessionValid = false;
+    try {
+      // Try to verify session using HTTP-only cookies
+      const sessionCheck = await AdminAuth.verifyUser();
+      sessionValid = !!sessionCheck;
+    } catch (error) {
+      sessionValid = false;
+    }
+    
+    if (!sessionValid) {
+      if (import.meta.env.DEV) {
+        console.log('No valid session found, redirecting to login');
+      }
+      const currentLang = window.location.pathname.split('/')[1];
+      window.location.href = `/${currentLang}/login`;
+      return;
+    }
+
+    // Check user session
+    try {
+      user = await AdminAuth.verifyUser();
+      if (!user || !AdminAuth.isUserAdmin(user)) {
+        if (import.meta.env.DEV) {
+          console.log('User is not admin');
+        }
+        // Redirect to 403 page instead of showing inline message
+        const currentLang = window.location.pathname.split('/')[1];
+        window.location.href = `/${currentLang}/403`;
+        return;
+      }
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Session check failed:', error);
+      }
+      const currentLang = window.location.pathname.split('/')[1];
+      window.location.href = `/${currentLang}/login`;
+      return;
+    }
+
+    // Load languages
+    try {
+      availableLanguages = await LanguageAPI.getLanguages(true);
+      requiredLanguages = availableLanguages.filter(lang => lang.is_active);
+      
+      if (requiredLanguages.length === 0) {
+        throw new Error('No active languages found');
+      }
+      
+      const translationStatus = document.getElementById('translation-status');
+      if (translationStatus) {
+        translationStatus.textContent = `Required translations: ${requiredLanguages.length} languages`;
+      }
+      
+      createTranslationSections();
+      
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Error loading languages:', error);
+      }
+      showError(`Failed to load languages: ${error.message}`);
+      
+      // Fallback languages
+      requiredLanguages = [
+        { code: 'en', name: 'English', native_name: 'English', is_active: true },
+        { code: 'pl', name: 'Polish', native_name: 'Polski', is_active: true }
+      ];
+      
+      const translationStatusFallback = document.getElementById('translation-status');
+      if (translationStatusFallback) {
+        translationStatusFallback.textContent = `Using fallback languages: ${requiredLanguages.length} languages`;
+      }
+      
+      createTranslationSections();
+    }
+
+    // Set default author
+    const authorInput = document.getElementById('author');
+    if (authorInput && !(authorInput as HTMLInputElement).value && user) {
+      const defaultAuthor = user.username || user.full_name || user.email?.split('@')[0] || '';
+      (authorInput as HTMLInputElement).value = defaultAuthor;
+      (authorInput as HTMLInputElement).placeholder = `Default: ${defaultAuthor || 'Enter author name'}`;
+    }
+
+    setupEventListeners();
+  }
+
+  function createTranslationSections() {
+    const container = document.getElementById('translations-container');
+    if (!container) return;
+
+    document.getElementById('loading-languages')?.remove();
+    container.innerHTML = '';
+
+    requiredLanguages.forEach(language => {
+      const section = createTranslationSection(language);
+      container.appendChild(section);
+    });
+  }
+
+  function createTranslationSection(language) {
+    const { code, name, native_name } = language;
+    const flag = getLanguageFlag(code);
+    
+    const section = document.createElement('div');
+    section.className = 'translation-section border border-gray-200 dark:border-gray-700 rounded-lg p-6';
+    section.setAttribute('data-lang', code);
+    
+    section.innerHTML = `
+      <div class="flex justify-between items-center mb-4">
+        <h4 class="text-md font-medium text-gray-900 dark:text-white flex items-center">
+          <span class="text-2xl mr-2">${flag}</span>
+          <span>${native_name} (${name}) *</span>
+          <span class="ml-2 text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400 px-2 py-1 rounded">Required</span>
+        </h4>
+        <div class="text-xs text-gray-500 dark:text-gray-400">
+          Language: ${code.toUpperCase()}
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Title * <span class="text-xs text-gray-500">(${native_name})</span>
+          </label>
+          <input 
+            name="title-${code}" 
+            type="text" 
+            required 
+            data-lang="${code}"
+            class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+            placeholder="Enter post title in ${native_name}..."
+          />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Excerpt <span class="text-xs text-gray-500">(${native_name})</span>
+          </label>
+          <textarea 
+            name="excerpt-${code}"
+            rows="3"
+            data-lang="${code}"
+            class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+            placeholder="Brief description of the post in ${native_name}..."
+          ></textarea>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Content * <span class="text-xs text-gray-500">(${native_name})</span>
+          </label>
+          <div class="relative">
+            <textarea 
+              name="content-${code}"
+              rows="20"
+              required
+              data-lang="${code}"
+              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors resize-y min-h-[500px]"
+              placeholder="Write your post content here in ${native_name}... (Markdown supported)"
+            ></textarea>
+            <div class="absolute bottom-3 right-3 text-xs text-gray-400 dark:text-gray-500 bg-white dark:bg-slate-900 px-2 py-1 rounded">
+              Markdown supported
+            </div>
+          </div>
+        </div>
+
+        <details class="border border-gray-200 dark:border-gray-700 rounded-lg">
+          <summary class="px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 font-medium">
+            SEO Settings for ${native_name} (Optional)
+          </summary>
+          <div class="px-4 pb-4 space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Meta Title <span class="text-xs text-gray-500">(${native_name})</span>
+              </label>
+              <input 
+                name="meta_title-${code}"
+                type="text" 
+                data-lang="${code}"
+                class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                placeholder="SEO title in ${native_name} (leave empty to use post title)"
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Meta Description <span class="text-xs text-gray-500">(${native_name})</span>
+              </label>
+              <textarea 
+                name="meta_description-${code}"
+                rows="2"
+                data-lang="${code}"
+                class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                placeholder="SEO description in ${native_name} (leave empty to use excerpt)"
+              ></textarea>
+            </div>
+          </div>
+        </details>
+      </div>
+    `;
+    
+    return section;
+  }
+
+  function getLanguageFlag(code) {
+    const flags = {
+      'pl': '🇵🇱', 'en': '🇺🇸', 'de': '🇩🇪', 'fr': '🇫🇷', 'es': '🇪🇸',
+      'it': '🇮🇹', 'pt': '🇵🇹', 'ru': '🇷🇺', 'zh': '🇨🇳', 'ja': '🇯🇵', 'ko': '🇰🇷'
+    };
+    return flags[code.toLowerCase()] || '🌐';
+  }
+
+  function setupEventListeners() {
+    // Auto-generate slug from title
+    document.addEventListener('input', (e) => {
+      if ((e.target as HTMLInputElement)?.name?.startsWith('title-')) {
+        updateSlugFromTitle();
+      }
+    });
+
+    // Form submission
+    document.getElementById('create-post-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const isDraft = e.submitter?.dataset.action === 'draft';
+      await submitPost(isDraft);
+    });
+
+    // Test backend button
+    document.getElementById('test-backend-btn')?.addEventListener('click', testBackendConnection);
+  }
+
+  function updateSlugFromTitle() {
+    const firstTitleInput = document.querySelector('input[name^="title-"]') as HTMLInputElement;
+    const slugInput = document.querySelector('input[name="slug"]') as HTMLInputElement;
+    
+    if (firstTitleInput?.value && !slugInput?.value.trim()) {
+      slugInput.value = generateSlugFromTitle(firstTitleInput.value);
+    }
+  }
+
+  function generateSlugFromTitle(title: string): string {
+    if (!title?.trim()) return 'untitled-post';
+    
+    const polishChars = {
+      'ą': 'a', 'ć': 'c', 'ę': 'e', 'ł': 'l', 'ń': 'n',
+      'ó': 'o', 'ś': 's', 'ź': 'z', 'ż': 'z'
+    };
+    
+    const slug = title.toLowerCase().trim()
+      .replace(/[ąćęłńóśźż]/g, (char) => polishChars[char] || char)
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    
+    return slug || 'untitled-post';
+  }
+
+  function collectTranslations(): Translation[] {
+    const translations: Translation[] = [];
+    const missingLanguages: string[] = [];
+    
+    for (const lang of requiredLanguages) {
+      const section = document.querySelector(`[data-lang="${lang.code}"]`);
+      if (!section) {
+        missingLanguages.push(lang.native_name);
+        continue;
+      }
+      
+      const titleInput = section.querySelector(`input[name="title-${lang.code}"]`) as HTMLInputElement;
+      const excerptInput = section.querySelector(`textarea[name="excerpt-${lang.code}"]`) as HTMLTextAreaElement;
+      const contentInput = section.querySelector(`textarea[name="content-${lang.code}"]`) as HTMLTextAreaElement;
+      const metaTitleInput = section.querySelector(`input[name="meta_title-${lang.code}"]`) as HTMLInputElement;
+      const metaDescInput = section.querySelector(`textarea[name="meta_description-${lang.code}"]`) as HTMLTextAreaElement;
+      
+      if (!titleInput?.value.trim() || !contentInput?.value.trim()) {
+        missingLanguages.push(`${lang.native_name} (missing title or content)`);
+        continue;
+      }
+      
+      translations.push({
+        language_code: lang.code,
+        title: titleInput.value.trim(),
+        content: contentInput.value.trim(),
+        excerpt: excerptInput?.value.trim() || '',
+        meta_title: metaTitleInput?.value.trim() || '',
+        meta_description: metaDescInput?.value.trim() || ''
+      });
+    }
+    
+    if (missingLanguages.length > 0) {
+      showError(`Missing translations for: ${missingLanguages.join(', ')}`);
+      return [];
+    }
+    
+    return translations;
+  }
+
+  async function testBackendConnection() {
+    hideMessages();
+    
+    try {
+      // Test health using API_URLS
+      const healthResponse = await fetch(API_URLS.health(), {
+        headers: { 'Accept': 'application/json' },
+        credentials: 'include'
+      });
+      
+      if (!healthResponse.ok) {
+        throw new Error(`Health check failed: ${healthResponse.status}`);
+      }
+      
+      const healthData = await healthResponse.json();
+      
+      // Test auth using HTTP-only cookies
+      const authResponse = await fetch(API_URLS.me(), {
+        headers: {
+          'Accept': 'application/json'
+        },
+        credentials: 'include'
+      });
+      
+      if (!authResponse.ok) {
+        throw new Error(`Auth test failed: ${authResponse.status}`);
+      }
+      
+      const userData = await authResponse.json();
+      
+      showSuccess(`✅ Backend operational!\n🏥 Health: ${healthData.status}\n👤 User: ${userData.email}`);
+      
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Backend test failed:', error);
+      }
+      
+      let message = 'Backend connection test failed: ';
+      if (error.message.includes('NetworkError') || error.message.includes('fetch')) {
+        message += 'Network error - check if backend is running and accessible';
+      } else {
+        message += error.message;
+      }
+      
+      showError(message);
+    }
+  }
+
+  async function submitPost(isDraft) {
+    if (isSubmitting) return;
+    isSubmitting = true;
+    
+    hideMessages();
+    
+    const activeBtn = isDraft ? 
+      document.getElementById('save-draft-btn') as HTMLButtonElement : 
+      document.getElementById('publish-btn') as HTMLButtonElement;
+    const activeText = isDraft ? 
+      document.getElementById('draft-text') : 
+      document.getElementById('publish-text');
+    
+    const originalText = activeText?.textContent || '';
+    
+    try {
+      // Show loading state
+      if (activeBtn) activeBtn.disabled = true;
+      if (activeText) activeText.textContent = 'Saving...';
+      
+      const translations = collectTranslations();
+      if (translations.length === 0) {
+        throw new Error('Translations are required for all active languages');
+      }
+      
+      const slugInput = document.querySelector('input[name="slug"]') as HTMLInputElement;
+      const authorInput = document.querySelector('input[name="author"]') as HTMLInputElement;
+      const categoryInput = document.querySelector('select[name="category"]') as HTMLSelectElement;
+      const tagsInput = document.querySelector('input[name="tags"]') as HTMLInputElement;
+      
+      let slug = slugInput?.value.trim();
+      if (!slug) {
+        slug = generateSlugFromTitle(translations[0].title);
+        if (slugInput) slugInput.value = slug;
+      }
+      
+      const postData = {
+        translations,
+        slug,
+        author: authorInput?.value.trim() || user?.username || 'Admin',
+        category: categoryInput?.value || 'General',
+        tags: tagsInput?.value.split(',').map(tag => tag.trim()).filter(Boolean) || [],
+        is_published: !isDraft,
+        meta_fields: {}
+      };
+      
+      const response = await fetch(API_URLS.createPost(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify(postData)
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP ${response.status}`);
+      }
+      
+      await response.json(); // Consume response
+      
+      showSuccess(`✅ Post ${isDraft ? 'saved as draft' : 'published'} successfully!`);
+      
+      // Reset form after successful submission
+      setTimeout(() => {
+        (document.getElementById('create-post-form') as HTMLFormElement)?.reset();
+        createTranslationSections();
+      }, 2000);
+      
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Submit failed:', error);
+      }
+      showError(`Failed to ${isDraft ? 'save draft' : 'publish'}: ${error.message}`);
+    } finally {
+      isSubmitting = false;
+      if (activeBtn) activeBtn.disabled = false;
+      if (activeText) activeText.textContent = originalText;
+    }
+  }
+
+  function showError(message) {
+    const errorDiv = document.getElementById('error-message');
+    const successDiv = document.getElementById('success-message');
+    
+    if (errorDiv) {
+      errorDiv.textContent = message;
+      errorDiv.classList.remove('hidden');
+    }
+    if (successDiv) {
+      successDiv.classList.add('hidden');
+    }
+  }
+
+  function showSuccess(message) {
+    const errorDiv = document.getElementById('error-message');
+    const successDiv = document.getElementById('success-message');
+    
+    if (successDiv) {
+      successDiv.textContent = message;
+      successDiv.classList.remove('hidden');
+    }
+    if (errorDiv) {
+      errorDiv.classList.add('hidden');
+    }
+  }
+
+  function hideMessages() {
+    document.getElementById('error-message')?.classList.add('hidden');
+    document.getElementById('success-message')?.classList.add('hidden');
+  }
+
+  // Initialize on page load
+  document.addEventListener('DOMContentLoaded', init);
+  document.addEventListener('astro:page-load', init);
+</script>
+
+<style>
+  /* Custom styles for the markdown editor */
+  #content {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  
+  /* Loading spinner for buttons */
+  .btn-loading {
+    position: relative;
+  }
+  
+  .btn-loading::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    to {
+      transform: translate(-50%, -50%) rotate(360deg);
+    }
+  }
+</style>
+
+<script>
+  import { AuthGuard } from '~/utils/authGuard';
+  
+  // Inicjalizuj ochronę autoryzacji - wymagana rola admin
+  AuthGuard.initAuthGuard({
+    requireAdmin: true,
+    requireAuth: true,
+    showLoader: true
+  });
+</script>

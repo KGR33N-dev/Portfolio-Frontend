@@ -9,10 +9,14 @@
   },
   "scripts": {
     "dev": "astro dev",
+    "dev:no-logs": "PUBLIC_ENABLE_LOGS=false astro dev",
+    "dev:prod-mode": "astro dev --mode production",
     "start": "astro dev",
     "build": "astro build",
+    "build:test": "PUBLIC_ENABLE_LOGS=false astro build && astro preview",
     "preview": "astro preview",
     "astro": "astro",
+    "test:api": "node test-api.js",
     "check": "npm run check:astro && npm run check:eslint && npm run check:prettier",
     "check:astro": "astro check",
     "check:eslint": "eslint .",
@@ -22,6 +26,7 @@
     "fix:prettier": "prettier -w ."
   },
   "dependencies": {
+    "@astrojs/cloudflare": "^12.6.3",
     "@astrojs/node": "^9.3.0",
     "@astrojs/react": "^4.3.0",
     "@astrojs/rss": "^4.0.11",

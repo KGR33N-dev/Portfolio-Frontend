@@ -1,0 +1,122 @@
+---
+import Layout from '~/layouts/PageLayout.astro';
+import { languages } from '~/i18n';
+import { API_URLS } from '~/config/api';
+import SinglePost from '~/components/blog/SinglePost.astro';
+import Comments from '~/components/blog/Comments.astro';
+import { convertApiPostToPost } from '~/types/blog';
+import type { Post, ApiPost, Translation } from '~/types/blog';
+import type { Language } from '~/types/language';
+
+// Use SSR for dynamic blog posts to support preview mode and fallback handling
+export const prerender = false;
+
+const { lang, slug } = Astro.params;
+
+// Validate language
+if (!lang || !Object.keys(languages).includes(lang)) {
+  return Astro.redirect('/404');
+}
+
+// Validate slug
+if (!slug) {
+  return Astro.redirect('/404');
+}
+
+// Check if this is a preview request for draft posts
+const isPreviewMode = Astro.url.searchParams.get('preview') === 'true';
+
+let currentPost: Post | null = null;
+
+try {
+  console.log(`🔍 Fetching post: ${slug} (${lang})`);
+  
+  // For preview mode, try to fetch from admin API first (includes drafts)
+  if (isPreviewMode) {
+    console.log('🔍 Preview mode detected, trying admin API...');
+  }
+    
+  // If not found in admin API or not preview mode, try public API
+  if (!currentPost) {
+    // Try to fetch all posts first, then find by slug (more reliable)
+    const allPostsResponse = await fetch(API_URLS.getAllPosts({
+      published: true,
+      per_page: 100 // Get enough posts to find our slug
+    }));
+    
+    if (allPostsResponse.ok) {
+      const allPosts = await allPostsResponse.json();
+      console.log('📊 All posts fetched:', allPosts.total);
+      
+      // Find post by slug
+      const foundPost = allPosts.items.find((p: ApiPost) => p.slug === slug);
+      
+      if (foundPost && foundPost.is_published) {
+        console.log(`✅ Found post ${foundPost.id} with slug ${slug}`);
+        console.log('Available translations:', foundPost.translations?.map(t => t.language_code));
+        
+        // Check if requested language is available
+        const hasRequestedLang = foundPost.translations?.some((t: Translation) => t.language_code === lang);
+        
+        if (hasRequestedLang) {
+          currentPost = convertApiPostToPost(foundPost, lang);
+          console.log('✅ Post loaded with requested language:', currentPost.title);
+        } else {
+          // Use first available language as fallback but keep the URL structure
+          const fallbackLang = foundPost.translations?.[0]?.language_code || 'en';
+          console.log(`⚠️ Post found but no ${lang} translation, using ${fallbackLang} with ${lang} URL structure`);
+          currentPost = convertApiPostToPost(foundPost, lang); // This will use fallback translation but keep lang in permalink
+        }
+      } else if (foundPost) {
+        console.log('❌ Post found but not published');
+      } else {
+        console.log('❌ Post not found with slug:', slug);
+      }
+    } else {
+      console.log(`⚠️ All posts API returned ${allPostsResponse.status}`);
+      const errorText = await allPostsResponse.text();
+      console.error('API Error:', errorText);
+    }
+  }
+} catch (e) {
+  console.error('❌ Error fetching post:', e);
+  // Error variable removed as it was unused
+}
+
+// If still no post found, return 404
+if (!currentPost) {
+  console.log(`❌ Post not found: ${slug} (${lang})`);
+  return new Response(null, {
+    status: 404,
+    statusText: 'Post not found'
+  });
+}
+
+// Prepare metadata
+const metadata = {
+  title: currentPost.currentMetaTitle || currentPost.currentTitle || currentPost.title,
+  description: currentPost.currentMetaDescription || currentPost.currentExcerpt || currentPost.excerpt || (currentPost.currentContent || currentPost.content)?.substring(0, 160) || '',
+  robots: {
+    index: currentPost.is_published !== false,
+    follow: true,
+  },
+  openGraph: {
+    type: 'article',
+    title: currentPost.currentTitle || currentPost.title,
+    description: currentPost.currentExcerpt || currentPost.excerpt || (currentPost.currentContent || currentPost.content)?.substring(0, 160) || '',
+    image: currentPost.featured_image,
+    article: {
+      author: currentPost.author,
+      publishedTime: currentPost.published_at || currentPost.created_at,
+      modifiedTime: currentPost.updated_at,
+      section: currentPost.category,
+      tags: currentPost.tags,
+    }
+  },
+};
+---
+
+<Layout metadata={metadata}>
+  <SinglePost post={currentPost} url={Astro.url} lang={lang} />
+  <Comments postId={currentPost.id} lang={lang as unknown as Language} />
+</Layout>

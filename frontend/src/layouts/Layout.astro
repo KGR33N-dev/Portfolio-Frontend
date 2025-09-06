@@ -11,6 +11,7 @@ import Metadata from '~/components/common/Metadata.astro';
 import SiteVerification from '~/components/common/SiteVerification.astro';
 import Analytics from '~/components/common/Analytics.astro';
 import BasicScripts from '~/components/common/BasicScripts.astro';
+import NotificationSystem from '~/components/common/StaticNotificationSystem.astro';
 
 // Comment the line below to disable View Transitions
 import { ClientRouter } from 'astro:transitions';
@@ -41,8 +42,15 @@ const { language, textDirection } = I18N;
   </head>
 
   <body class="antialiased text-default bg-page tracking-tight">
+    <NotificationSystem />
+    
     <slot />
 
     <BasicScripts />
+    
+    <!-- Global auto-initialization script -->
+    <script type="module">
+      import '/src/scripts/global-app.ts';
+    </script>
   </body>
 </html>

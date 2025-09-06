@@ -1,0 +1,132 @@
+---
+// Component for admin controls in header - only visible on blog pages
+---
+
+<div id="admin-controls" class="flex items-center border-l border-gray-200 dark:border-gray-700 pl-2 ml-2">
+  <!-- Login button (shown when not authenticated) -->
+  <a
+    id="admin-login-btn"
+    href="/login"
+    class="text-muted dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm px-3 py-2 inline-flex items-center"
+    style="display: none;"
+    title="Login"
+  >
+    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+    </svg>
+    Login
+  </a>
+
+  <!-- Admin controls (shown when authenticated) -->
+  <div id="admin-authenticated" class="flex items-center space-x-1" style="display: none;">
+    <!-- Dashboard button -->
+    <a
+      id="admin-dashboard-btn"
+      href="/admin/dashboard"
+      class="text-muted dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm px-3 py-2 inline-flex items-center"
+      title="Admin Dashboard"
+    >
+      <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+      </svg>
+      Admin
+    </a>
+
+    <!-- Logout button -->
+    <button
+      id="admin-logout-btn"
+      class="text-muted dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm px-3 py-2 inline-flex items-center"
+      title="Logout"
+    >
+      <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+      </svg>
+      Logout
+    </button>
+  </div>
+</div>
+
+<script>
+  import { AdminAuth } from '../../utils/adminAuth';
+  
+  // Only show admin controls on blog pages
+  async function initAdminControls() {
+    const currentPath = window.location.pathname;
+    const isBlogPage = currentPath.includes('/blog') || currentPath.includes('/pl/blog') || currentPath.includes('/en/blog');
+    
+    if (!isBlogPage) {
+      // Hide admin controls completely if not on blog page
+      const adminControls = document.getElementById('admin-controls');
+      if (adminControls) {
+        adminControls.style.display = 'none';
+      }
+      return;
+    }
+
+    // Check admin status securely via HTTP-only cookies
+    let isAdmin = false;
+    try {
+      const user = await AdminAuth.verifyUser();
+      isAdmin = user ? AdminAuth.isUserAdmin(user) : false;
+    } catch {
+      isAdmin = false;
+    }
+    
+    console.log('AdminControls: Admin status verified:', isAdmin);
+
+    if (!isAdmin) {
+      showLoginButton();
+      return;
+    }
+
+    showAdminControls();
+  }
+
+  function showLoginButton() {
+    const loginBtn = document.getElementById('admin-login-btn');
+    const authenticatedControls = document.getElementById('admin-authenticated');
+    
+    if (loginBtn) {
+      loginBtn.style.display = 'inline-flex';
+      const currentLang = window.location.pathname.split('/')[1] || 'en';
+      (loginBtn as HTMLAnchorElement).href = `/${currentLang}/login`;
+    }
+    if (authenticatedControls) {
+      authenticatedControls.style.display = 'none';
+    }
+  }
+
+  function showAdminControls() {
+    const loginBtn = document.getElementById('admin-login-btn');
+    const authenticatedControls = document.getElementById('admin-authenticated');
+    const dashboardBtn = document.getElementById('admin-dashboard-btn');
+    const logoutBtn = document.getElementById('admin-logout-btn');
+
+    if (loginBtn) loginBtn.style.display = 'none';
+    if (authenticatedControls) authenticatedControls.style.display = 'flex';
+
+    // Update dashboard link with current language
+    if (dashboardBtn) {
+      const currentLang = window.location.pathname.split('/')[1] || 'en';
+      (dashboardBtn as HTMLAnchorElement).href = `/${currentLang}/admin/dashboard`;
+    }
+
+    // Setup logout functionality
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', () => {
+        AdminAuth.logout();
+        window.location.reload();
+      });
+    }
+  }
+
+  // Initialize on page load
+  document.addEventListener('DOMContentLoaded', initAdminControls);
+  
+  // Also initialize if this script runs after DOMContentLoaded
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAdminControls);
+  } else {
+    initAdminControls();
+  }
+</script>

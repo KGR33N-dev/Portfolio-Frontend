@@ -1,0 +1,220 @@
+---
+import Layout from '~/layouts/PageLayout.astro';
+import Headline from '~/components/ui/Headline.astro';
+import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
+import StaticNotificationSystem from '~/components/common/StaticNotificationSystem.astro';
+import { useTranslations } from '~/i18n/utils';
+import { languages } from '~/i18n';
+
+export function getStaticPaths() {
+  return Object.keys(languages).map(lang => ({
+    params: { lang }
+  }));
+}
+
+const { lang } = Astro.params;
+const t = useTranslations(lang as keyof typeof languages);
+
+const metadata = {
+  title: t('auth.registerTitle'),
+  description: t('auth.registerSubtitle'),
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+---
+
+<Layout metadata={metadata}>
+  <StaticNotificationSystem />
+  <WidgetWrapper 
+    id="register" 
+    containerClass="max-w-md mx-auto min-h-screen flex items-center"
+  >
+    <Fragment slot="bg">
+      <div class="absolute inset-0 bg-gray-50 dark:bg-gray-900"></div>
+    </Fragment>
+    
+    <div class="w-full space-y-8">
+      <Headline 
+        title={t('auth.registerTitle')}
+        subtitle={t('auth.registerSubtitle')}
+        classes={{
+          container: 'text-center',
+          title: 'text-3xl font-extrabold',
+          subtitle: 'text-sm text-gray-600 dark:text-gray-400'
+        }}
+      />
+      
+      <!-- Messages -->
+      <!-- Using StaticNotifications instead of inline messages -->
+      
+      <!-- Registration Form -->
+      <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <form id="register-form" class="space-y-6">
+          <div>
+            <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('auth.email')} <span class="text-red-500">*</span>
+            </label>
+            <input 
+              id="email" 
+              name="email" 
+              type="email" 
+              required 
+              autocomplete="email"
+              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+              placeholder={t('auth.emailPlaceholder')}
+            />
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('auth.emailHint')}</p>
+          </div>
+          
+          <div>
+            <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('auth.username')} <span class="text-red-500">*</span>
+            </label>
+            <input 
+              id="username" 
+              name="username" 
+              type="text" 
+              required 
+              autocomplete="username"
+              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+              placeholder={t('auth.usernamePlaceholder')}
+              pattern="^[A-Za-z0-9.-_]{3,15}$"
+            />
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('auth.usernameHint')}</p>
+          </div>
+          
+          <div>
+            <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('auth.password')} <span class="text-red-500">*</span>
+            </label>
+            <input 
+              id="password" 
+              name="password" 
+              type="password" 
+              required 
+              autocomplete="new-password"
+              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+              placeholder={t('auth.passwordPlaceholder')}
+              minlength="8"
+            />
+            <div id="password-strength" class="mt-2">
+              <div class="text-xs text-gray-500 dark:text-gray-400">
+                {t('auth.passwordRequirements')}:
+              </div>
+              <ul class="text-xs text-gray-500 dark:text-gray-400 mt-1 space-y-1">
+                <li id="length-check" class="flex items-center">
+                  <span class="w-4 h-4 mr-2">✗</span>
+                  {t('auth.passwordLength')}
+                </li>
+                <li id="uppercase-check" class="flex items-center">
+                  <span class="w-4 h-4 mr-2">✗</span>
+                  {t('auth.passwordUppercase')}
+                </li>
+                <li id="lowercase-check" class="flex items-center">
+                  <span class="w-4 h-4 mr-2">✗</span>
+                  {t('auth.passwordLowercase')}
+                </li>
+                <li id="number-check" class="flex items-center">
+                  <span class="w-4 h-4 mr-2">✗</span>
+                  {t('auth.passwordNumber')}
+                </li>
+                <li id="special-check" class="flex items-center">
+                  <span class="w-4 h-4 mr-2">✗</span>
+                  {t('auth.passwordSpecial')}
+                </li>
+              </ul>
+            </div>
+          </div>
+          
+          <div>
+            <label for="confirmPassword" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('auth.confirmPassword')} <span class="text-red-500">*</span>
+            </label>
+            <input 
+              id="confirmPassword" 
+              name="confirmPassword" 
+              type="password" 
+              required 
+              autocomplete="new-password"
+              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+              placeholder={t('auth.confirmPasswordPlaceholder')}
+            />
+          </div>
+          
+          <div>
+            <label for="fullName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('auth.fullName')}
+            </label>
+            <input 
+              id="fullName" 
+              name="fullName" 
+              type="text" 
+              autocomplete="name"
+              class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+              placeholder={t('auth.fullNamePlaceholder')}
+              maxlength="100"
+            />
+          </div>
+          
+          <!-- Terms & Privacy -->
+          <div class="flex items-start">
+            <div class="flex items-center h-5">
+              <input 
+                id="terms" 
+                name="terms" 
+                type="checkbox" 
+                required
+                class="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-blue-300 dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-600 dark:ring-offset-gray-800"
+              />
+            </div>
+            <div class="ml-3 text-sm">
+              <label for="terms" class="text-gray-500 dark:text-gray-300">
+                {t('auth.agreeToTerms')} <a href={`/${lang}/terms`} class="text-blue-600 hover:underline dark:text-blue-500" target="_blank">{t('auth.termsOfService')}</a> {t('auth.and')} <a href={`/${lang}/privacy`} class="text-blue-600 hover:underline dark:text-blue-500" target="_blank">{t('auth.privacyPolicy')}</a>
+              </label>
+            </div>
+          </div>
+          
+          <div class="mt-6">
+            <button 
+              type="submit" 
+              id="register-button"
+              class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              disabled
+            >
+              <span id="button-text">{t('auth.registerButton')}</span>
+              <svg id="loading-spinner" class="hidden animate-spin -mr-1 ml-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </button>
+          </div>
+        </form>
+        
+        <div class="mt-6 text-center">
+          <p class="text-sm text-gray-600 dark:text-gray-400">
+            {t('auth.alreadyHaveAccount')} 
+            <a href={`/${lang}/login`} class="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 font-medium">
+              {t('auth.signInHere')}
+            </a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </WidgetWrapper>
+</Layout>
+
+<script define:vars={{ currentLang: lang }}>
+  import { initRegisterPage } from '~/scripts/auth/registerInit';
+  
+  // Initialize on DOM load and Astro page navigation
+  document.addEventListener('DOMContentLoaded', () => {
+    initRegisterPage(currentLang);
+  });
+  
+  document.addEventListener('astro:page-load', () => {
+    initRegisterPage(currentLang);
+  });
+</script>
+

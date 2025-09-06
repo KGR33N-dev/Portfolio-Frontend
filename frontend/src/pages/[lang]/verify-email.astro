@@ -1,0 +1,140 @@
+---
+import Layout from '~/layouts/PageLayout.astro';
+import Headline from '~/components/ui/Headline.astro';
+import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
+import { useTranslations } from '~/i18n/utils';
+import { languages } from '~/i18n';
+
+export function getStaticPaths() {
+  return Object.keys(languages).map(lang => ({
+    params: { lang }
+  }));
+}
+
+const { lang } = Astro.params;
+const t = useTranslations(lang as keyof typeof languages);
+
+const metadata = {
+  title: t('auth.verifyEmailTitle'),
+  description: t('auth.verifyEmailSubtitle'),
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+---
+
+<Layout metadata={metadata}>
+  <WidgetWrapper 
+    id="verify-email" 
+    containerClass="max-w-md mx-auto min-h-screen flex items-center"
+  >
+    <Fragment slot="bg">
+      <div class="absolute inset-0 bg-gray-50 dark:bg-gray-900"></div>
+    </Fragment>
+    
+    <div class="w-full space-y-8">
+      <Headline 
+        title={t('auth.verifyEmailTitle')}
+        subtitle={t('auth.verifyEmailSubtitle')}
+        classes={{
+          container: 'text-center',
+          title: 'text-3xl font-extrabold',
+          subtitle: 'text-sm text-gray-600 dark:text-gray-400'
+        }}
+      />
+      
+      <!-- Messages -->
+      <!-- Using StaticNotifications instead of inline messages -->
+      
+      <!-- Verification Form -->
+      <div class="bg-white dark:bg-slate-900 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <div class="space-y-6">
+          <!-- Email Display -->
+          <div class="text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/20">
+              <svg class="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+              </svg>
+            </div>
+            <p class="mt-4 text-sm text-gray-600 dark:text-gray-400" id="email-display">
+              {t('auth.checkYourEmail')}
+            </p>
+          </div>
+
+          <form id="verify-form" class="space-y-6">
+            <div>
+              <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t('auth.email')} <span class="text-red-500">*</span>
+              </label>
+              <input 
+                id="email" 
+                name="email" 
+                type="email" 
+                required 
+                autocomplete="email"
+                class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                placeholder={t('auth.emailPlaceholder')}
+              />
+            </div>
+            
+            <div>
+              <label for="verification-code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t('auth.verificationCode')} <span class="text-red-500">*</span>
+              </label>
+              <input 
+                id="verification-code" 
+                name="verification_code" 
+                type="text" 
+                required 
+                autocomplete="one-time-code"
+                class="py-3 px-4 block w-full text-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors text-center tracking-wider font-mono text-2xl"
+                placeholder="123456"
+                maxlength="6"
+                pattern="[0-9]{6}"
+                inputmode="numeric"
+              />
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('auth.verificationCodeHint')}</p>
+            </div>
+            
+            <div class="mt-6">
+              <button 
+                type="submit" 
+                id="verify-button"
+                class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              >
+                <span id="verify-button-text">{t('auth.verifyEmailButton')}</span>
+                <svg id="verify-loading-spinner" class="hidden animate-spin -mr-1 ml-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </button>
+            </div>
+          </form>
+          
+          <!-- Resend Code -->
+          <div class="text-center space-y-4">
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              {t('auth.didntReceiveCode')}
+            </p>
+            
+            <button 
+              id="resend-button"
+              type="button"
+              class="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span id="resend-button-text">{t('auth.resendCode')}</span>
+              <span id="resend-countdown" class="hidden">({t('auth.resendIn')} <span id="countdown-timer">60</span>s)</span>
+            </button>
+            
+            <div class="mt-4">
+              <a href={`/${lang}/login`} class="text-sm text-gray-600 hover:text-gray-500 dark:text-gray-400 dark:hover:text-gray-300">
+                ← {t('auth.backToLogin')}
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </WidgetWrapper>
+</Layout>

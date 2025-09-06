@@ -1,18 +1,37 @@
 ---
 import { APP_BLOG } from 'astrowind:config';
-
-import { getRelatedPosts } from '~/utils/blog';
+import { API_URLS } from '~/config/api';
 import BlogHighlightedPosts from '../widgets/BlogHighlightedPosts.astro';
-import type { Post } from '~/types';
 import { getBlogPermalink } from '~/utils/permalinks';
 
+interface BlogPost {
+  id: number;
+  title: string;
+  slug: string;
+  tags?: string[];
+  category?: string;
+}
+
 export interface Props {
-  post: Post;
+  post: BlogPost;
 }
 
 const { post } = Astro.props;
 
-const relatedPosts = post.tags ? await getRelatedPosts(post, 4) : [];
+let relatedPosts: BlogPost[] = [];
+
+// Get related posts based on tags or category
+if (post.tags && post.tags.length > 0) {
+  try {
+    const response = await fetch(`${API_URLS.getAllPosts()}?tags=${post.tags.join(',')}&limit=4`);
+    if (response.ok) {
+      const data = await response.json();
+      relatedPosts = data.posts?.filter((p: BlogPost) => p.slug !== post.slug) || [];
+    }
+  } catch (error) {
+    console.error('Error fetching related posts:', error);
+  }
+}
 ---
 
 {
@@ -25,7 +44,7 @@ const relatedPosts = post.tags ? await getRelatedPosts(post, 4) : [];
       title="Related Posts"
       linkText="View All Posts"
       linkUrl={getBlogPermalink()}
-      postIds={relatedPosts.map((post) => post.id)}
+      postIds={relatedPosts.map((post) => post.id.toString())}
     />
   ) : null
 }

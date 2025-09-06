@@ -17,10 +17,6 @@ export const getHeaderData = (lang: SupportedLanguage) => {
         text: t('nav.blog'),
         href: `/${lang}/blog`,
       },
-      {
-        text: t('nav.contact'),
-        href: `/${lang}/contact`,
-      },
     ],
   };
 };

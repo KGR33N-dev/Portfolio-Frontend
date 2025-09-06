@@ -1,36 +1,103 @@
 ---
 import { Icon } from 'astro-icon/components';
-import { getPermalink } from '~/utils/permalinks';
-import Button from '~/components/ui/Button.astro';
 
 export interface Props {
-  prevUrl?: string;
-  nextUrl?: string;
+  currentPage: number;
+  totalPages: number;
+  baseUrl: string;
   prevText?: string;
   nextText?: string;
 }
 
-const { prevUrl, nextUrl, prevText = 'Newer posts', nextText = 'Older posts' } = Astro.props;
+const { currentPage, totalPages, baseUrl, prevText = 'Previous', nextText = 'Next' } = Astro.props;
+
+// Generate page numbers to show
+const generatePageNumbers = (current: number, total: number) => {
+  const delta = 2; // Show 2 pages before and after current
+  const range = [];
+  const rangeWithDots = [];
+
+  for (let i = Math.max(2, current - delta); i <= Math.min(total - 1, current + delta); i++) {
+    range.push(i);
+  }
+
+  if (current - delta > 2) {
+    rangeWithDots.push(1, '...');
+  } else {
+    rangeWithDots.push(1);
+  }
+
+  rangeWithDots.push(...range);
+
+  if (current + delta < total - 1) {
+    rangeWithDots.push('...', total);
+  } else {
+    rangeWithDots.push(total);
+  }
+
+  return rangeWithDots;
+};
+
+const pageNumbers = totalPages > 1 ? generatePageNumbers(currentPage, totalPages) : [];
 ---
 
-{
-  (prevUrl || nextUrl) && (
-    <div class="container flex">
-      <div class="flex flex-row mx-auto container justify-between">
-        <Button
-          variant="tertiary"
-          class={`md:px-3 px-3 mr-2 ${!prevUrl ? 'invisible' : ''}`}
-          href={getPermalink(prevUrl)}
-        >
-          <Icon name="tabler:chevron-left" class="w-6 h-6" />
-          <p class="ml-2">{prevText}</p>
-        </Button>
+{totalPages > 1 && (
+  <nav class="flex justify-center items-center space-x-1" aria-label="Pagination">
+    <!-- Previous Page -->
+    {currentPage > 1 ? (
+      <a
+        href={currentPage === 2 ? baseUrl : `${baseUrl}?page=${currentPage - 1}`}
+        class="flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white transition-colors"
+        aria-label="Previous page"
+      >
+        <Icon name="tabler:chevron-left" class="w-4 h-4 mr-1" />
+        {prevText}
+      </a>
+    ) : (
+      <span class="flex items-center px-3 py-2 text-sm font-medium text-gray-300 bg-gray-100 border border-gray-300 rounded-lg cursor-not-allowed dark:bg-gray-700 dark:border-gray-600 dark:text-gray-500">
+        <Icon name="tabler:chevron-left" class="w-4 h-4 mr-1" />
+        {prevText}
+      </span>
+    )}
 
-        <Button variant="tertiary" class={`md:px-3 px-3 ${!nextUrl ? 'invisible' : ''}`} href={getPermalink(nextUrl)}>
-          <span class="mr-2">{nextText}</span>
-          <Icon name="tabler:chevron-right" class="w-6 h-6" />
-        </Button>
-      </div>
+    <!-- Page Numbers -->
+    <div class="flex items-center space-x-1">
+      {pageNumbers.map((pageNum) => (
+        pageNum === '...' ? (
+          <span class="px-3 py-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+            ...
+          </span>
+        ) : pageNum === currentPage ? (
+          <span class="px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-lg cursor-default">
+            {pageNum}
+          </span>
+        ) : (
+          <a
+            href={pageNum === 1 ? baseUrl : `${baseUrl}?page=${pageNum}`}
+            class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white transition-colors"
+            aria-label={`Go to page ${pageNum}`}
+          >
+            {pageNum}
+          </a>
+        )
+      ))}
     </div>
-  )
-}
+
+    <!-- Next Page -->
+    {currentPage < totalPages ? (
+      <a
+        href={`${baseUrl}?page=${currentPage + 1}`}
+        class="flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white transition-colors"
+        aria-label="Next page"
+      >
+        {nextText}
+        <Icon name="tabler:chevron-right" class="w-4 h-4 ml-1" />
+      </a>
+    ) : (
+      <span class="flex items-center px-3 py-2 text-sm font-medium text-gray-300 bg-gray-100 border border-gray-300 rounded-lg cursor-not-allowed dark:bg-gray-700 dark:border-gray-600 dark:text-gray-500">
+        {nextText}
+        <Icon name="tabler:chevron-right" class="w-4 h-4 ml-1" />
+      </span>
+    )}
+  </nav>
+)}
