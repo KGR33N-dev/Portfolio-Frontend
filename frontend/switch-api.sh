@@ -35,10 +35,10 @@ function switch_to_local() {
 }
 
 function switch_to_remote() {
-    sed -i 's|PUBLIC_API_URL=.*|PUBLIC_API_URL=http://51.20.78.79:8000|g' "$ENV_FILE"
+    sed -i 's|PUBLIC_API_URL=.*|PUBLIC_API_URL=https://api.kgr33n.com|g' "$ENV_FILE"
     sed -i 's|PUBLIC_FRONTEND_URL=.*|PUBLIC_FRONTEND_URL=https://your-domain.com|g' "$ENV_FILE"
     echo "✅ Przełączono na ZDALNY backend"
-    echo "📍 API URL: http://51.20.78.79:8000"
+    echo "📍 API URL: https://api.kgr33n.com"
     echo "🌐 Frontend URL: https://your-domain.com"
     echo "☁️ Używa serwera produkcyjnego"
 }
